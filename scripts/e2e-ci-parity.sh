@@ -73,4 +73,4 @@ for i in $(seq 1 45); do
 done
 
 echo "Running Playwright with CI parity services..."
-CI=1 bun run test:e2e-new -- "$@"
+NODE_OPTIONS='--dns-result-order=ipv4first' CI=1 bunx playwright test --config=e2e-new/playwright.config.ts --retries=0 --max-failures=1 --workers=1 "$@"

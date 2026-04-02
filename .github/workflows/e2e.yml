@@ -103,7 +103,7 @@ jobs:
           LOCAL_RELAY_ONLY: 'true'
 
       - name: Run e2e tests
-        run: bun test:e2e-new
+        run: bun test:e2e-new:fail-fast
 
       - name: Show server logs on failure
         if: failure()
