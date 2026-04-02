@@ -113,3 +113,5 @@ Executed local happy-path with relay + currency server + app:
 - `80e8aaf` test(e2e): start currency server in local and CI runs
 - `ea3c0ea` test(e2e): harden WebLN checkout readiness and retries
 - `e02fcdf` test(e2e): keep local webServer startup unchanged
+- `8f1ed42` refactor: rename contextvm server and ctxcn client artifacts
+- `0c40fa9` chore: align ctxcn dev relay config and review notes
