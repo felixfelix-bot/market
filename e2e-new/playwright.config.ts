@@ -34,7 +34,8 @@ export default defineConfig({
 		? []
 		: [
 				{
-					command: 'nak serve --hostname 0.0.0.0',
+					command:
+						'bash -lc "NAK_BIN=$(command -v nak || true); if [ -z \"$NAK_BIN\" ]; then NAK_BIN=\"$HOME/.local/bin/nak\"; fi; \"$NAK_BIN\" serve --hostname 0.0.0.0"',
 					port: 10547,
 					reuseExistingServer: true,
 					stdout: 'pipe',
@@ -44,7 +45,8 @@ export default defineConfig({
 					// Seed the relay with app settings, then start the dev server.
 					// The dev server caches appSettings at startup, so events must
 					// exist on the relay before it initializes.
-					command: 'bun e2e-new/seed-relay.ts && NODE_ENV=test bun dev',
+					command:
+						'bash -lc "for i in $(seq 1 20); do (echo > /dev/tcp/localhost/10547) 2>/dev/null && break; sleep 1; done; bun e2e-new/seed-relay.ts && NODE_ENV=test bun dev"',
 					cwd: PROJECT_ROOT,
 					port: TEST_PORT,
 					reuseExistingServer: true,
