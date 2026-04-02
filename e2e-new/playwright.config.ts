@@ -41,12 +41,6 @@ export default defineConfig({
 					stderr: 'pipe',
 				},
 				{
-					command: 'NODE_ENV=test APP_RELAY_URL=ws://localhost:10547 bun run dev:currency-server',
-					reuseExistingServer: true,
-					stdout: 'pipe',
-					stderr: 'pipe',
-				},
-				{
 					// Seed the relay with app settings, then start the dev server.
 					// The dev server caches appSettings at startup, so events must
 					// exist on the relay before it initializes.
