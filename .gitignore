@@ -49,3 +49,12 @@ test-results
 # Claude Code local settings (user-specific)
 .claude/settings.local.json
 __pycache__/
+.opencode/branch-intent.md
+.opencode/project-profile.yaml
+
+# OpenCode local subagent setup artifacts
+.opencode/
+Makefile
+scripts/docs_summary.py
+scripts/gitignore_audit.py
+scripts/verify_subagents.py

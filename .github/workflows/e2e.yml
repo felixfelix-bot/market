@@ -77,6 +77,7 @@ jobs:
       - name: Seed relay and start dev server
         run: |
           bun e2e-new/seed-relay.ts
+          nohup bun run dev:currency-server > /tmp/currency-server.log 2>&1 &
           nohup bun dev > /tmp/devserver.log 2>&1 &
           echo "Waiting for dev server on port 3333..."
           for i in $(seq 1 30); do
@@ -94,6 +95,7 @@ jobs:
           PORT: '3333'
           APP_RELAY_URL: ws://localhost:10547
           APP_PRIVATE_KEY: e2e0000000000000000000000000000000000000000000000000000000000001
+          CVM_SERVER_KEY: 2300f5fff5642341946758cad8214f2c54f3c40fba5ba51b616452b197fd3e71
           LOCAL_RELAY_ONLY: 'true'
 
       - name: Run e2e tests
@@ -107,6 +109,9 @@ jobs:
           echo ""
           echo "=== Dev server logs ==="
           cat /tmp/devserver.log 2>/dev/null || echo "(no dev server log)"
+          echo ""
+          echo "=== Currency server logs ==="
+          cat /tmp/currency-server.log 2>/dev/null || echo "(no currency server log)"
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
