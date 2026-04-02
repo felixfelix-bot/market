@@ -3,7 +3,6 @@ import { test, expect } from '../fixtures'
 import { setupLnurlMock } from '../helpers/lnurl-mock'
 import { waitForWebLnPaymentReady } from '../helpers/checkout-payment'
 import { RelayMonitor } from '../fixtures/relay-monitor'
-import { WALLETED_USER_LUD16 } from '../../src/lib/fixtures'
 import { queryRelayEvents, filterByTag } from '../utils/relay-query'
 import { WALLETED_USER_LUD16, devUser1, devUser2 } from '../../src/lib/fixtures'
 
