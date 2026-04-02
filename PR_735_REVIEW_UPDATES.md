@@ -10,6 +10,7 @@ This update addresses the review feedback on PR #735 and keeps the BTC pricing p
 - Generalized `test:unit` and `test:unit:watch` package scripts so they are no longer tied to a single test file.
 - Updated deployment flow to include a PM2-managed currency server process and `CVM_SERVER_KEY` env examples.
 - Scoped currency server public relay behavior to production.
+- Stabilized E2E checkout/payment reliability by starting the currency server in CI and hardening WebLN readiness checks.
 
 ## Review Comment Responses
 
@@ -21,7 +22,7 @@ This update addresses the review feedback on PR #735 and keeps the BTC pricing p
 
 - Updated `.env.example` to:
   - `CVM_SERVER_KEY=<your_contextvm_server_private_key_in_hex>`
-- Updated runtime usage in `contextvm/currency-server.ts` to read `process.env.CVM_SERVER_KEY`.
+- Updated runtime usage in `contextvm/server.ts` to read `process.env.CVM_SERVER_KEY`.
 - Added `CVM_SERVER_KEY` examples in deploy env templates:
   - `deploy-simple/env/.env.development.example`
   - `deploy-simple/env/.env.staging.example`
@@ -34,8 +35,9 @@ This update addresses the review feedback on PR #735 and keeps the BTC pricing p
 **Response:** ✅ Done (phase 1, safe rollout).
 
 - Added `ctxcn.config.json` to repo.
+- Configured `ctxcn.config.json` with localhost relay first for dev-mode generation (`ws://localhost:10547`).
 - Added checked-in typed generated-style client:
-  - `src/lib/ctxcn/PlebeianCurrencyServerClient.ts`
+  - `src/lib/ctxcn/PlebeianServerClient.ts`
 - Introduced `Plebeian` naming for active runtime client:
   - `src/lib/plebeian-currency-client.ts`
 - Kept compatibility export in:
@@ -66,6 +68,11 @@ This update addresses the review feedback on PR #735 and keeps the BTC pricing p
   - Non-production avoids public relay announce behavior.
 - Deploy script updated to run a separate PM2 process for currency server:
   - `deploy-simple/deploy.sh` now deploys `contextvm/` and starts/reloads both app and currency server PM2 apps.
+- E2E reliability hardening for checkout/payment scenarios:
+  - CI now starts `dev:currency-server` before running Playwright (`.github/workflows/e2e.yml`).
+  - Added `e2e-new/helpers/checkout-payment.ts` to wait for `Pay with WebLN` and retry transient invoice generation failures via `Try Again`.
+  - Updated checkout-related specs to use the helper (`checkout`, `shipping-special`, `order-lifecycle`, `order-messaging`, `marketplace`, `zaps`, `payments`).
+  - Reduced cross-test state bleed in `payments.spec.ts` by deleting a temporary payment method instead of risking removal of the only seeded Lightning destination.
 
 ## Validation Performed
 
@@ -103,3 +110,6 @@ Executed local happy-path with relay + currency server + app:
 - `ec1d228` feat: deploy currency server with pm2 and CVM key examples
 - `9463c7e` chore: separate integration tests from generalized unit suite
 - `58d9eb5` fix: start currency server pm2 process during deploy
+- `80e8aaf` test(e2e): start currency server in local and CI runs
+- `ea3c0ea` test(e2e): harden WebLN checkout readiness and retries
+- `e02fcdf` test(e2e): keep local webServer startup unchanged
