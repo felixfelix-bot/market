@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if [[ "${SKIP_LOCAL_PREFLIGHT:-0}" == "1" ]]; then
+	echo "Skipping local pre-push preflight (SKIP_LOCAL_PREFLIGHT=1)."
+	exit 0
+fi
+
+echo "Running local pre-push preflight..."
+bash scripts/ci-preflight.sh quick
