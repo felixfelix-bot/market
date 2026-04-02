@@ -37,6 +37,10 @@ if ! command -v nak >/dev/null 2>&1; then
 	exit 1
 fi
 
+pkill -f "nak serve --hostname 0.0.0.0" 2>/dev/null || true
+pkill -f "contextvm/server.ts" 2>/dev/null || true
+pkill -f "PORT=${TEST_PORT}" 2>/dev/null || true
+
 echo "Starting local relay..."
 nohup nak serve --hostname 0.0.0.0 > "$RELAY_LOG" 2>&1 &
 RELAY_PID=$!
@@ -53,11 +57,11 @@ echo "Seeding relay..."
 NODE_ENV=test APP_RELAY_URL="$RELAY_URL" APP_PRIVATE_KEY="$APP_PRIVATE_KEY" LOCAL_RELAY_ONLY=true bun e2e-new/seed-relay.ts
 
 echo "Starting currency server..."
-nohup NODE_ENV=test APP_RELAY_URL="$RELAY_URL" CVM_SERVER_KEY="$CVM_SERVER_KEY" bun run dev:currency-server > "$CURRENCY_LOG" 2>&1 &
+nohup env NODE_ENV=test APP_RELAY_URL="$RELAY_URL" CVM_SERVER_KEY="$CVM_SERVER_KEY" bun run dev:currency-server > "$CURRENCY_LOG" 2>&1 &
 SERVER_PID=$!
 
 echo "Starting app server..."
-nohup NODE_ENV=test PORT="$TEST_PORT" APP_RELAY_URL="$RELAY_URL" APP_PRIVATE_KEY="$APP_PRIVATE_KEY" LOCAL_RELAY_ONLY=true bun dev > "$DEV_LOG" 2>&1 &
+nohup env NODE_ENV=test PORT="$TEST_PORT" APP_RELAY_URL="$RELAY_URL" APP_PRIVATE_KEY="$APP_PRIVATE_KEY" LOCAL_RELAY_ONLY=true bun dev > "$DEV_LOG" 2>&1 &
 DEV_PID=$!
 
 echo "Waiting for app server on port $TEST_PORT..."
