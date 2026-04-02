@@ -10,10 +10,11 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { UserNameWithBadge } from '@/components/UserNameWithBadge'
+import { UserCard } from '@/components/UserCard'
 import { ZapButton } from '@/components/ZapButton'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useEntityPermissions } from '@/hooks/useEntityPermissions'
+import { authStore } from '@/lib/stores/auth'
 import { cartActions, useCart, type RichShippingInfo } from '@/lib/stores/cart'
 import { ndkActions } from '@/lib/stores/ndk'
 import { uiActions, uiStore } from '@/lib/stores/ui'
@@ -245,7 +246,7 @@ function RouteComponent() {
 					<Link to="/products" className="inline-flex">
 						<Button variant="outline">Back to products</Button>
 					</Link>
-					<Button variant="default" onClick={() => uiActions.openNSFWConfirmation()} className="bg-amber-600 hover:bg-amber-700">
+					<Button variant="primary" onClick={() => uiActions.openNSFWConfirmation()} className="bg-amber-600 hover:bg-amber-700">
 						Enable adult content
 					</Button>
 				</div>
@@ -262,7 +263,7 @@ function RouteComponent() {
 		if (!product || visibility === 'hidden') return
 
 		// Just add the product ID to the cart with the specified quantity
-		await cartActions.addProduct(pubkey, {
+		await cartActions.addProduct({
 			id: productId,
 			amount: quantity,
 			shippingMethodId: null,
@@ -482,10 +483,8 @@ function RouteComponent() {
 								</div>
 							)}
 
-							<div className="flex items-center gap-2">
-								<span>Sold by:</span>
-								<UserNameWithBadge pubkey={pubkey} />
-							</div>
+							<span>Sold by:</span>
+							<UserCard pubkey={pubkey} size="md" />
 						</div>
 					</div>
 				</div>
@@ -750,14 +749,18 @@ function RouteComponent() {
 			</div>
 
 			{/* More from this seller */}
-			<div className="flex flex-col gap-4 p-4">
-				<h2 className="font-heading text-2xl text-center lg:text-left">More from this seller</h2>
-				<ItemGrid className="gap-4 sm:gap-8">
-					{sellerProducts.map((p) => (
-						<ProductCard key={p.id} product={p} />
-					))}
-				</ItemGrid>
-			</div>
+			{sellerProducts.filter((p) => p.id !== productId).length > 0 && (
+				<div className="flex flex-col gap-4 p-4">
+					<h2 className="font-heading text-2xl text-center lg:text-left">More from this seller</h2>
+					<ItemGrid className="gap-4 sm:gap-8">
+						{sellerProducts
+							.filter((p) => p.id !== productId)
+							.map((p) => (
+								<ProductCard key={p.id} product={p} />
+							))}
+					</ItemGrid>
+				</div>
+			)}
 
 			{/* Image Viewer Modal */}
 			<ImageViewerModal

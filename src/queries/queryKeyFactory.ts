@@ -42,6 +42,7 @@ export const profileKeys = {
 	nip05: (p: string) => [...profileKeys.all, 'nip05', p] as const,
 	detailsByNip05: (nip05: string) => [...profileKeys.all, 'byNip05', nip05] as const,
 	zapCapability: (p: string) => [...profileKeys.all, 'zapCapability', p] as const,
+	wot: (p: string) => [...profileKeys.all, 'wot', p] as const,
 } as const
 
 export const postKeys = {
@@ -131,4 +132,9 @@ export const migrationKeys = {
 	all: ['migration'] as const,
 	nip15Products: (userPubkey: string) => [...migrationKeys.all, 'nip15Products', userPubkey] as const,
 	migratedEvents: (userPubkey: string) => [...migrationKeys.all, 'migratedEvents', userPubkey] as const,
+} as const
+
+export const cartKeys = {
+	all: ['cart'] as const,
+	byPubkey: (pubkey: string) => [...cartKeys.all, 'byPubkey', pubkey] as const,
 } as const
