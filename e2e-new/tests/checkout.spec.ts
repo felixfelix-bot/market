@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures'
 import { LightningMock } from '../utils/lightning-mock'
 import { queryRelayEvents, filterByTag } from '../utils/relay-query'
-import { waitForWebLnPaymentReady } from '../helpers/checkout-payment'
+import { waitForWebLnPaymentReady, clickWebLnPayment } from '../helpers/checkout-payment'
 import { devUser1, devUser2 } from '../../src/lib/fixtures'
 
 test.use({ scenario: 'merchant' })
@@ -92,7 +92,7 @@ test.describe('Checkout', () => {
 				.catch(() => false)) === false
 		) {
 			await expect(webLnButton).toBeEnabled({ timeout: 10_000 })
-			await webLnButton.click()
+			await clickWebLnPayment(webLnButton)
 			// Wait for payment to register before attempting the next
 			await buyerPage.waitForTimeout(1_000)
 		}

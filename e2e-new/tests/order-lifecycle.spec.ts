@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures'
 import { LightningMock } from '../utils/lightning-mock'
 import { queryRelayEvents, filterByTag, getTagValue } from '../utils/relay-query'
-import { waitForWebLnPaymentReady } from '../helpers/checkout-payment'
+import { waitForWebLnPaymentReady, clickWebLnPayment } from '../helpers/checkout-payment'
 import { devUser1, devUser2 } from '../../src/lib/fixtures'
 import type { Page } from '@playwright/test'
 
@@ -67,7 +67,7 @@ test.describe('Order Lifecycle', () => {
 		// Pay invoice 1 (merchant share) with WebLN
 		const webLnButton = await waitForWebLnPaymentReady(buyerPage)
 		await expect(webLnButton).toBeEnabled({ timeout: 10_000 })
-		await webLnButton.click()
+		await clickWebLnPayment(webLnButton)
 
 		// Wait for first payment confirmation (invoice count varies with V4V config)
 		await expect(buyerPage.getByText(/1 of \d+ completed/)).toBeVisible({ timeout: 15_000 })
@@ -119,7 +119,7 @@ test.describe('Order Lifecycle', () => {
 		const dialogWebLn = buyerPage.getByRole('button', { name: 'Pay with WebLN' })
 		await expect(dialogWebLn).toBeVisible({ timeout: 15_000 })
 		await expect(dialogWebLn).toBeEnabled({ timeout: 10_000 })
-		await dialogWebLn.click()
+		await clickWebLnPayment(dialogWebLn)
 
 		// Verify both invoices now paid
 		expect(lnMock.paidInvoices.length).toBe(2)
@@ -163,7 +163,7 @@ test.describe('Order Lifecycle', () => {
 				.catch(() => false)) === false
 		) {
 			await expect(webLnButton).toBeEnabled({ timeout: 10_000 })
-			await webLnButton.click()
+			await clickWebLnPayment(webLnButton)
 			await buyerPage.waitForTimeout(1_000)
 		}
 

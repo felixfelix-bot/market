@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../fixtures'
 import { LightningMock } from '../utils/lightning-mock'
-import { waitForWebLnPaymentReady } from '../helpers/checkout-payment'
+import { waitForWebLnPaymentReady, clickWebLnPayment } from '../helpers/checkout-payment'
 import { devUser2 } from '../../src/lib/fixtures'
 import { nip19 } from 'nostr-tools'
 
@@ -347,7 +347,7 @@ test.describe('Multi-Seller Checkout with V4V', () => {
 		for (let i = 0; i < 4; i++) {
 			await expect(webLnButton).toBeVisible({ timeout: 30_000 })
 			await expect(webLnButton).toBeEnabled({ timeout: 10_000 })
-			await webLnButton.click()
+			await clickWebLnPayment(webLnButton)
 
 			if (i < 3) {
 				// Wait for progress indicator before clicking next

@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures'
 import { LightningMock } from '../utils/lightning-mock'
 import { queryRelayEvents, filterByTag } from '../utils/relay-query'
-import { waitForWebLnPaymentReady } from '../helpers/checkout-payment'
+import { waitForWebLnPaymentReady, clickWebLnPayment } from '../helpers/checkout-payment'
 import { devUser1, devUser2 } from '../../src/lib/fixtures'
 import type { Page } from '@playwright/test'
 
@@ -37,7 +37,7 @@ async function payAllInvoices(page: Page) {
 			.catch(() => false)) === false
 	) {
 		await expect(webLnButton).toBeEnabled({ timeout: 10_000 })
-		await webLnButton.click()
+		await clickWebLnPayment(webLnButton)
 		await page.waitForTimeout(1_000)
 	}
 

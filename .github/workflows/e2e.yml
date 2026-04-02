@@ -82,7 +82,7 @@ jobs:
         run: |
           bun e2e-new/seed-relay.ts
           nohup bun run dev:currency-server > /tmp/currency-server.log 2>&1 &
-          nohup bun dev > /tmp/devserver.log 2>&1 &
+          nohup bun run dev:test > /tmp/devserver.log 2>&1 &
           echo "Waiting for dev server on port 34567..."
           for i in $(seq 1 30); do
             if curl -sf http://localhost:34567/api/config > /dev/null 2>&1; then

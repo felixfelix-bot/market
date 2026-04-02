@@ -46,7 +46,7 @@ export default defineConfig({
 					// The dev server caches appSettings at startup, so events must
 					// exist on the relay before it initializes.
 					command:
-						'bash -lc "for i in $(seq 1 20); do (echo > /dev/tcp/localhost/10547) 2>/dev/null && break; sleep 1; done; bun e2e-new/seed-relay.ts && NODE_ENV=test bun dev"',
+						'bash -lc "for i in $(seq 1 20); do (echo > /dev/tcp/localhost/10547) 2>/dev/null && break; sleep 1; done; bun e2e-new/seed-relay.ts && NODE_ENV=test bun run dev:test"',
 					cwd: PROJECT_ROOT,
 					port: TEST_PORT,
 					reuseExistingServer: true,

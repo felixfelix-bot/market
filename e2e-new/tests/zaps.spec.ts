@@ -1,5 +1,5 @@
 import { test, expect } from '../fixtures'
-import { waitForWebLnPaymentReady } from '../helpers/checkout-payment'
+import { waitForWebLnPaymentReady, clickWebLnPayment } from '../helpers/checkout-payment'
 import { LightningMock } from '../utils/lightning-mock'
 
 test.use({ scenario: 'merchant' })
@@ -48,7 +48,7 @@ test.describe('Lightning Zaps', () => {
 		await expect(webLnButton).toBeEnabled()
 
 		// Click "Pay with WebLN" — triggers the mock payment + zap receipt
-		await webLnButton.click()
+		await clickWebLnPayment(webLnButton)
 
 		// Wait for success confirmation
 		// The ZapDialog shows a toast "Zap successful!" and closes after 1.5s
