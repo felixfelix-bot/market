@@ -18,17 +18,23 @@ bun run test:unit
 echo "[preflight] Stage 3: Integration gate"
 bash scripts/integration-local.sh
 
-echo "[preflight] Stage 4: Targeted checkout/payment gate"
+echo "[preflight] Stage 4: E2E smoke gate"
 bash scripts/e2e-ci-parity.sh \
-	e2e-new/tests/checkout.spec.ts \
-	e2e-new/tests/payments.spec.ts \
-	e2e-new/tests/order-lifecycle.spec.ts \
-	e2e-new/tests/order-messaging.spec.ts \
-	e2e-new/tests/shipping-special.spec.ts \
-	e2e-new/tests/zaps.spec.ts
+	e2e-new/tests/navigation.spec.ts \
+	e2e-new/tests/btc-price.spec.ts \
+	e2e-new/tests/checkout.spec.ts
 
 if [[ "$MODE" == "full" ]]; then
-	echo "[preflight] Stage 5: Full CI-parity E2E run"
+	echo "[preflight] Stage 5: Extended checkout/payment gate"
+	bash scripts/e2e-ci-parity.sh \
+		e2e-new/tests/checkout.spec.ts \
+		e2e-new/tests/payments.spec.ts \
+		e2e-new/tests/order-lifecycle.spec.ts \
+		e2e-new/tests/order-messaging.spec.ts \
+		e2e-new/tests/shipping-special.spec.ts \
+		e2e-new/tests/zaps.spec.ts
+
+	echo "[preflight] Stage 6: Full CI-parity E2E run"
 	bash scripts/e2e-ci-parity.sh
 fi
 
