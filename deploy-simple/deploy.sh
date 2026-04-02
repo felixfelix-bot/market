@@ -206,7 +206,7 @@ module.exports = {
     listen_timeout: 10000,
   }, {
     name: '$PM2_CURRENCY_APP_NAME',
-    script: 'contextvm/currency-server.ts',
+    script: 'contextvm/server.ts',
     interpreter: process.env.HOME + '/.bun/bin/bun',
     cwd: '$REMOTE_APP_DIR',
     instances: 1,
