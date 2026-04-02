@@ -142,11 +142,14 @@ test.describe('Receiving Payments Configuration', () => {
 		const countBefore = await deleteButtons.count()
 		expect(countBefore).toBeGreaterThan(1)
 
-		// Click the first delete button (trash icon with aria-label)
-		await deleteButtons.first().click()
+		// Delete the temporary method specifically so seeded checkout payment details stay intact
+		const tempRow = merchantPage.locator('div').filter({ hasText: tempAddress }).first()
+		await expect(tempRow).toBeVisible({ timeout: 10_000 })
+		await tempRow.getByRole('button', { name: /delete payment detail/i }).click()
 
 		// After deletion, one fewer delete button should remain (seeded method stays available)
 		await expect(deleteButtons).toHaveCount(countBefore - 1, { timeout: 10_000 })
+		await expect(merchantPage.getByText(WALLETED_USER_LUD16).first()).toBeVisible({ timeout: 10_000 })
 	})
 })
 
@@ -351,17 +354,9 @@ test.describe('Checkout Flow', () => {
 			await fillShippingForm(buyerPage, 'Test Buyer')
 		})
 
-		// Step 4: Payment — wait until WebLN path is ready (with retry on transient invoice generation failures)
-		await waitForWebLnPaymentReady(buyerPage)
-
-		// If there are skip buttons, click them to move past payment
-		const skipButton = buyerPage.getByRole('button', { name: /skip|pay later/i }).first()
-		if (await skipButton.isVisible({ timeout: 3_000 }).catch(() => false)) {
-			await skipButton.click()
-		}
 		await test.step('Create the order and open the payment step', async () => {
 			await continueFromSummaryToPayment(buyerPage)
-			await expect(buyerPage.getByText('Invoices', { exact: true })).toBeVisible({ timeout: 30_000 })
+			await waitForWebLnPaymentReady(buyerPage)
 		})
 
 		await test.step('Skip all mocked invoices and finish checkout', async () => {
