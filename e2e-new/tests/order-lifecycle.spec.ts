@@ -1,6 +1,7 @@
 import { test, expect } from '../fixtures'
 import { LightningMock } from '../utils/lightning-mock'
 import { queryRelayEvents, filterByTag, getTagValue } from '../utils/relay-query'
+import { waitForWebLnPaymentReady } from '../helpers/checkout-payment'
 import { devUser1, devUser2 } from '../../src/lib/fixtures'
 import type { Page } from '@playwright/test'
 
@@ -64,8 +65,7 @@ test.describe('Order Lifecycle', () => {
 		await checkoutToPaymentStep(buyerPage)
 
 		// Pay invoice 1 (merchant share) with WebLN
-		const webLnButton = buyerPage.getByRole('button', { name: 'Pay with WebLN' })
-		await expect(webLnButton).toBeVisible({ timeout: 30_000 })
+		const webLnButton = await waitForWebLnPaymentReady(buyerPage)
 		await expect(webLnButton).toBeEnabled({ timeout: 10_000 })
 		await webLnButton.click()
 
@@ -155,8 +155,7 @@ test.describe('Order Lifecycle', () => {
 		await checkoutToPaymentStep(buyerPage)
 
 		// Pay all invoices (merchant + V4V shares — count varies with V4V config)
-		const webLnButton = buyerPage.getByRole('button', { name: 'Pay with WebLN' })
-		await expect(webLnButton).toBeVisible({ timeout: 30_000 })
+		const webLnButton = await waitForWebLnPaymentReady(buyerPage)
 		while (
 			(await buyerPage
 				.getByText('All payments completed successfully!')

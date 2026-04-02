@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../fixtures'
 import { LightningMock } from '../utils/lightning-mock'
+import { waitForWebLnPaymentReady } from '../helpers/checkout-payment'
 import { devUser2 } from '../../src/lib/fixtures'
 import { nip19 } from 'nostr-tools'
 
@@ -341,7 +342,7 @@ test.describe('Multi-Seller Checkout with V4V', () => {
 		await proceedToPaymentStep(newUserPage)
 
 		// Pay all 4 invoices using WebLN
-		const webLnButton = newUserPage.getByRole('button', { name: 'Pay with WebLN' })
+		const webLnButton = await waitForWebLnPaymentReady(newUserPage)
 
 		for (let i = 0; i < 4; i++) {
 			await expect(webLnButton).toBeVisible({ timeout: 30_000 })

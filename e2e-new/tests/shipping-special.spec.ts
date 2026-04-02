@@ -1,6 +1,7 @@
 import { test, expect } from '../fixtures'
 import { LightningMock } from '../utils/lightning-mock'
 import { queryRelayEvents, filterByTag } from '../utils/relay-query'
+import { waitForWebLnPaymentReady } from '../helpers/checkout-payment'
 import { devUser1, devUser2 } from '../../src/lib/fixtures'
 import type { Page } from '@playwright/test'
 
@@ -26,9 +27,7 @@ async function addProductAndOpenCart(page: Page, productName: string) {
 }
 
 async function payAllInvoices(page: Page) {
-	await expect(page.getByText('Invoices', { exact: true })).toBeVisible({ timeout: 30_000 })
-	const webLnButton = page.getByRole('button', { name: 'Pay with WebLN' })
-	await expect(webLnButton).toBeVisible({ timeout: 30_000 })
+	const webLnButton = await waitForWebLnPaymentReady(page)
 
 	// Pay all invoices (merchant + V4V shares — count varies with V4V config)
 	while (

@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../fixtures'
 import { setupLnurlMock } from '../helpers/lnurl-mock'
+import { waitForWebLnPaymentReady } from '../helpers/checkout-payment'
 import { RelayMonitor } from '../fixtures/relay-monitor'
 import { WALLETED_USER_LUD16 } from '../../src/lib/fixtures'
 
@@ -95,15 +96,27 @@ test.describe('Receiving Payments Configuration', () => {
 		await expect(merchantPage.getByRole('heading', { name: /receiving payments/i })).toBeVisible({ timeout: 15_000 })
 		await expect(merchantPage.getByText(WALLETED_USER_LUD16).first()).toBeVisible({ timeout: 10_000 })
 
+		// Add a temporary payment detail first so this test never removes
+		// the only seeded Lightning destination used by checkout scenarios.
+		const addButton = merchantPage.getByRole('button', { name: /add payment method/i }).first()
+		await addButton.click()
+
+		const tempAddress = `temp-delete-${Date.now()}@getalby.com`
+		const detailsInput = merchantPage.getByTestId('payment-details-input')
+		await expect(detailsInput).toBeVisible({ timeout: 5_000 })
+		await detailsInput.fill(tempAddress)
+		await merchantPage.getByTestId('save-payment-button').click()
+		await expect(merchantPage.getByText(tempAddress)).toBeVisible({ timeout: 10_000 })
+
 		// Count delete buttons before deletion
 		const deleteButtons = merchantPage.getByRole('button', { name: /delete payment detail/i })
 		const countBefore = await deleteButtons.count()
-		expect(countBefore).toBeGreaterThan(0)
+		expect(countBefore).toBeGreaterThan(1)
 
 		// Click the first delete button (trash icon with aria-label)
 		await deleteButtons.first().click()
 
-		// After deletion, one fewer delete button should remain
+		// After deletion, one fewer delete button should remain (seeded method stays available)
 		await expect(deleteButtons).toHaveCount(countBefore - 1, { timeout: 10_000 })
 	})
 })
@@ -319,18 +332,8 @@ test.describe('Checkout Flow', () => {
 		await expect(continueButton).toBeVisible({ timeout: 5_000 })
 		await continueButton.click()
 
-		// Step 4: Payment — wait for invoices or error state
-		await expect(async () => {
-			const pageText = await buyerPage.locator('body').textContent()
-			const hasPaymentContent =
-				pageText?.includes('lnbc') ||
-				pageText?.includes('Unable to generate') ||
-				pageText?.includes('Skip') ||
-				pageText?.includes('Pay') ||
-				pageText?.includes('Invoices') ||
-				pageText?.includes('invoice')
-			expect(hasPaymentContent).toBeTruthy()
-		}).toPass({ timeout: 30_000 })
+		// Step 4: Payment — wait until WebLN path is ready (with retry on transient invoice generation failures)
+		await waitForWebLnPaymentReady(buyerPage)
 
 		// If there are skip buttons, click them to move past payment
 		const skipButton = buyerPage.getByRole('button', { name: /skip|pay later/i }).first()

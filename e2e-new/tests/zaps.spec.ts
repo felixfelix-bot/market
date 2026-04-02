@@ -1,4 +1,5 @@
 import { test, expect } from '../fixtures'
+import { waitForWebLnPaymentReady } from '../helpers/checkout-payment'
 import { LightningMock } from '../utils/lightning-mock'
 
 test.use({ scenario: 'merchant' })
@@ -43,8 +44,7 @@ test.describe('Lightning Zaps', () => {
 
 		// Wait for invoice generation (LNURL calls intercepted by mock)
 		// The "Pay with WebLN" button appears once the invoice is ready
-		const webLnButton = buyerPage.getByRole('button', { name: 'Pay with WebLN' })
-		await expect(webLnButton).toBeVisible({ timeout: 15_000 })
+		const webLnButton = await waitForWebLnPaymentReady(buyerPage, { timeoutMs: 15_000, maxInvoiceRetries: 1 })
 		await expect(webLnButton).toBeEnabled()
 
 		// Click "Pay with WebLN" — triggers the mock payment + zap receipt

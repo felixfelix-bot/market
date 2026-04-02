@@ -1,6 +1,7 @@
 import { test, expect } from '../fixtures'
 import { LightningMock } from '../utils/lightning-mock'
 import { queryRelayEvents, filterByTag } from '../utils/relay-query'
+import { waitForWebLnPaymentReady } from '../helpers/checkout-payment'
 import { devUser1, devUser2 } from '../../src/lib/fixtures'
 
 test.use({ scenario: 'merchant' })
@@ -81,10 +82,9 @@ test.describe('Checkout', () => {
 
 		// Wait for invoice generation to complete
 		// "Generating Lightning invoices..." disappears once invoices are ready
-		const webLnButton = buyerPage.getByRole('button', { name: 'Pay with WebLN' })
+		const webLnButton = await waitForWebLnPaymentReady(buyerPage)
 
 		// Pay all invoices (merchant + V4V shares — count varies with V4V config)
-		await expect(webLnButton).toBeVisible({ timeout: 30_000 })
 		while (
 			(await buyerPage
 				.getByText('All payments completed successfully!')
