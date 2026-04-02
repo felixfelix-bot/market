@@ -1,6 +1,5 @@
 import { ndkActions } from '@/lib/stores/ndk'
 import { type NDKUserProfile, NDKEvent, NDKUser } from '@nostr-dev-kit/ndk'
-import { NDKWoT } from '@nostr-dev-kit/wot'
 import { queryOptions, useQuery } from '@tanstack/react-query'
 import { profileKeys } from './queryKeyFactory'
 
@@ -280,6 +279,8 @@ export const getWotScore = async (pubkey: string): Promise<number | null> => {
 	if (!ndk.activeUser) return null
 
 	try {
+		const wotModule = '@nostr-dev-kit/wot'
+		const { NDKWoT } = await import(wotModule)
 		const wot = new NDKWoT(ndk, pubkey)
 		await wot.load({
 			depth: 2,
