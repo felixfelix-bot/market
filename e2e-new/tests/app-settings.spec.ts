@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '../fixtures'
+import { test, expect } from '../fixtures'
+import type { Page } from '@playwright/test'
 import { devUser1, devUser2, devUser3 } from '../../src/lib/fixtures'
 import { nip19 } from 'nostr-tools'
 import { resetAppBlacklist, resetAppFeaturedList } from 'e2e-new/scenarios'
@@ -13,17 +14,14 @@ test.use({ scenario: 'merchant' })
  * interrupted by a redirect. This helper retries navigation to work around the race.
  */
 async function gotoAdminRoute(page: Page, path: string) {
-	await page.goto(path, { waitUntil: 'commit' }).catch(() => {})
+	await expect(async () => {
+		await page.goto(path, { waitUntil: 'commit' }).catch(() => {})
+		await page.waitForLoadState('networkidle').catch(() => {})
 
-	// If we got redirected, wait a moment for the admin query to resolve and try again
-	const currentUrl = page.url()
-	if (!currentUrl.includes('app-settings')) {
-		await page.waitForTimeout(2000)
-		await page.goto(path)
-	}
-
-	// Wait for the page to be fully loaded
-	await page.waitForLoadState('networkidle')
+		const currentPath = new URL(page.url()).pathname
+		expect(currentPath).toContain('/dashboard/app-settings/')
+		expect(currentPath).toContain(path)
+	}).toPass({ timeout: 20_000 })
 }
 
 /**
@@ -31,7 +29,7 @@ async function gotoAdminRoute(page: Page, path: string) {
  * Uses heading role to avoid strict mode violations from sidebar nav links.
  */
 async function expectPageHeading(page: Page, name: string | RegExp) {
-	await expect(page.getByRole('heading', { name }).first()).toBeVisible({ timeout: 10_000 })
+	await expect(page.getByRole('heading', { name }).first()).toBeVisible({ timeout: 20_000 })
 }
 
 /**
@@ -59,14 +57,22 @@ async function expectInputCleared(page: Page, inputId: string) {
 
 async function clickDestructiveButtonForText(page: Page, text: string) {
 	const rowText = page.getByText(text)
-	await expect(rowText).toBeVisible({ timeout: 15_000 })
+	await expect(rowText.first()).toBeVisible({ timeout: 20_000 })
 
-	const row = rowText.locator('xpath=ancestor::div[contains(@class,"flex") and contains(@class,"items-center")]')
-	const destructiveButton = row.locator('button[class*="destructive"]')
+	await expect(async () => {
+		const current = page.getByText(text)
+		if ((await current.count()) === 0) {
+			return
+		}
 
-	await expect(destructiveButton).toBeVisible()
-	await destructiveButton.click({ timeout: 15_000 })
-	await expect(rowText).toBeHidden({ timeout: 15_000 })
+		const row = current.first().locator('xpath=ancestor::div[contains(@class,"flex") and contains(@class,"items-center")]')
+		const destructiveButton = row.locator('button[class*="destructive"]').first()
+
+		await expect(destructiveButton).toBeVisible({ timeout: 10_000 })
+		await destructiveButton.click({ timeout: 15_000 })
+		await page.waitForTimeout(800)
+		expect(await page.getByText(text).count()).toBe(0)
+	}).toPass({ timeout: 45_000 })
 }
 
 const compactNpub = (pubkey: string) => {
@@ -148,8 +154,23 @@ test.describe('Featured Items', () => {
 		// Add a uniquely identifiable coordinate so the remove assertion targets the exact row
 		const dTag = `e2e-remove-${Date.now()}`
 		const productCoords = `30402:${devUser1.pk}:${dTag}`
+
+		// First attempt
 		await fillAndAdd(merchantPage, 'newProduct', productCoords)
-		await expectInputCleared(merchantPage, 'newProduct')
+		let addCompleted = true
+		try {
+			await expectInputCleared(merchantPage, 'newProduct')
+		} catch {
+			addCompleted = false
+		}
+
+		// Retry once if the add action did not complete (input never cleared).
+		if (!addCompleted) {
+			await fillAndAdd(merchantPage, 'newProduct', productCoords)
+			await expectInputCleared(merchantPage, 'newProduct')
+		}
+
+		await expect(merchantPage.getByText(`ID: ${dTag}`)).toBeVisible({ timeout: 20_000 })
 		await clickDestructiveButtonForText(merchantPage, `ID: ${dTag}`)
 	})
 

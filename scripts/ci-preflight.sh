@@ -27,6 +27,7 @@ bash scripts/e2e-ci-parity.sh \
 if [[ "$MODE" == "commit" || "$MODE" == "full" ]]; then
 	echo "[preflight] Stage 5: Critical checkout/payment gate"
 	bash scripts/e2e-ci-parity.sh \
+		e2e-new/tests/app-settings.spec.ts \
 		e2e-new/tests/checkout.spec.ts \
 		e2e-new/tests/marketplace.spec.ts \
 		e2e-new/tests/order-lifecycle.spec.ts \

@@ -4,6 +4,7 @@ const SERVER_URL = 'https://contextvm.org/s/29bd6461f780c07b29c89b4df8017db90973
 const EXPECTED_PUBKEY = '29bd6461f780c07b29c89b4df8017db90973d5608a3cd811a0522b15c1064f15'
 
 const TEST_PRIVATE_KEY = process.env.TEST_CONTEXTVM_NSEC
+const RUN_CONTEXTVM_ORG_TESTS = process.env.RUN_CONTEXTVM_ORG_TESTS === 'true'
 
 async function loginToContextVm(page: import('@playwright/test').Page) {
 	if (!TEST_PRIVATE_KEY) {
@@ -62,6 +63,10 @@ async function waitForToolResult(page: import('@playwright/test').Page, timeoutM
 }
 
 test.describe.configure({ timeout: 60_000 })
+
+test.beforeEach(async ({}, testInfo) => {
+	testInfo.skip(!RUN_CONTEXTVM_ORG_TESTS, 'Set RUN_CONTEXTVM_ORG_TESTS=true to run external ContextVM.org e2e tests.')
+})
 
 test.describe('ContextVM.org - Server Page (no login required)', () => {
 	test('server page loads with correct name and version', async ({ page }) => {

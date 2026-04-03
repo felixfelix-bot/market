@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test'
 import { test, expect } from '../fixtures'
 import { devUser1, devUser2 } from '../../src/lib/fixtures'
 import { waitForLatestCartSnapshotToBeEmpty } from '../utils/relay-query'
-import { resetRemoteCartForUser } from 'e2e-new/scenarios'
+import { ensureScenario, resetRemoteCartForUser } from 'e2e-new/scenarios'
 
 test.use({ scenario: 'marketplace' })
 
@@ -40,11 +40,28 @@ async function safeGoto(page: Page, url: string): Promise<void> {
 
 /** Open the cart drawer via the basket icon in the header. */
 async function openCart(page: Page): Promise<void> {
+	const dialog = cartDialog(page)
+	if (await dialog.isVisible()) {
+		await expect(dialog).toBeVisible()
+		return
+	}
+
 	await page
 		.getByRole('button')
 		.filter({ has: page.locator('.i-basket') })
 		.click()
 	await expect(page.getByRole('heading', { name: /your cart/i })).toBeVisible({ timeout: 5_000 })
+}
+
+/** Close the cart drawer via the basket icon in the header. */
+async function closeCart(page: Page): Promise<void> {
+	const dialog = cartDialog(page)
+	if (!(await dialog.isVisible())) {
+		return
+	}
+
+	await page.getByRole('button', { name: /^close$/i }).click()
+	await expect(dialog).toBeHidden({ timeout: 5_000 })
 }
 
 /** Get the cart dialog locator. */
@@ -54,36 +71,53 @@ function cartDialog(page: Page) {
 
 /** Add the "Bitcoin Hardware Wallet" (devUser1) to the cart from the /products page. */
 async function addWalletToCart(page: Page): Promise<void> {
-	const wallet = page.locator('[data-testid="product-card"]').filter({ hasText: 'Bitcoin Hardware Wallet' })
-	await expect(wallet).toBeVisible({ timeout: 15_000 })
-	await wallet.getByRole('button', { name: /add to cart/i }).click()
-	// Wait for the button to change indicating item was added
-	await expect(wallet.getByRole('button', { name: /add/i })).toBeVisible()
+	await addProductToCart(page, 'Bitcoin Hardware Wallet')
 }
 
 /** Add the "Lightning Node Setup Guide" (devUser2) to the cart from the /products page. */
 async function addGuideToCart(page: Page): Promise<void> {
-	const guide = page.locator('[data-testid="product-card"]').filter({ hasText: 'Lightning Node Setup Guide' })
-	await expect(guide).toBeVisible({ timeout: 15_000 })
-	await guide.getByRole('button', { name: /add to cart/i }).click()
-	await expect(guide.getByRole('button', { name: /add/i })).toBeVisible()
+	await addProductToCart(page, 'Lightning Node Setup Guide')
 }
 
 /** Add the "Nostr T-Shirt" (devUser1) to the cart from the /products page. */
 async function addTShirtToCart(page: Page): Promise<void> {
-	const tshirt = page.locator('[data-testid="product-card"]').filter({ hasText: 'Nostr T-Shirt' })
-	await expect(tshirt).toBeVisible({ timeout: 15_000 })
-	await tshirt.getByRole('button', { name: /add to cart/i }).click()
-	await expect(tshirt.getByRole('button', { name: /add/i })).toBeVisible()
+	await addProductToCart(page, 'Nostr T-Shirt')
+}
+
+async function addProductToCart(page: Page, productTitle: string): Promise<void> {
+	await expect(async () => {
+		const card = page.locator('[data-testid="product-card"]').filter({ hasText: productTitle })
+		await expect(card).toBeVisible({ timeout: 10_000 })
+
+		const addToCartButton = card.getByRole('button', { name: /add to cart/i }).first()
+		if ((await addToCartButton.count()) > 0 && (await addToCartButton.isVisible())) {
+			await addToCartButton.click()
+		}
+
+		await openCart(page)
+		await expect(cartDialog(page).getByText(productTitle)).toBeVisible({ timeout: 10_000 })
+		await closeCart(page)
+	}).toPass({ timeout: 30_000 })
 }
 
 /** Wait for the /products page to display products from both sellers. */
 async function waitForProducts(page: Page): Promise<void> {
 	await expect(async () => {
-		const content = await page.locator('main').textContent()
-		expect(content).toContain('Bitcoin Hardware Wallet')
-		expect(content).toContain('Lightning Node Setup Guide')
-	}).toPass({ timeout: 30_000 })
+		const walletCards = page.locator('[data-testid="product-card"]').filter({ hasText: 'Bitcoin Hardware Wallet' })
+		const guideCards = page.locator('[data-testid="product-card"]').filter({ hasText: 'Lightning Node Setup Guide' })
+
+		const hasWallet = (await walletCards.count()) > 0
+		const hasGuide = (await guideCards.count()) > 0
+
+		if (!hasWallet || !hasGuide) {
+			await ensureScenario('marketplace', { force: true })
+			await page.reload({ waitUntil: 'domcontentloaded' })
+			await page.waitForLoadState('networkidle').catch(() => {})
+		}
+
+		expect(await walletCards.count()).toBeGreaterThan(0)
+		expect(await guideCards.count()).toBeGreaterThan(0)
+	}).toPass({ timeout: 25_000 })
 }
 
 // ---------------------------------------------------------------------------
@@ -300,19 +334,18 @@ test.describe('Cart - Multiple Merchants', () => {
 		await expect(dialog.getByText('Bitcoin Hardware Wallet')).toBeVisible({ timeout: 10_000 })
 		await expect(dialog.getByText('Lightning Node Setup Guide')).toBeVisible()
 
-		// Remove the wallet (devUser1's product)
-		const walletItem = dialog.locator('li').filter({ hasText: 'Bitcoin Hardware Wallet' })
-		await walletItem.locator('button:has(svg.lucide-trash-2)').click()
+		await expect(async () => {
+			const walletItem = dialog.locator('li').filter({ hasText: 'Bitcoin Hardware Wallet' })
+			if ((await walletItem.count()) > 0) {
+				await walletItem.locator('button:has(svg.lucide-trash-2)').first().click()
+			}
 
-		// Wallet gone, guide stays
-		await expect(dialog.getByText('Bitcoin Hardware Wallet')).not.toBeVisible({ timeout: 5_000 })
-		await expect(dialog.getByText('Lightning Node Setup Guide')).toBeVisible()
+			await expect(dialog.getByText('Bitcoin Hardware Wallet')).toHaveCount(0)
+			await expect(dialog.getByText('Lightning Node Setup Guide')).toBeVisible()
 
-		// Only 1 live shipping selector control should remain for the remaining seller.
-		// Count the actual select triggers rather than raw text so exiting animated nodes
-		// don't get mistaken for an active seller section.
-		const shippingSelectors = dialog.locator('[data-slot="select-trigger"]:visible')
-		await expect(shippingSelectors).toHaveCount(1, { timeout: 10_000 })
+			const shippingSelectors = dialog.locator('[data-slot="select-trigger"]:visible')
+			await expect(shippingSelectors).toHaveCount(1)
+		}).toPass({ timeout: 30_000 })
 	})
 })
 

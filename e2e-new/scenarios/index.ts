@@ -16,8 +16,9 @@ const seededScenarios = new Set<ScenarioName>()
  * Ensures a scenario has been seeded. Scenarios are cumulative and idempotent
  * within a worker process.
  */
-export async function ensureScenario(scenario: ScenarioName): Promise<void> {
-	if (scenario === 'none' || seededScenarios.has(scenario)) return
+export async function ensureScenario(scenario: ScenarioName, options?: { force?: boolean }): Promise<void> {
+	const force = options?.force ?? false
+	if (scenario === 'none' || (!force && seededScenarios.has(scenario))) return
 
 	const relay = await Relay.connect(RELAY_URL)
 
@@ -27,11 +28,11 @@ export async function ensureScenario(scenario: ScenarioName): Promise<void> {
 				await seedBase(relay)
 				break
 			case 'merchant':
-				await ensureScenario('base')
+				await ensureScenario('base', { force })
 				await seedMerchant(relay)
 				break
 			case 'marketplace':
-				await ensureScenario('merchant')
+				await ensureScenario('merchant', { force })
 				await seedMarketplace(relay)
 				break
 		}
