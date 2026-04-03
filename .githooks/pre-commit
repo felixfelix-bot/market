@@ -2,9 +2,12 @@
 
 set -euo pipefail
 
-if [[ "${SKIP_LOCAL_PREFLIGHT:-0}" == "1" ]]; then
-	echo "Skipping local pre-commit preflight (SKIP_LOCAL_PREFLIGHT=1)."
-	exit 0
-fi
+echo "Local pre-commit hook temporarily disabled; CI workflow will run checks."
+exit 0
 
-echo "Pre-commit checks are lightweight; running full test preflight on pre-push."
+# if [[ "${SKIP_LOCAL_PREFLIGHT:-0}" == "1" ]]; then
+# 	echo "Skipping local pre-commit preflight (SKIP_LOCAL_PREFLIGHT=1)."
+# 	exit 0
+# fi
+
+# echo "Pre-commit checks are lightweight; running full test preflight on pre-push."

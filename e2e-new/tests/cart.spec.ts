@@ -180,7 +180,7 @@ test.describe('Cart - Remove Items', () => {
 
 test.beforeEach(async () => {
 	// Clear cart for active user
-	await resetRemoteCartForUser(devUser1.sk)
+	await resetRemoteCartForUser(devUser3.sk)
 })
 
 test.describe('Cart - Change Quantity', () => {
