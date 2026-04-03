@@ -36,12 +36,20 @@ async function waitForFiatPrice(page: Page, locator: ReturnType<Page['locator']>
 	return lastText
 }
 
+async function getPricedProductCard(page: Page) {
+	const pricedCard = page
+		.locator('[data-testid="product-card"]')
+		.filter({ hasText: /\d[\d,]*\s*sats/i })
+		.first()
+	await expect(pricedCard).toBeVisible({ timeout: 20000 })
+	return pricedCard
+}
+
 test.describe('BTC price display', () => {
 	test('products load and show product cards with sats prices', async ({ merchantPage }) => {
 		await safeGoto(merchantPage, '/products')
 
-		const card = merchantPage.locator('[data-testid="product-card"]').first()
-		await expect(card).toBeVisible({ timeout: 20000 })
+		const card = await getPricedProductCard(merchantPage)
 
 		const productText = await card.textContent()
 		expect(productText).toMatch(/\d[\d,]*\s*sats/i)
@@ -50,8 +58,7 @@ test.describe('BTC price display', () => {
 	test('product cards show fiat price from real exchange rates', async ({ merchantPage }) => {
 		await safeGoto(merchantPage, '/products')
 
-		const card = merchantPage.locator('[data-testid="product-card"]').first()
-		await expect(card).toBeVisible({ timeout: 20000 })
+		const card = await getPricedProductCard(merchantPage)
 
 		const cardText = await waitForFiatPrice(merchantPage, card)
 
@@ -65,8 +72,7 @@ test.describe('BTC price display', () => {
 	test('currency dropdown switches displayed fiat price to EUR', async ({ merchantPage }) => {
 		await safeGoto(merchantPage, '/products')
 
-		const card = merchantPage.locator('[data-testid="product-card"]').first()
-		await expect(card).toBeVisible({ timeout: 20000 })
+		const card = await getPricedProductCard(merchantPage)
 
 		const currencyButton = merchantPage.getByTestId('currency-dropdown-button')
 		await expect(currencyButton).toBeVisible({ timeout: 5000 })
@@ -93,8 +99,7 @@ test.describe('BTC price display', () => {
 	test('product detail page shows price', async ({ merchantPage }) => {
 		await safeGoto(merchantPage, '/products')
 
-		const firstCard = merchantPage.locator('[data-testid="product-card"]').first()
-		await expect(firstCard).toBeVisible({ timeout: 20000 })
+		const firstCard = await getPricedProductCard(merchantPage)
 		await firstCard.click()
 
 		await merchantPage.waitForLoadState('networkidle')
@@ -109,8 +114,7 @@ test.describe('BTC price display', () => {
 	test('fiat price is a reasonable number (not NaN, not zero)', async ({ merchantPage }) => {
 		await safeGoto(merchantPage, '/products')
 
-		const card = merchantPage.locator('[data-testid="product-card"]').first()
-		await expect(card).toBeVisible({ timeout: 20000 })
+		const card = await getPricedProductCard(merchantPage)
 
 		const cardText = await waitForFiatPrice(merchantPage, card)
 

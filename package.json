@@ -38,6 +38,7 @@
 		"e2e:ci-parity": "bash scripts/e2e-ci-parity.sh",
 		"test:integration:local": "bash scripts/integration-local.sh",
 		"ci:preflight": "bash scripts/ci-preflight.sh quick",
+		"ci:preflight:commit": "bash scripts/ci-preflight.sh commit",
 		"ci:preflight:full": "bash scripts/ci-preflight.sh full",
 		"hooks:install": "bash scripts/install-pre-push-hook.sh",
 		"dev:currency-server": "bun run contextvm/server.ts",

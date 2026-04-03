@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../fixtures'
 import { setupLnurlMock } from '../helpers/lnurl-mock'
-import { waitForWebLnPaymentReady } from '../helpers/checkout-payment'
+import { waitForPayLaterReady } from '../helpers/checkout-payment'
 import { RelayMonitor } from '../fixtures/relay-monitor'
 import { queryRelayEvents, filterByTag } from '../utils/relay-query'
 import { WALLETED_USER_LUD16, devUser1, devUser2 } from '../../src/lib/fixtures'
@@ -145,7 +145,10 @@ test.describe('Receiving Payments Configuration', () => {
 		// Delete the temporary method specifically so seeded checkout payment details stay intact
 		const tempRow = merchantPage.locator('div').filter({ hasText: tempAddress }).first()
 		await expect(tempRow).toBeVisible({ timeout: 10_000 })
-		await tempRow.getByRole('button', { name: /delete payment detail/i }).click()
+		await tempRow
+			.getByRole('button', { name: /delete payment detail/i })
+			.first()
+			.click()
 
 		// After deletion, one fewer delete button should remain (seeded method stays available)
 		await expect(deleteButtons).toHaveCount(countBefore - 1, { timeout: 10_000 })
@@ -313,6 +316,7 @@ async function continueFromSummaryToPayment(page: Page): Promise<void> {
 
 async function skipAllInvoices(page: Page): Promise<void> {
 	await expect(page.getByText('Invoices', { exact: true })).toBeVisible({ timeout: 30_000 })
+	const nextPaymentButton = page.getByRole('button', { name: /next payment/i })
 
 	while (
 		(await page
@@ -320,10 +324,16 @@ async function skipAllInvoices(page: Page): Promise<void> {
 			.isVisible()
 			.catch(() => false)) === false
 	) {
-		const skipButton = page.getByRole('button', { name: /skip payment|pay later/i })
-		await expect(skipButton.first()).toBeVisible({ timeout: 10_000 })
+		if (await nextPaymentButton.isVisible().catch(() => false)) {
+			await neutralizeBlockingToasts(page)
+			await nextPaymentButton.click()
+			await page.waitForTimeout(500)
+			continue
+		}
+
+		const skipButton = await waitForPayLaterReady(page, { timeoutMs: 10_000 })
 		await neutralizeBlockingToasts(page)
-		await skipButton.first().click()
+		await skipButton.click()
 		await page.waitForTimeout(500)
 	}
 }
@@ -356,7 +366,7 @@ test.describe('Checkout Flow', () => {
 
 		await test.step('Create the order and open the payment step', async () => {
 			await continueFromSummaryToPayment(buyerPage)
-			await waitForWebLnPaymentReady(buyerPage)
+			await waitForPayLaterReady(buyerPage, { timeoutMs: 30_000 })
 		})
 
 		await test.step('Skip all mocked invoices and finish checkout', async () => {
@@ -409,13 +419,16 @@ test.describe('Checkout Flow', () => {
 		await continueFromSummaryToPayment(buyerPage)
 
 		await expect(buyerPage.getByText('Invoices', { exact: true })).toBeVisible({ timeout: 30_000 })
-		const payLaterButton = buyerPage.getByRole('button', { name: /pay later/i })
-		await expect(payLaterButton).toBeVisible({ timeout: 10_000 })
+		const payLaterButton = await waitForPayLaterReady(buyerPage, { timeoutMs: 15_000 })
 		await neutralizeBlockingToasts(buyerPage)
 		await payLaterButton.click()
 
 		await expect(buyerPage.getByText(/1 of \d+ completed/i)).toBeVisible({ timeout: 15_000 })
 		await expect(buyerPage.getByText(/skipped/i).first()).toBeVisible({ timeout: 10_000 })
-		await expect(buyerPage.getByRole('button', { name: /pay later/i })).toBeVisible({ timeout: 10_000 })
+		const nextPaymentButton = buyerPage.getByRole('button', { name: /next payment/i })
+		await expect(nextPaymentButton).toBeVisible({ timeout: 15_000 })
+		await neutralizeBlockingToasts(buyerPage)
+		await nextPaymentButton.click()
+		await waitForPayLaterReady(buyerPage, { timeoutMs: 15_000 })
 	})
 })

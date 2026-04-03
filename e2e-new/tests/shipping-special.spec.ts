@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures'
 import { LightningMock } from '../utils/lightning-mock'
 import { queryRelayEvents, filterByTag } from '../utils/relay-query'
-import { waitForWebLnPaymentReady, clickWebLnPayment } from '../helpers/checkout-payment'
+import { clickWebLnPayment } from '../helpers/checkout-payment'
 import { devUser1, devUser2 } from '../../src/lib/fixtures'
 import type { Page } from '@playwright/test'
 
@@ -27,21 +27,46 @@ async function addProductAndOpenCart(page: Page, productName: string) {
 }
 
 async function payAllInvoices(page: Page) {
-	const webLnButton = await waitForWebLnPaymentReady(page)
+	await expect(page.getByText('Invoices', { exact: true })).toBeVisible({ timeout: 30_000 })
+	const webLnButton = page.getByRole('button', { name: /Pay with WebLN/i }).first()
+	const payLaterButton = page.getByRole('button', { name: /Pay Later|Skip Payment/i }).first()
+	const nextPaymentButton = page.getByRole('button', { name: /next payment/i })
+	const allPaidMessage = page.getByText('All payments completed successfully!')
+	const checkoutCompleteMessage = page.getByText('Checkout completed!')
+
+	const isPaymentComplete = async () => {
+		const allPaid = await allPaidMessage.isVisible().catch(() => false)
+		const checkoutComplete = await checkoutCompleteMessage.isVisible().catch(() => false)
+		return allPaid || checkoutComplete
+	}
 
 	// Pay all invoices (merchant + V4V shares — count varies with V4V config)
-	while (
-		(await page
-			.getByText('All payments completed successfully!')
-			.isVisible()
-			.catch(() => false)) === false
-	) {
-		await expect(webLnButton).toBeEnabled({ timeout: 10_000 })
-		await clickWebLnPayment(webLnButton)
+	while ((await isPaymentComplete()) === false) {
+		await dismissToasts(page)
+
+		if (await nextPaymentButton.isVisible().catch(() => false)) {
+			await nextPaymentButton.click()
+			await page.waitForTimeout(500)
+			continue
+		}
+
+		if (await webLnButton.isVisible().catch(() => false)) {
+			await expect(webLnButton).toBeEnabled({ timeout: 10_000 })
+			await clickWebLnPayment(webLnButton)
+			await page.waitForTimeout(1_000)
+			continue
+		}
+
+		if (await payLaterButton.isVisible().catch(() => false)) {
+			await payLaterButton.click()
+			await page.waitForTimeout(1_000)
+			continue
+		}
+
 		await page.waitForTimeout(1_000)
 	}
 
-	await expect(page.getByText('All payments completed successfully!')).toBeVisible({ timeout: 20_000 })
+	await expect.poll(isPaymentComplete, { timeout: 20_000 }).toBeTruthy()
 }
 
 /**

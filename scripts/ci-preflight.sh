@@ -4,8 +4,8 @@ set -euo pipefail
 
 MODE="${1:-quick}"
 
-if [[ "$MODE" != "quick" && "$MODE" != "full" ]]; then
-	echo "Usage: scripts/ci-preflight.sh [quick|full]"
+if [[ "$MODE" != "quick" && "$MODE" != "commit" && "$MODE" != "full" ]]; then
+	echo "Usage: scripts/ci-preflight.sh [quick|commit|full]"
 	exit 1
 fi
 
@@ -24,8 +24,20 @@ bash scripts/e2e-ci-parity.sh \
 	e2e-new/tests/btc-price.spec.ts \
 	e2e-new/tests/checkout.spec.ts
 
+if [[ "$MODE" == "commit" || "$MODE" == "full" ]]; then
+	echo "[preflight] Stage 5: Critical checkout/payment gate"
+	bash scripts/e2e-ci-parity.sh \
+		e2e-new/tests/checkout.spec.ts \
+		e2e-new/tests/marketplace.spec.ts \
+		e2e-new/tests/order-lifecycle.spec.ts \
+		e2e-new/tests/order-messaging.spec.ts \
+		e2e-new/tests/payments.spec.ts \
+		e2e-new/tests/shipping-special.spec.ts \
+		e2e-new/tests/collections.spec.ts
+fi
+
 if [[ "$MODE" == "full" ]]; then
-	echo "[preflight] Stage 5: Extended checkout/payment gate"
+	echo "[preflight] Stage 6: Extended checkout/payment gate"
 	bash scripts/e2e-ci-parity.sh \
 		e2e-new/tests/checkout.spec.ts \
 		e2e-new/tests/payments.spec.ts \
@@ -34,7 +46,7 @@ if [[ "$MODE" == "full" ]]; then
 		e2e-new/tests/shipping-special.spec.ts \
 		e2e-new/tests/zaps.spec.ts
 
-	echo "[preflight] Stage 6: Full CI-parity E2E run"
+	echo "[preflight] Stage 7: Full CI-parity E2E run"
 	bash scripts/e2e-ci-parity.sh
 fi
 

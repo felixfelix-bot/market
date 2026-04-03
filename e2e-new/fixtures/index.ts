@@ -4,6 +4,38 @@ import { setupAuthContext, type TestUser } from './auth'
 import { ensureScenario, resetRemoteCartForUser, type ScenarioName } from '../scenarios'
 import { devUser1, devUser2, devUser3 } from '../../src/lib/fixtures'
 
+async function installE2EStyleGuards(page: Page): Promise<void> {
+	await page.addInitScript(() => {
+		const ensureStyle = () => {
+			if (document.getElementById('e2e-pointer-guards')) return
+			const style = document.createElement('style')
+			style.id = 'e2e-pointer-guards'
+			style.textContent = `bun-hmr { pointer-events: none !important; }`
+			document.head.appendChild(style)
+		}
+
+		const removeBunHmr = () => {
+			document.querySelectorAll('bun-hmr').forEach((node) => node.remove())
+		}
+
+		if (document.readyState === 'loading') {
+			document.addEventListener(
+				'DOMContentLoaded',
+				() => {
+					ensureStyle()
+					removeBunHmr()
+					new MutationObserver(removeBunHmr).observe(document.documentElement, { childList: true, subtree: true })
+				},
+				{ once: true },
+			)
+		} else {
+			ensureStyle()
+			removeBunHmr()
+			new MutationObserver(removeBunHmr).observe(document.documentElement, { childList: true, subtree: true })
+		}
+	})
+}
+
 type TestFixtures = {
 	/** Page with devUser1 logged in (merchant / app owner) */
 	merchantPage: Page
@@ -36,6 +68,7 @@ export const test = base.extend<TestFixtures>({
 		const context = await browser.newContext()
 		await setupAuthContext(context, devUser1)
 		const page = await context.newPage()
+		await installE2EStyleGuards(page)
 
 		// Navigate and wait for the app to load
 		await page.goto('/')
@@ -53,6 +86,7 @@ export const test = base.extend<TestFixtures>({
 		const context = await browser.newContext()
 		await setupAuthContext(context, devUser2)
 		const page = await context.newPage()
+		await installE2EStyleGuards(page)
 
 		await page.goto('/')
 		await page.waitForLoadState('networkidle')
@@ -68,6 +102,7 @@ export const test = base.extend<TestFixtures>({
 		const context = await browser.newContext()
 		await setupAuthContext(context, devUser3)
 		const page = await context.newPage()
+		await installE2EStyleGuards(page)
 
 		await page.goto('/')
 		await page.waitForLoadState('networkidle')

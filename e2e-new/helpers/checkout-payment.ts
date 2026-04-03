@@ -5,18 +5,36 @@ type WaitForWebLnOptions = {
 	maxInvoiceRetries?: number
 }
 
+type WaitForPaymentButtonOptions = WaitForWebLnOptions & {
+	buttonName: RegExp
+}
+
 export async function waitForWebLnPaymentReady(page: Page, options: WaitForWebLnOptions = {}): Promise<Locator> {
+	return waitForPaymentButtonReady(page, {
+		...options,
+		buttonName: /Pay with WebLN/i,
+	})
+}
+
+export async function waitForPayLaterReady(page: Page, options: WaitForWebLnOptions = {}): Promise<Locator> {
+	return waitForPaymentButtonReady(page, {
+		...options,
+		buttonName: /Pay Later|Skip Payment/i,
+	})
+}
+
+async function waitForPaymentButtonReady(page: Page, options: WaitForPaymentButtonOptions): Promise<Locator> {
 	const timeoutMs = options.timeoutMs ?? 30_000
 	const maxInvoiceRetries = options.maxInvoiceRetries ?? 2
-	const webLnButton = page.getByRole('button', { name: /Pay with WebLN/i }).first()
+	const button = page.getByRole('button', { name: options.buttonName }).first()
 	const deadline = Date.now() + timeoutMs
 	let retriesUsed = 0
 
 	await expect(page.getByText('Invoices', { exact: true }).first()).toBeVisible({ timeout: timeoutMs })
 
 	while (Date.now() < deadline) {
-		if (await webLnButton.isVisible().catch(() => false)) {
-			return webLnButton
+		if (await button.isVisible().catch(() => false)) {
+			return button
 		}
 
 		const generatingInvoices = page.getByText('Generating Lightning invoices...')
@@ -55,7 +73,7 @@ export async function waitForWebLnPaymentReady(page: Page, options: WaitForWebLn
 			.textContent()
 			.catch(() => '')) || ''
 	).slice(0, 600)
-	throw new Error(`Timed out waiting for \"Pay with WebLN\". Page excerpt: ${bodyText}`)
+	throw new Error(`Timed out waiting for payment button ${options.buttonName}. Page excerpt: ${bodyText}`)
 }
 
 export async function clickWebLnPayment(button: Locator): Promise<void> {
