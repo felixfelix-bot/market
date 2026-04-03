@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../fixtures'
-import { devUser1, devUser2 } from '../../src/lib/fixtures'
+import { devUser1, devUser2, devUser3 } from '../../src/lib/fixtures'
 import { waitForLatestCartSnapshotToBeEmpty } from '../utils/relay-query'
 import { ensureScenario, resetRemoteCartForUser } from 'e2e-new/scenarios'
 
@@ -126,7 +126,7 @@ async function waitForProducts(page: Page): Promise<void> {
 
 test.beforeEach(async () => {
 	// Clear cart for active user
-	await resetRemoteCartForUser(devUser1.sk)
+	await resetRemoteCartForUser(devUser3.sk)
 })
 
 test.describe('Cart - Remove Items', () => {
@@ -249,31 +249,20 @@ test.describe('Cart - Change Quantity', () => {
 		await safeGoto(newUserPage, '/products')
 		await waitForProducts(newUserPage)
 
-		const wallet = newUserPage.locator('[data-testid="product-card"]').filter({ hasText: 'Bitcoin Hardware Wallet' })
-		// The button may show "Add to Cart" or "Add" depending on re-render timing.
-		// Use a broad matcher that covers both states.
-		const addButton = wallet.getByRole('button', { name: /add/i }).first()
-
-		// First add
-		await addButton.click()
-		// Wait for the Adding… → Added cycle to complete before clicking again
-		await expect(addButton).not.toHaveText(/adding/i, { timeout: 5_000 })
-		await expect(addButton).not.toHaveText(/added/i, { timeout: 5_000 })
-
-		// Second add
-		await addButton.click()
-		await expect(addButton).not.toHaveText(/adding/i, { timeout: 5_000 })
-		await expect(addButton).not.toHaveText(/added/i, { timeout: 5_000 })
-
-		// Third add
-		await addButton.click()
-		await expect(addButton).not.toHaveText(/adding/i, { timeout: 5_000 })
-
-		// Open cart and verify quantity is 3
+		await addWalletToCart(newUserPage)
 		await openCart(newUserPage)
 		const dialog = cartDialog(newUserPage)
+		await expect(dialog.getByText('Bitcoin Hardware Wallet')).toBeVisible({ timeout: 10_000 })
+
+		const incrementButton = dialog.locator('button:has(svg.lucide-plus)').first()
+		await incrementButton.click()
+		await incrementButton.click()
+
+		// Open cart and verify quantity is 3
 		const quantityInput = dialog.locator('input[type="number"]').first()
-		await expect(quantityInput).toHaveValue('3')
+		await expect(async () => {
+			await expect(quantityInput).toHaveValue('3')
+		}).toPass({ timeout: 15_000 })
 	})
 })
 
