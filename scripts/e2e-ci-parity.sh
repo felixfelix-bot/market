@@ -8,6 +8,7 @@ CURRENCY_LOG="${CURRENCY_LOG:-/tmp/currency-server.log}"
 
 TEST_PORT="${TEST_PORT:-34567}"
 RELAY_URL="${RELAY_URL:-ws://localhost:10547}"
+APP_HEALTH_URL="${APP_HEALTH_URL:-http://127.0.0.1:${TEST_PORT}/api/config}"
 APP_PRIVATE_KEY="${APP_PRIVATE_KEY:-e2e0000000000000000000000000000000000000000000000000000000000001}"
 CVM_SERVER_KEY="${CVM_SERVER_KEY:-2300f5fff5642341946758cad8214f2c54f3c40fba5ba51b616452b197fd3e71}"
 
@@ -67,12 +68,24 @@ nohup env NODE_ENV=test PORT="$TEST_PORT" APP_RELAY_URL="$RELAY_URL" APP_PRIVATE
 DEV_PID=$!
 
 echo "Waiting for app server on port $TEST_PORT..."
+app_ready=false
 for i in $(seq 1 45); do
-	if curl -sf "http://localhost:${TEST_PORT}/api/config" > /dev/null 2>&1; then
+	if curl -sf "$APP_HEALTH_URL" > /dev/null 2>&1; then
+		app_ready=true
 		break
 	fi
 	sleep 1
 done
+
+if [[ "$app_ready" != "true" ]]; then
+	echo "::error::App server did not become ready at $APP_HEALTH_URL"
+	exit 1
+fi
+
+if ! curl -sf "$APP_HEALTH_URL" > /dev/null 2>&1; then
+	echo "::error::App server health check failed immediately before Playwright run: $APP_HEALTH_URL"
+	exit 1
+fi
 
 echo "Running Playwright with CI parity services..."
 NODE_OPTIONS='--dns-result-order=ipv4first' CI=1 bunx playwright test --config=e2e-new/playwright.config.ts --retries=0 --max-failures=1 --workers=1 "$@"
