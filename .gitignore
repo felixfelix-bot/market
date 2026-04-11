@@ -51,4 +51,5 @@ test-results
 __pycache__/
 
 .opencode/
+.opencode
 contextvm/
