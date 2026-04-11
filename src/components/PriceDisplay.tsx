@@ -71,7 +71,7 @@ export function PriceDisplay({
 
 	const satsValue = getSatsValue()
 	const fiatValue = satsValue ? getFiatValue(satsValue) : null
-	const isLoading = ratesLoading || (!isBitcoinCurrency && satsLoading)
+	const isLoading = !satsValue && (ratesLoading || (!isBitcoinCurrency && satsLoading))
 
 	if (isLoading) {
 		return (

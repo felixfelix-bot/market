@@ -2,7 +2,7 @@ name: E2E Tests
 
 on:
   push:
-    branches: [main, master, 'feature/**']
+    branches: [main, master, get-currency-context-vm, 'feature/**']
   pull_request:
     branches: [main, master]
 
