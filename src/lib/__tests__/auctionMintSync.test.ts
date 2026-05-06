@@ -5,42 +5,22 @@ const EMPTY = new Set<string>()
 
 describe('syncMintSelection', () => {
 	test('adds newly available mints', () => {
-		const result = syncMintSelection(
-			['mint-a', 'mint-b'],
-			['mint-a', 'mint-b', 'mint-c'],
-			['mint-a', 'mint-b'],
-			EMPTY,
-		)
+		const result = syncMintSelection(['mint-a', 'mint-b'], ['mint-a', 'mint-b', 'mint-c'], ['mint-a', 'mint-b'], EMPTY)
 		expect(result).toEqual(['mint-a', 'mint-b', 'mint-c'])
 	})
 
 	test('does not auto-remove mints that leave availableMints', () => {
-		const result = syncMintSelection(
-			['mint-a', 'mint-b', 'mint-c'],
-			['mint-a', 'mint-c'],
-			['mint-a', 'mint-b', 'mint-c'],
-			EMPTY,
-		)
+		const result = syncMintSelection(['mint-a', 'mint-b', 'mint-c'], ['mint-a', 'mint-c'], ['mint-a', 'mint-b', 'mint-c'], EMPTY)
 		expect(result).toEqual(['mint-a', 'mint-b', 'mint-c'])
 	})
 
 	test('preserves user explicit removals when available is unchanged', () => {
-		const result = syncMintSelection(
-			['mint-a', 'mint-b', 'mint-c'],
-			['mint-a', 'mint-b', 'mint-c'],
-			['mint-a'],
-			EMPTY,
-		)
+		const result = syncMintSelection(['mint-a', 'mint-b', 'mint-c'], ['mint-a', 'mint-b', 'mint-c'], ['mint-a'], EMPTY)
 		expect(result).toEqual(['mint-a'])
 	})
 
 	test('handles add and keep simultaneously', () => {
-		const result = syncMintSelection(
-			['mint-a', 'mint-b'],
-			['mint-a', 'mint-c', 'mint-d'],
-			['mint-a', 'mint-b'],
-			EMPTY,
-		)
+		const result = syncMintSelection(['mint-a', 'mint-b'], ['mint-a', 'mint-c', 'mint-d'], ['mint-a', 'mint-b'], EMPTY)
 		expect(result).toEqual(['mint-a', 'mint-b', 'mint-c', 'mint-d'])
 	})
 
@@ -62,12 +42,7 @@ describe('syncMintSelection', () => {
 
 	test('returning mint is not re-added when user explicitly removed it', () => {
 		const removed = new Set(['mint-b'])
-		const result = syncMintSelection(
-			['mint-a', 'mint-b'],
-			['mint-a', 'mint-b', 'mint-c'],
-			['mint-a'],
-			removed,
-		)
+		const result = syncMintSelection(['mint-a', 'mint-b'], ['mint-a', 'mint-b', 'mint-c'], ['mint-a'], removed)
 		expect(result).toEqual(['mint-a', 'mint-c'])
 	})
 
@@ -77,12 +52,7 @@ describe('syncMintSelection', () => {
 	})
 
 	test('does not duplicate mints already in selection', () => {
-		const result = syncMintSelection(
-			['mint-a'],
-			['mint-a', 'mint-b'],
-			['mint-a', 'mint-b'],
-			EMPTY,
-		)
+		const result = syncMintSelection(['mint-a'], ['mint-a', 'mint-b'], ['mint-a', 'mint-b'], EMPTY)
 		expect(result).toEqual(['mint-a', 'mint-b'])
 	})
 })

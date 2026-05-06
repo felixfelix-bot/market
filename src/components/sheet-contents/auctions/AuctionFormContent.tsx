@@ -14,6 +14,7 @@ import {
 	type AuctionPublishValidationField,
 	type AuctionPublishValidationIssue,
 } from '@/lib/auctionPublishValidation'
+import { syncMintSelection } from '@/lib/auctionMintSync'
 import { DEFAULT_TRUSTED_MINTS, PRODUCT_CATEGORIES } from '@/lib/constants'
 import { authStore } from '@/lib/stores/auth'
 import { configStore } from '@/lib/stores/config'
@@ -36,7 +37,7 @@ import { createShippingReference, getShippingInfo, isShippingDeleted, useShippin
 import { useNavigate } from '@tanstack/react-router'
 import { useStore } from '@tanstack/react-store'
 import { CalendarIcon, Plus, X } from 'lucide-react'
-import { useMemo, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react'
+import { useEffect, useMemo, useRef, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react'
 
 type AuctionImage = { imageUrl: string; imageOrder: number }
 
@@ -806,6 +807,8 @@ function AuctionTabContent({
 	durationSeconds,
 	setDurationSeconds,
 	validationMessages,
+	userRemovedMints,
+	onUserRemovedMintsChange,
 }: TabProps & {
 	availableMints: readonly string[]
 	startMode: StartMode
@@ -815,6 +818,8 @@ function AuctionTabContent({
 	durationSeconds: number
 	setDurationSeconds: Dispatch<SetStateAction<number>>
 	validationMessages: ValidationMessages
+	userRemovedMints: Set<string>
+	onUserRemovedMintsChange: (next: Set<string>) => void
 }) {
 	const selectedMints = formData.trustedMints
 	const unselectedMints = availableMints.filter((mint) => !selectedMints.includes(mint))
@@ -823,11 +828,17 @@ function AuctionTabContent({
 	const removeMint = (mint: string) => {
 		if (!canRemoveMint) return
 		setFormData((prev) => ({ ...prev, trustedMints: prev.trustedMints.filter((m) => m !== mint) }))
+		onUserRemovedMintsChange(new Set(userRemovedMints).add(mint))
 	}
 
 	const addMint = (mint: string) => {
 		if (selectedMints.includes(mint)) return
 		setFormData((prev) => ({ ...prev, trustedMints: [...prev.trustedMints, mint] }))
+		if (userRemovedMints.has(mint)) {
+			const next = new Set(userRemovedMints)
+			next.delete(mint)
+			onUserRemovedMintsChange(next)
+		}
 	}
 
 	const startingBidNum = parseInt(formData.startingBid, 10)
@@ -1487,6 +1498,25 @@ export function AuctionFormContent() {
 		[walletDevMode],
 	)
 
+	const prevAvailableMintsRef = useRef(availableMints)
+	const userRemovedMintsRef = useRef<Set<string>>(new Set())
+
+	const setUserRemovedMints = (next: Set<string>) => {
+		userRemovedMintsRef.current = next
+	}
+
+	useEffect(() => {
+		const prev = prevAvailableMintsRef.current
+		if (prev === availableMints) return
+
+		setFormData((prevForm) => ({
+			...prevForm,
+			trustedMints: syncMintSelection(prev, availableMints, prevForm.trustedMints, userRemovedMintsRef.current),
+		}))
+
+		prevAvailableMintsRef.current = availableMints
+	}, [availableMints])
+
 	const [formData, setFormData] = useState<AuctionFormData>(() => ({ ...INITIAL_FORM, trustedMints: [...availableMints] }))
 	const [images, setImages] = useState<AuctionImage[]>([])
 	const [activeTab, setActiveTab] = useState<AuctionTab>('name')
@@ -1609,6 +1639,8 @@ export function AuctionFormContent() {
 								durationSeconds={durationSeconds}
 								setDurationSeconds={setDurationSeconds}
 								validationMessages={validationMessages}
+								userRemovedMints={userRemovedMintsRef.current}
+								onUserRemovedMintsChange={setUserRemovedMints}
 							/>
 						</TabsContent>
 						<TabsContent value="category" className="mt-4">
