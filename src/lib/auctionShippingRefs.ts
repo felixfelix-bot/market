@@ -33,12 +33,13 @@ export function parseAuctionShippingRef(shippingRef: string): Pick<ValidAuctionS
 }
 
 export function getUniqueAuctionShippingRefs(inputs: AuctionShippingRefInput[]): AuctionShippingRef[] {
-	const seenShippingRefs = new Set<string>()
+	const seenKeys = new Set<string>()
 	const refs: AuctionShippingRef[] = []
 
 	for (const input of inputs) {
-		if (seenShippingRefs.has(input.shippingRef)) continue
-		seenShippingRefs.add(input.shippingRef)
+		const dedupeKey = `${input.shippingRef}|${input.extraCost}`
+		if (seenKeys.has(dedupeKey)) continue
+		seenKeys.add(dedupeKey)
 
 		const parsed = parseAuctionShippingRef(input.shippingRef)
 		if (!parsed) {
