@@ -15,6 +15,18 @@ function unselectedMintLocator(page: import('@playwright/test').Page, mintUrl: s
 	return page.locator('button').filter({ has: page.locator(`span[title="${mintUrl}"]`) })
 }
 
+/**
+ * NOTE: Dynamic availableMints re-sync (the core bug) is not tested here because
+ * the test environment (NODE_ENV=test, hostname=localhost) forces
+ * isNip60WalletDevModeEnabled() to always return true, making availableMints
+ * static for the entire session. Flipping it at runtime would require exposing
+ * configStore on window, which is an app change for test-only purposes.
+ *
+ * Full coverage of the re-sync logic lives in the unit tests:
+ *   src/lib/__tests__/auctionMintSync.test.ts
+ * Key cases: "returning mint is not re-added when user explicitly removed it"
+ *            "returning mint IS re-added when user did not remove it"
+ */
 test.describe('Auction Mint State', () => {
 	test('trusted mints initialize with available mints', async ({ merchantPage }) => {
 		test.setTimeout(60_000)
