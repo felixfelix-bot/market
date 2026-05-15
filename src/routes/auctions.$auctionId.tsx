@@ -617,10 +617,10 @@ function AuctionDetailRoute() {
 													const extraCostNumber = option.extraCost ? Number(option.extraCost) : 0
 													const hasExtraCost = !Number.isNaN(extraCostNumber) && extraCostNumber > 0
 													return (
-														<li key={`${option.shippingRef}-${option.extraCost}-${index}`} className="rounded-lg border border-zinc-200 bg-white px-3 py-2">
+														<li key={`${option.shippingRef}-${index}`} className="rounded-lg border border-zinc-200 bg-white px-3 py-2">
 															{option.status === 'invalid' ? (
 																<div className="space-y-1">
-																	<p className="font-medium text-amber-600">Invalid shipping reference</p>
+																	<p className="font-medium text-zinc-900">Invalid shipping reference</p>
 																	<p className="break-all text-xs text-zinc-500">{option.shippingRef}</p>
 																</div>
 															) : option.isLoading ? (
@@ -637,8 +637,8 @@ function AuctionDetailRoute() {
 																</div>
 															) : (
 																<div className="space-y-1">
-																	<p className="font-medium text-zinc-500">Shipping option not found</p>
-																	<p className="break-all text-xs text-zinc-400">{option.shippingRef}</p>
+																	<p className="font-medium text-zinc-900">Shipping option unavailable</p>
+																	<p className="break-all text-xs text-zinc-500">{option.shippingRef}</p>
 																</div>
 															)}
 														</li>

@@ -30,7 +30,7 @@ test.describe('Auction Shipping Display', () => {
 		await expect(merchantPage.getByText('Base:')).toBeVisible()
 	})
 
-	test('deduplicates shipping refs with same ref and extraCost', async ({ merchantPage }) => {
+	test('deduplicates shipping refs by shippingRef, first occurrence wins', async ({ merchantPage }) => {
 		test.setTimeout(60_000)
 
 		const shippingRef = `30406:${devUser1.pk}:digital-delivery`
@@ -39,7 +39,7 @@ test.describe('Auction Shipping Display', () => {
 			title: 'Dedup Test',
 			shippingOptions: [
 				{ shippingRef, extraCost: '0' },
-				{ shippingRef, extraCost: '0' },
+				{ shippingRef, extraCost: '500' },
 			],
 		})
 		relay.close()
@@ -53,31 +53,7 @@ test.describe('Auction Shipping Display', () => {
 		await expect(shippingItems).toHaveCount(1, { timeout: 15_000 })
 	})
 
-	test('keeps entries with different extraCost for same ref', async ({ merchantPage }) => {
-		test.setTimeout(60_000)
-
-		const shippingRef = `30406:${devUser1.pk}:worldwide-standard`
-		const relay = await Relay.connect(RELAY_URL)
-		const auctionEvent = await seedAuction(relay, devUser1.sk, {
-			title: 'ExtraCost Test',
-			shippingOptions: [
-				{ shippingRef, extraCost: '0' },
-				{ shippingRef, extraCost: '500' },
-			],
-		})
-		relay.close()
-
-		await merchantPage.goto(`/auctions/${auctionEvent.id}`)
-		await merchantPage.waitForLoadState('networkidle')
-
-		await merchantPage.getByRole('tab', { name: 'Description' }).click()
-
-		const shippingItems = merchantPage.locator('li').filter({ hasText: 'Worldwide Standard' })
-		await expect(shippingItems).toHaveCount(2, { timeout: 15_000 })
-		await expect(merchantPage.getByText('Auction extra cost: 500')).toBeVisible()
-	})
-
-	test('shows not found for unresolvable shipping ref', async ({ merchantPage }) => {
+	test('shows unavailable for unresolvable shipping ref', async ({ merchantPage }) => {
 		test.setTimeout(60_000)
 
 		const relay = await Relay.connect(RELAY_URL)
@@ -92,6 +68,6 @@ test.describe('Auction Shipping Display', () => {
 
 		await merchantPage.getByRole('tab', { name: 'Description' }).click()
 
-		await expect(merchantPage.getByText('Shipping option not found')).toBeVisible({ timeout: 15_000 })
+		await expect(merchantPage.getByText('Shipping option unavailable')).toBeVisible({ timeout: 15_000 })
 	})
 })
