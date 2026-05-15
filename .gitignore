@@ -54,3 +54,5 @@ __pycache__/
 contextvm/
 
 PR.md
+Makefile
+src/routeTree.gen.ts
