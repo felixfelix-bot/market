@@ -61,12 +61,15 @@ local rules) so the whole team adopts them:
 
 - [x] Create git worktree `chore/pr1003-review-plan` from `master`
 - [x] Write this planning doc (plan + exact text + checklist)
-- [ ] Write bd issue draft `docs/github-issues/makefile-ansible-reproducibility-issue.md`
-- [ ] Update `AGENTS.md` with local session-rules block
-- [ ] Commit changes on the worktree branch
-- [ ] Push branch to `fork` remote (c03rad0r/market)
-- [ ] Post the review to PR #1003 (request-changes; fall back to comment if no perms)
-- [ ] File bd issue (bd not installed -> pending manual filing; draft ready)
+- [x] Write bd issue draft `docs/github-issues/makefile-ansible-reproducibility-issue.md`
+- [x] Update `AGENTS.md` with local session-rules block
+- [x] Commit changes on the worktree branch (commit `0272d9ad`)
+- [x] Push branch to `fork` remote (c03rad0r/market); used `SKIP_LOCAL_PREFLIGHT=1`
+      because `scripts/ci-preflight.sh` is missing from the repo (hook infra bug)
+- [x] Post the review to PR #1003 — posted as **CHANGES_REQUESTED** on 2026-06-22
+      (review id `PRR_kwDOOFRvT88AAAABDt_l9w`); c03rad0r has MEMBER access, so no fallback needed
+- [ ] File bd issue (bd CLI not installed -> pending manual filing; draft ready at
+      `docs/github-issues/makefile-ansible-reproducibility-issue.md`)
 - [ ] Final verification (`git status --short`) + voice-notify
 
 ---
