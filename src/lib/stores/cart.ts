@@ -1219,6 +1219,7 @@ export const cartActions = {
 	},
 
 	updateV4VShares: async () => {
+		if (!ndkActions.getNDK()) return
 		const state = cartStore.state
 		// Start with existing shares to avoid losing data
 		const shares: Record<string, V4VDTO[]> = { ...state.v4vShares }
@@ -1481,6 +1482,7 @@ export const cartActions = {
 	},
 
 	updateSellerData: async () => {
+		if (!ndkActions.getNDK()) return
 		const state = cartStore.state
 		const { productsBySeller } = state
 		const newSellerData: Record<string, any> = {}
@@ -1660,6 +1662,7 @@ export const cartActions = {
 	},
 
 	fetchAndSetSellerShippingOptions: async () => {
+		if (!ndkActions.getNDK()) return
 		const state = cartStore.state
 		const { productsBySeller, cart } = state
 		const newSellerShippingOptions: Record<string, RichShippingInfo[]> = {}
