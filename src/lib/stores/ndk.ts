@@ -204,6 +204,24 @@ function getRelayUrls(overrideRelays?: string[]): string[] {
 	return Array.from(new Set(relays))
 }
 
+// t_73e313e5: env-gated timing helpers for fetchEventsWithTimeout instrumentation.
+function ioTimingEnabled(): boolean {
+	try {
+		// Works in both Bun/Node (process.env) and browser (Vite/define via process.env shim).
+		return (globalThis as unknown as { process?: { env?: Record<string, string | undefined> } }).process?.env
+			?.NOSTR_IO_TIMING === '1'
+	} catch {
+		return false
+	}
+}
+
+function filterSummary(filters: NDKFilter | NDKFilter[]): string {
+	const arr = Array.isArray(filters) ? filters : [filters]
+	const kinds = Array.from(new Set(arr.flatMap((f) => f.kinds ?? [])))
+	const limits = arr.map((f) => (f.limit !== undefined ? String(f.limit) : '-')).join(',')
+	return `kinds=[${kinds.join(',')}] limit=[${limits}]`
+}
+
 export const ndkActions = {
 	/**
 	 * Ensure the instance relay (config.appRelay) is always present,
@@ -234,16 +252,35 @@ export const ndkActions = {
 
 		const { timeoutMs = 8000, ...subOpts } = opts ?? {}
 
+		// t_73e313e5: env-gated performance.now() instrumentation. Zero overhead
+		// when disabled (default). Enable with NOSTR_IO_TIMING=1 to log every fetch:
+		//   [io] fetch kinds=[..] limit=[..] ms=NNN events=NN by=eose|close|timeout
+		const timingOn = ioTimingEnabled()
+		const t0 = timingOn ? performance.now() : 0
+
 		return await new Promise<Set<NDKEvent>>((resolve) => {
 			const events = new Map<string, NDKEvent>()
 			let settled = false
 			let timer: ReturnType<typeof setTimeout> | undefined
 
-			const finalize = (subscription?: { stop: () => void }) => {
+			const finalize = (
+				subscription?: { stop: () => void },
+				reason: 'eose' | 'close' | 'timeout' = 'close',
+			) => {
 				if (settled) return
 				settled = true
 				if (timer) clearTimeout(timer)
 				subscription?.stop()
+				if (timingOn) {
+					const ms = Math.round(performance.now() - t0)
+					console.debug(
+						'[io] fetch',
+						filterSummary(filters),
+						`ms=${ms}`,
+						`events=${events.size}`,
+						`by=${reason}`,
+					)
+				}
 				resolve(new Set(events.values()))
 			}
 
@@ -263,11 +300,11 @@ export const ndkActions = {
 						events.set(key, event)
 					}
 				},
-				onEose: () => finalize(subscription),
-				onClose: () => finalize(subscription),
+				onEose: () => finalize(subscription, 'eose'),
+				onClose: () => finalize(subscription, 'close'),
 			})
 
-			timer = setTimeout(() => finalize(subscription), timeoutMs)
+			timer = setTimeout(() => finalize(subscription, 'timeout'), timeoutMs)
 		})
 	},
 
