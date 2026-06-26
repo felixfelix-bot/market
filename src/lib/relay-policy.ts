@@ -47,6 +47,13 @@ export interface ComputeNdkConfigInput {
 	overrideRelays?: string[]
 	/** Bun-side flag forcing local-relay-only behavior. */
 	localRelayOnly?: boolean
+	/**
+	 * Production kill-switch for the outbox model (#1046). When true, NDK
+	 * will NOT discover/connect to merchant relays even in production — the
+	 * Go relay (relay.plebeian.market) already carries all events, so the
+	 * 30–45 extra WS connections outbox fan-out opens are wasted.
+	 */
+	disableOutbox?: boolean
 }
 
 /**
@@ -66,10 +73,13 @@ export function resolveMainRelay(stage: Stage | undefined, appRelay?: string): s
  * always computed together at NDK init time.
  */
 export function computeNdkConfig(input: ComputeNdkConfigInput): NdkConfigComputed {
-	const { stage, appRelay, overrideRelays, localRelayOnly } = input
+	const { stage, appRelay, overrideRelays, localRelayOnly, disableOutbox } = input
 	const mainRelay = resolveMainRelay(stage, appRelay)
 
-	const enableOutbox = stage !== 'staging' && stage !== 'development' && !localRelayOnly
+	// Outbox is off in non-prod and local-only mode; `disableOutbox` lets
+	// production turn it off via NEXT_PUBLIC_DISABLE_OUTBOX without a deploy (#1046).
+	const enableOutbox =
+		!disableOutbox && stage !== 'staging' && stage !== 'development' && !localRelayOnly
 
 	const explicitRelayUrls = resolveExplicitRelays({ stage, mainRelay, overrideRelays, localRelayOnly })
 	const writeRelayUrls =

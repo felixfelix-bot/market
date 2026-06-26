@@ -239,6 +239,16 @@ function isBunLocalRelayOnly(): boolean {
 }
 
 /**
+ * Bun runtime sniff for the `NEXT_PUBLIC_DISABLE_OUTBOX` flag (#1046).
+ * Lets production turn off NDK's outbox model without a code change — the
+ * Go relay already carries every event, so merchant-relay fan-out is wasted.
+ */
+function isBunDisableOutbox(): boolean {
+	// @ts-ignore - Bun.env is available in Bun runtime
+	return typeof Bun !== 'undefined' && Bun.env?.NEXT_PUBLIC_DISABLE_OUTBOX === 'true'
+}
+
+/**
  * Read the current pool state and reconcile `health` /
  * `connectedRelayCount` on the store. Called from pool events + the
  * watchdog tick + visibilitychange. Idempotent — only writes when the
@@ -413,6 +423,7 @@ export const ndkActions = {
 			appRelay: configStore.state.config.appRelay,
 			overrideRelays: relays,
 			localRelayOnly: isBunLocalRelayOnly(),
+			disableOutbox: isBunDisableOutbox(),
 		})
 
 		const ndk = new NDK({
