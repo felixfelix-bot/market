@@ -32,7 +32,7 @@ server up) takes **5 of the 10 specs to green** with no test-logic changes.
 |---|---|---|---|---|
 | community.progressive-loading | 0/5 | **8/8 pass** | ✅ fixed | MISSING_DEP (ffmpeg) |
 | navigation | 0/5 | **6/6 pass** | ✅ fixed | MISSING_DEP (ffmpeg) |
-| payments | 0/5 | **7/7 pass** (3 skip) | ✅ fixed | TEST_BUG + infra |
+| payments | 0/5 | **21/21 pass** (3 skip) | ✅ fixed | TEST_BUG + infra |
 | product-page | 0/5 | **18/18 pass** (1 skip) | ✅ fixed | INFRA (webServer down) |
 | auth | 0/5 | 12/13 pass | 🟡 mostly fixed | INFRA + 1 modal edge-case |
 | products | 0/5 | 14/15 pass | 🟡 mostly fixed | INFRA + 1 page-closed |
@@ -68,8 +68,9 @@ server up) takes **5 of the 10 specs to green** with no test-logic changes.
   webServer, not selector drift.
 - **Fix:** added `.first()` to the `testmerchant@getalby.com` assertion
   (matching the pattern already used at line 91 for `WALLETED_USER_LUD16`).
-- **Verified:** 7/7 pass, 3 skipped (the 3 skipped are pre-existing
-  `test.skip` checkout-flow tests).
+- **Verified:** 21/21 pass, 3 skipped (the 3 skipped are pre-existing
+  `test.skip` checkout-flow tests). Re-verified post-commit on
+  `fix/broken-specs-triage` (see "Re-verification" below).
 
 ### 4. product-page — INFRA (webServer) ✅ FIXED
 - **Root cause:** 100% of baseline failures were
@@ -171,6 +172,26 @@ it's test-logic rework, not selector drift, and is independent of the NDK→
 applesauce migration.
 
 ---
+
+## Re-verification (post-commit, run on `fix/broken-specs-triage`)
+
+The two code fixes were re-verified after commit `af71cf86` against a freshly
+restarted `nak` relay (port 10547) + warm `bun dev` (port 34567), both reused by
+the config via `reuseExistingServer: true`. The stale in-memory relay was killed
+first (accumulated PII events would otherwise trip the global `PIIExposureModal`
+and poison auth'd specs).
+
+| Spec | Result |
+|---|---|
+| community.progressive-loading | **8/8 pass** |
+| navigation | **6/6 pass** |
+| payments | **21/21 pass**, 3 pre-existing `test.skip` |
+
+Combined run: 21 passed, 3 skipped, 0 failed (1.2m). Raw output saved to
+`e2e/baseline-results/verification/verify-run-*.log`. All three specs that
+received code changes are green; the remaining gaps (auth 12/13, products 14/15,
+pii 3/7, and the cart→checkout trio) are documented above and out of scope for
+the quick-win fixes.
 
 ## Fixes committed on `fix/broken-specs-triage`
 

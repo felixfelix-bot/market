@@ -1,0 +1,54 @@
+
+--- E2E Global Setup ---
+  App pubkey: ed29ae1859d35e17...
+  Server health: OK (app settings loaded)
+--- Global Setup Complete ---
+
+
+Running 24 tests using 1 worker
+
+  ✓   1 [chromium] › e2e/tests/community.progressive-loading.spec.ts:84:2 › Community Tab Progressive Loading › renders hero and page shell while collection and merchant queries are pending (3.4s)
+  ✓   2 [chromium] › e2e/tests/community.progressive-loading.spec.ts:98:2 › Community Tab Progressive Loading › displays deterministic skeletons while collection and merchant queries are pending (2.3s)
+  ✓   3 [chromium] › e2e/tests/community.progressive-loading.spec.ts:112:2 › Community Tab Progressive Loading › renders collection cards after a successful collection query (2.5s)
+  ✓   4 [chromium] › e2e/tests/community.progressive-loading.spec.ts:139:2 › Community Tab Progressive Loading › renders collection empty state after a successful empty collection query (5.3s)
+  ✓   5 [chromium] › e2e/tests/community.progressive-loading.spec.ts:152:2 › Community Tab Progressive Loading › renders collection error state and recovers after retry (2.4s)
+  ✓   6 [chromium] › e2e/tests/community.progressive-loading.spec.ts:181:2 › Community Tab Progressive Loading › renders merchant success and empty states distinctly (3.1s)
+  ✓   7 [chromium] › e2e/tests/community.progressive-loading.spec.ts:200:2 › Community Tab Progressive Loading › renders merchant error state and recovers after retry (2.4s)
+  ✓   8 [chromium] › e2e/tests/community.progressive-loading.spec.ts:222:2 › Community Tab Progressive Loading › page remains interactive while community queries are pending (2.4s)
+  ✓   9 [chromium] › e2e/tests/navigation.spec.ts:6:2 › Navigation › homepage loads and shows header (2.3s)
+  ✓  10 [chromium] › e2e/tests/navigation.spec.ts:11:2 › Navigation › products page loads (2.4s)
+  ✓  11 [chromium] › e2e/tests/navigation.spec.ts:16:2 › Navigation › community page loads (2.3s)
+  Seeding: base (user profiles)
+    Published profile: TestMerchant
+    Published profile: TestBuyer
+    Published profile: TestApp
+    Published admin list with devUser1
+  ✓  12 [chromium] › e2e/tests/navigation.spec.ts:21:2 › Navigation › authenticated user can access dashboard (3.2s)
+  ✓  13 [chromium] › e2e/tests/navigation.spec.ts:26:2 › Navigation › dashboard shows navigation sections (3.2s)
+  ✓  14 [chromium] › e2e/tests/navigation.spec.ts:35:2 › Navigation › dashboard products link navigates correctly (3.6s)
+  Seeding: merchant (shipping, payments, products)
+    Published shipping: Worldwide Standard
+    Published shipping: Digital Delivery
+    Published shipping: Local Pickup - Bitcoin Store
+    Published payment: LIGHTNING_NETWORK
+    Published V4V shares (10% to community)
+    Published product: Bitcoin Hardware Wallet
+    Published product: Nostr T-Shirt
+    Published product: Bitcoin E-Book
+    Published product: Bitcoin Conference Ticket
+  ✓  15 [chromium] › e2e/tests/payments.spec.ts:83:2 › Receiving Payments Configuration › displays existing seeded payment details (4.4s)
+  ✓  16 [chromium] › e2e/tests/payments.spec.ts:97:2 › Receiving Payments Configuration › can add a new Lightning payment method (4.5s)
+  ✓  17 [chromium] › e2e/tests/payments.spec.ts:121:2 › Receiving Payments Configuration › can delete a payment method (3.7s)
+  ✓  18 [chromium] › e2e/tests/payments.spec.ts:146:2 › NWC Wallet Management › empty state shows add wallet prompt (3.6s)
+  ✓  19 [chromium] › e2e/tests/payments.spec.ts:159:2 › NWC Wallet Management › can add NWC wallet via manual fields (4.5s)
+  ✓  20 [chromium] › e2e/tests/payments.spec.ts:190:2 › NWC Wallet Management › can delete an NWC wallet (5.5s)
+  ✓  21 [chromium] › e2e/tests/payments.spec.ts:319:2 › Checkout Flow › empty cart shows redirect message (3.7s)
+  -  22 [chromium] › e2e/tests/payments.spec.ts:331:7 › Checkout Flow › full checkout flow with mocked Lightning invoices
+  -  23 [chromium] › e2e/tests/payments.spec.ts:354:7 › Checkout Flow › checkout publishes order events to relay
+  -  24 [chromium] › e2e/tests/payments.spec.ts:389:7 › Checkout Flow › allows buyer to defer an invoice and continue checkout
+
+--- E2E Global Teardown ---
+  Cleanup complete
+
+  3 skipped
+  21 passed (1.2m)
