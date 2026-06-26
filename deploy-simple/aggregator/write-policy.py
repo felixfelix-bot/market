@@ -63,11 +63,42 @@ ROOT_HEX = os.environ.get("STRFRY_AGG_ROOT_HEX", "").strip().lower()
 # 30078 (NIP-78 application-specific data) is intentionally EXCLUDED here —
 # it is treated as restricted below because it can carry private payloads.
 PUBLIC_MARKET_KINDS = frozenset({
-    0, 1, 3, 7, 9735, 1985, 10000, 10002,
+    # --- Identity & social (public) ---
+    0,       # Metadata (user profiles)
+    3,       # Contacts / follow lists (relay discovery)
+    5,       # Deletions
+    1,       # Text notes (bug reports, public posts)
+    4,       # DMs — NIP-04 (encryption protects content)
+    7,       # Reactions
+    1111,    # Comments (product reviews, discussion)
+
+    # --- Marketplace (public) ---
+    30018,   # NIP-15 products (legacy format)
+    30402,   # NIP-99 classified listings (products)
+    30405,   # Collections
+    30406,   # Shipping options
+    30408,   # Auctions
+    30440, 30441, 30442,  # Auction bid kinds (from #1069 scraper)
+    31555,   # (from #1069 scraper)
+
+    # --- App handlers (public) ---
+    31989,   # NIP-89 handler recommendation
+    31990,   # NIP-89 app handler info
+
+    # --- Payments & trust (public) ---
+    9735,    # Zap receipts (NIP-57)
+    1985,    # Reports (NIP-56)
+
+    # --- Lists & settings (public) ---
+    10000,   # Mute lists (NIP-51)
+    10002,   # Relay lists (NIP-65)
+    30000,   # App settings, vanity URLs, NIP-05 names
+
+    # --- NWC / NIP-47 config endpoints (public) ---
     1023, 1024, 1025, 1026,
-    30402, 30405, 30406, 30408,
-    30440, 30441, 30442,
-    31555, 31990,
+
+    # --- Misc app kinds (public) ---
+    25910,   # ctxvm client messages
 })
 
 # RESTRICTED_KINDS: accepted only from root npub or the WoT allowlist.
