@@ -20,7 +20,7 @@ services:
       context: .
       dockerfile: Dockerfile
     image: strfry-market-agg:local
-    container_name: strfry-market-agg
+    container_name: market-agg-relay
     restart: unless-stopped
     ports:
       - '127.0.0.1:7780:7777'

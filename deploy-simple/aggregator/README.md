@@ -86,14 +86,23 @@ layer for future use cases (verified sellers, etc.), not the primary gate.
 
 ## Deploy
 
+This deployment is fully **self-contained**: `docker-compose.yml` defines its
+own bridge network (no external networks) and both services build from the
+local `Dockerfile`. It runs standalone on any host with Docker — no other
+project's networks or containers are required — so it can be deployed wherever
+you like. (The VPS2 `/opt/tollgate/strfry-market-agg/` path is a legacy
+location carried over from when this relay shared infra with the tollgate
+project; it is not a requirement.)
+
 ```bash
 cd deploy-simple/aggregator
 mkdir -p db state
 docker compose up -d --build
 ```
 
-- `strfry-market-agg` listens on `127.0.0.1:7780` (Caddy proxies
-  `market-agg.orangesync.tech` -> `:7780`).
+- The relay container (`market-agg-relay`, compose service `strfry-market-agg`)
+  listens on `127.0.0.1:7780` (Caddy proxies `market-agg.orangesync.tech` ->
+  `:7780`).
 - `scraper` starts after the relay, bootstraps the root npub's network, and
   begins scraping. Tail logs with `docker compose logs -f scraper`.
 
