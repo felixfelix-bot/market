@@ -25,7 +25,7 @@ services:
     container_name: market-agg-relay
     restart: unless-stopped
     ports:
-      - "127.0.0.1:7780:7777"
+      - '127.0.0.1:7780:7777'
     volumes:
       - ./strfry.conf:/etc/strfry.conf:ro
       - ./db:/strfry-db
