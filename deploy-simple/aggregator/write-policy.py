@@ -11,8 +11,8 @@ aggregator (the primary production read relay).
 strfry invokes this plugin as a long-lived process and feeds it one JSON
 object per line on stdin (see strfry docs/plugins.md). Each input line:
 
-    {"type":"new","event":{"id":...,"pubkey":...,"kind":...,"tags":...,...},
-     "receivedAt":...,"sourceType":"...","sourceInfo":"..."}
+    {"type":"new","event":{"id":..., "pubkey":..., "kind":..., "tags":...,...},
+     "receivedAt":..., "sourceType":"...", "sourceInfo":"..."}
 
 For every line we print a single minified JSON object with ``id`` (echoed),
 ``action`` ("accept"|"reject") and an optional ``msg``.
@@ -70,11 +70,15 @@ MARKET_KINDS = {
     30402,   # NIP-99 classified listings (products)
     30405,   # Collections
     30406,   # Shipping options
+    30408,   # Auctions
+    30440, 30441, 30442,  # Auction bid kinds (from #1069 scraper)
+    31555,   # Auction live-activity events (from #1069 scraper)
     31989,   # NIP-89 handler recommendation
     31990,   # NIP-89 app handler info
 
-    # --- Payments ---
+    # --- Payments & trust ---
     9735,    # Zap receipts (NIP-57)
+    1985,    # Reports (NIP-56)
 
     # --- Lists & app settings ---
     10000,   # Mute lists (NIP-51)
@@ -82,9 +86,12 @@ MARKET_KINDS = {
     30000,   # App settings, vanity URLs, NIP-05 names
     30078,   # Cart persistence, relay preferences, v4v data
     9775,    # App-specific data (NDKKind.AppSpecificData, e.g. NWC wallet lists)
-    17375,   # NIP-60 Cashu wallet config (wallet state for v4v / Cashu payments)
+
+    # --- NWC / NIP-47 config endpoints ---
+    1023, 1024, 1025, 1026,
 
     # --- Misc app kinds ---
+    17375,   # NIP-60 Cashu wallet config (wallet state for v4v / Cashu payments)
     25910,   # ctxvm client messages
 }
 
