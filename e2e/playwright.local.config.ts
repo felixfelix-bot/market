@@ -1,4 +1,6 @@
 import path from 'node:path'
+import { existsSync, readdirSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { defineConfig, devices } from '@playwright/test'
 import { TEST_APP_PRIVATE_KEY, RELAY_URL, BASE_URL, TEST_PORT } from './test-config'
@@ -11,6 +13,20 @@ const SYSTEM_CHROMIUM = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || ''
 const launchOptions = SYSTEM_CHROMIUM
 	? { executablePath: SYSTEM_CHROMIUM }
 	: {}
+
+// Playwright needs its OWN ffmpeg build (not the system one) for video recording.
+// On platforms where the prebuilt ffmpeg isn't installable (e.g. Ubuntu 26.04 —
+// `npx playwright install ffmpeg` errors with "does not support ffmpeg on ubuntu26.04-x64"),
+// `browserContext.newPage` hard-fails on every context that opts into video.
+// Detect the binary and disable video when it's absent so tests can at least run.
+// Video is debug-only ('retain-on-failure'), so disabling it never affects assertions.
+const PW_CACHE = `${homedir()}/.cache/ms-playwright`
+const hasPlaywrightFfmpeg =
+	existsSync(PW_CACHE) &&
+	readdirSync(PW_CACHE).some(
+		(dir) => dir.startsWith('ffmpeg-') && existsSync(`${PW_CACHE}/${dir}/ffmpeg-linux`),
+	)
+const videoMode = hasPlaywrightFfmpeg ? 'retain-on-failure' : 'off'
 
 export default defineConfig({
 	testDir: './tests',
@@ -25,7 +41,7 @@ export default defineConfig({
 		baseURL: BASE_URL,
 		trace: 'on-first-retry',
 		screenshot: 'only-on-failure',
-		video: 'retain-on-failure',
+		video: videoMode,
 		launchOptions,
 	},
 

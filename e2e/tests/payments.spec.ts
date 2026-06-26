@@ -112,8 +112,10 @@ test.describe('Receiving Payments Configuration', () => {
 		// Click save
 		await merchantPage.getByTestId('save-payment-button').click()
 
-		// The new payment detail should appear in the list
-		await expect(merchantPage.getByText('testmerchant@getalby.com')).toBeVisible({ timeout: 10_000 })
+		// The new payment detail should appear in the list. Multiple list items can
+		// match the address (it shows in both the detail row and any summary), so
+		// scope to .first() to avoid a strict-mode violation.
+		await expect(merchantPage.getByText('testmerchant@getalby.com').first()).toBeVisible({ timeout: 10_000 })
 	})
 
 	test('can delete a payment method', async ({ merchantPage }) => {
