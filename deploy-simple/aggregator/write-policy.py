@@ -74,7 +74,12 @@ PUBLIC_MARKET_KINDS = frozenset({
 #   1059 = NIP-17 gift-wrap sealed event
 #   1060 = NIP-17 gift-wrap direct message (rumored/seal)
 #   30078 = NIP-78 application-specific data (may carry private payloads)
-RESTRICTED_KINDS = frozenset({1059, 1060, 30078})
+#   13 = NIP-59 seal (gift-wrap inner layer, private)
+#   14 = order general communications (private order details)
+#   16 = order process status (private order state)
+#   17 = payment receipt (private payment data)
+#   17375 = NIP-60 Cashu wallet config (private wallet state)
+RESTRICTED_KINDS = frozenset({1059, 1060, 30078, 13, 14, 16, 17, 17375})
 
 
 def _load_allowlist() -> tuple[set[str], float]:

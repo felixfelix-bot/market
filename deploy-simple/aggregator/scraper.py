@@ -93,12 +93,13 @@ RELAY_RECONNECT_BASE = float(os.environ.get("RELAY_RECONNECT_BASE", "5"))       
 SCRAPE_KINDS = [
     0, 1, 3, 7, 9735, 1985, 10000, 10002,
     1023, 1024, 1025, 1026,
+    13, 14, 16, 17, 17375,          # seals, order comms/status, payment receipt, NIP-60 wallet
     30402, 30405, 30406, 30408,
     30440, 30441, 30442,
     31555, 31990, 30078,
 ]
 # Kinds to subscribe to via the #p filter (events that *mention* the root npub).
-P_TAG_KINDS = [1, 3, 7, 9735, 30402, 30405, 30406, 30408, 30440, 30441, 30442]
+P_TAG_KINDS = [1, 3, 7, 9735, 30402, 30405, 30406, 30408, 30440, 30441, 30442, 14, 16, 17, 13]
 
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO"),
