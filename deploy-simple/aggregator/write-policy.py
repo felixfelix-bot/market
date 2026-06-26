@@ -82,6 +82,7 @@ MARKET_KINDS = {
     30000,   # App settings, vanity URLs, NIP-05 names
     30078,   # Cart persistence, relay preferences, v4v data
     9775,    # App-specific data (NDKKind.AppSpecificData, e.g. NWC wallet lists)
+    17375,   # NIP-60 Cashu wallet config (wallet state for v4v / Cashu payments)
 
     # --- Misc app kinds ---
     25910,   # ctxvm client messages
