@@ -1,6 +1,10 @@
 import { ORDER_GENERAL_KIND, ORDER_MESSAGE_TYPE, ORDER_PROCESS_KIND, ORDER_STATUS, PAYMENT_RECEIPT_KIND } from '@/lib/schemas/order'
 import { NIP59_GIFT_WRAP_KIND, signerSupportsNip44 } from '@/lib/nostr/nip59'
 import { decryptPrivateOrderMessageWithSigner, type PrivateOrderDeliveryDetails } from '@/lib/orders/privateOrderMessage'
+// Wave A1b: orders relay reads are now applesauce-backed (RelayPool), selected
+// explicitly through the seam so the global NDK default stays untouched. Flip
+// back to the seam's default pass-throughs (fetchEvents/subscribe) to revert.
+import { applesauceIo, type NostrFilter } from '@/lib/nostr/io'
 import { ndkActions } from '@/lib/stores/ndk'
 import type { NDKEvent, NDKFilter, NDKSigner } from '@nostr-dev-kit/ndk'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -62,6 +66,22 @@ const PRODUCT_REF_KIND = '30402'
 const SHIPPING_REF_KIND = '30406'
 const ORDER_CREATION_SUBJECT = 'order-info'
 const HEX_PUBKEY_RE = /^[0-9a-f]{64}$/i
+
+/**
+ * Fetches events via the library-agnostic Nostr I/O seam and rehydrates them as
+ * NDKEvents so the existing orders domain types are unchanged. Wave A1b: the
+ * reads now resolve through `applesauceIo` (RelayPool-backed), selected
+ * explicitly at the import so the seam's global default stays NDK-backed.
+ * Reverting the import flips orders back to NDK in one step.
+ */
+async function fetchNdkEventSet(
+	ndk: NonNullable<ReturnType<typeof ndkActions.getNDK>> | null,
+	filter: NDKFilter | NDKFilter[],
+): Promise<Set<NDKEvent>> {
+	if (!ndk) throw new Error('NDK not initialized')
+	const raw = await applesauceIo.fetchEvents(filter as NostrFilter | NostrFilter[])
+	return new Set(raw.map((event) => new NDKEvent(ndk, event)))
+}
 
 export const fetchSellerPrivateOrderGiftWraps = async (sellerPubkey: string): Promise<NDKEvent[]> => {
 	const ndk = ndkActions.getNDK()
@@ -1004,11 +1024,14 @@ export const useOrderById = (orderId: string, options: UseOrderByIdOptions = {})
 			void queryClient.refetchQueries({ queryKey })
 		}
 
-		// Event handler for all events related to this order
-		subscription.on('event', (newEvent) => {
-			const taggedOrderId = newEvent.tags.find((tag) => tag[0] === 'order')?.[1]
-			const matchesRouteId = newEvent.id === orderId || taggedOrderId === orderId
-			const matchesFetchedOrder = !!taggedOrderId && (taggedOrderId === logicalOrderId || taggedOrderId === fetchedOrderEventId)
+		// Live subscription via the Nostr I/O seam (applesauce-backed); rehydrate as NDKEvent.
+		const stop = applesauceIo.subscribe(
+			relatedEventsFilter,
+			(rawEvent) => {
+				const newEvent = new NDKEvent(ndk, rawEvent)
+				const taggedOrderId = newEvent.tags.find((tag) => tag[0] === 'order')?.[1]
+				const matchesRouteId = newEvent.id === orderId || taggedOrderId === orderId
+				const matchesFetchedOrder = !!taggedOrderId && (taggedOrderId === logicalOrderId || taggedOrderId === fetchedOrderEventId)
 
 			// Any related event should refresh order details (status, shipping, payment requests/receipts, messages)
 			if (!matchesRouteId && !matchesFetchedOrder) return
