@@ -49,6 +49,10 @@ export const DEFAULT_PUBLIC_RELAYS: string[] = [
  * market-relevant events from upstream relays into a single local relay.
  * Used as the primary read relay in production to eliminate the multi-second
  * dead-relay timeouts in the auctions UI (#1046).
+ *
+ * Configurable via the NEXT_PUBLIC_MARKET_AGG_RELAY env var. When unset (empty
+ * string), no aggregator relay is used and reads fall back to the standard
+ * main relay + public defaults.
  */
 export const MARKET_AGGREGATOR_RELAY = process.env.NEXT_PUBLIC_MARKET_AGG_RELAY ?? ''
 

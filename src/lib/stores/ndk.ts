@@ -209,6 +209,7 @@ function getRelayUrls(overrideRelays?: string[]): string[] {
 	// Standard case: prefer the fast market aggregator relay first in production
 	// (see #1046) — it mirrors market events from upstream relays into one fast
 	// local relay, eliminating dead-relay fan-out. Then main relay + public defaults.
+	// Only added when configured via NEXT_PUBLIC_MARKET_AGG_RELAY (non-empty).
 	const primaryAgg = stage === 'production' && MARKET_AGGREGATOR_RELAY ? [MARKET_AGGREGATOR_RELAY] : []
 	const relays = mainRelay ? [...primaryAgg, mainRelay, ...DEFAULT_PUBLIC_RELAYS] : [...primaryAgg, ...DEFAULT_PUBLIC_RELAYS]
 	return Array.from(new Set(relays))
