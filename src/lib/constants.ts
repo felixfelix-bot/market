@@ -44,6 +44,14 @@ export const DEFAULT_PUBLIC_RELAYS: string[] = [
 	'wss://relay.minibits.cash',
 ]
 
+/**
+ * Market aggregator relay — fast read-only strfry relay that caches
+ * marketplace events mirrored from upstream relays into a single local relay.
+ * Used as the primary read relay in production to eliminate the multi-second
+ * dead-relay timeouts in the auctions UI (#1046).
+ */
+export const MARKET_AGGREGATOR_RELAY = process.env.NEXT_PUBLIC_MARKET_AGG_RELAY ?? ''
+
 // Keep for backward compatibility (deprecated - use DEFAULT_PUBLIC_RELAYS instead)
 export const defaultRelaysUrls: string[] = DEFAULT_PUBLIC_RELAYS
 
@@ -107,7 +115,7 @@ export function getCurrencyServerRelays(): string[] {
 	}
 }
 
-export { resolveCvmServerPubkey as CVM_SERVER_PUBKEY_RESOLVER } from './cvm-identity'
+export const CVM_SERVER_PUBKEY = process.env.CVM_SERVER_PUBKEY || '29bd6461f780c07b29c89b4df8017db90973d5608a3cd811a0522b15c1064f15'
 
 export const DEFAULT_ZAP_AMOUNTS = [
 	{ displayText: '😊 21 sats', amount: 21 },
