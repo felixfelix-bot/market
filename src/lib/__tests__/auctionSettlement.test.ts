@@ -186,6 +186,115 @@ describe('auctionSettlement helpers', () => {
 	})
 })
 
+describe('v1 anti-snipe extension trigger (issue #7)', () => {
+	// Every bid carries an `e` tag pointing at the auction root id, matching
+	// the root-event filter in getAuctionEffectiveEndAt (bids for a different
+	// auction are ignored). makeAuction() with no `rootEventId` makes its
+	// root id == its `id`, so each bid's auctionEventId mirrors the auction id.
+	test('no anti-snipe window (max_end_at == end_at) never extends regardless of bids', () => {
+		// Flat auction — the seller chose window = 0. Even a bid at the
+		// very end leaves the effective end at the nominal close.
+		const auction = makeAuction({ id: 'flat', startAt: 100, endAt: 1000, maxEndAt: 1000 })
+		const bids = [makeBid({ id: 'b1', pubkey: 'alice', amount: 1100, createdAt: 999, auctionEventId: 'flat' })]
+
+		expect(getAuctionEffectiveEndAt(auction, bids)).toBe(1000)
+	})
+
+	test('bid far outside the extension window does NOT extend the end', () => {
+		// end_at=1000, max_end_at=1100 → 100s window. A bid at t=500 lands
+		// well outside the last-100s zone, so the effective end stays at the
+		// nominal close.
+		const auction = makeAuction({ id: 'v1-outside', startAt: 100, endAt: 1000, maxEndAt: 1100 })
+		const bids = [makeBid({ id: 'early', pubkey: 'alice', amount: 1100, createdAt: 500, auctionEventId: 'v1-outside' })]
+
+		expect(getAuctionEffectiveEndAt(auction, bids)).toBe(1000)
+		expect(getAuctionWindowValidBids(auction, bids).map((bid) => bid.id)).toEqual(['early'])
+	})
+
+	test('bid within the extension window extends the end, capped at max_end_at', () => {
+		// Bid at t=970 is within 100s of the nominal close → extends.
+		const auction = makeAuction({ id: 'v1-within', startAt: 100, endAt: 1000, maxEndAt: 1100 })
+		const bids = [
+			makeBid({ id: 'early', pubkey: 'alice', amount: 1100, createdAt: 500, auctionEventId: 'v1-within' }),
+			makeBid({ id: 'snipe', pubkey: 'bob', amount: 1200, createdAt: 970, auctionEventId: 'v1-within' }),
+		]
+
+		// early@500 → no extension; snipe@970 → remaining 30 < 100 → push to 1100.
+		expect(getAuctionEffectiveEndAt(auction, bids)).toBe(1100)
+		expect(getAuctionWindowValidBids(auction, bids).map((bid) => bid.id)).toEqual(['early', 'snipe'])
+		expect(getAuctionCurrentPrice(auction, bids, 1000)).toBe(1200)
+	})
+
+	test('late bid landing in (end_at, max_end_at] is valid and extends the end (issue #7 core case)', () => {
+		// This is the regression that motivated the fix: before #7 a bid
+		// published after the nominal close but inside the anti-snipe window
+		// was dropped because the effective end never moved past end_at.
+		const auction = makeAuction({ id: 'v1-late', startAt: 100, endAt: 1000, maxEndAt: 1100 })
+		const bids = [makeBid({ id: 'window-bid', pubkey: 'bob', amount: 1200, createdAt: 1050, auctionEventId: 'v1-late' })]
+
+		// window-bid@1050 > nominal end → v1 late-bid branch extends to 1100.
+		expect(getAuctionEffectiveEndAt(auction, bids)).toBe(1100)
+		expect(getAuctionWindowValidBids(auction, bids).map((bid) => bid.id)).toEqual(['window-bid'])
+	})
+
+	test('bids past the hard cutoff max_end_at are rejected and never extend', () => {
+		const auction = makeAuction({ id: 'v1-cutoff', startAt: 100, endAt: 1000, maxEndAt: 1100 })
+		const bids = [
+			makeBid({ id: 'in-window', pubkey: 'bob', amount: 1200, createdAt: 1050, auctionEventId: 'v1-cutoff' }),
+			makeBid({ id: 'too-late', pubkey: 'carol', amount: 1300, createdAt: 1101, auctionEventId: 'v1-cutoff' }),
+		]
+
+		expect(getAuctionEffectiveEndAt(auction, bids)).toBe(1100)
+		expect(getAuctionWindowValidBids(auction, bids).map((bid) => bid.id)).toEqual(['in-window'])
+	})
+
+	test('extension fires for a real v1 auction with no extension_rule tag at all', () => {
+		// The production publish path (src/publish/auctions.tsx) emits
+		// max_end_at + min_bid_curve but omits the retired extension_rule
+		// tag entirely. makeAuction() emits ['extension_rule','none']; here
+		// we build the event by hand to mirror real v1 wire format.
+		const v1Auction = {
+			id: 'v1-real',
+			pubkey: 'seller',
+			created_at: 10,
+			content: 'Auction description',
+			tags: [
+				['d', 'auction-v1'],
+				['title', 'Auction'],
+				['auction_type', 'english'],
+				['start_at', '100'],
+				['end_at', '1000'],
+				['starting_bid', '1000', 'SAT'],
+				['bid_increment', '100'],
+				['reserve', '0'],
+				['max_end_at', '1100'],
+				['min_bid_curve', 'linear:5.0'],
+				['settlement_grace', '3600'],
+				// NOTE: no extension_rule tag — v1 wire format.
+			],
+		} as NDKEvent
+		const bids = [makeBid({ id: 'late', pubkey: 'bob', amount: 1200, createdAt: 1050, auctionEventId: 'v1-real' })]
+
+		expect(getAuctionEffectiveEndAt(v1Auction, bids)).toBe(1100)
+		expect(getAuctionWindowValidBids(v1Auction, bids).map((bid) => bid.id)).toEqual(['late'])
+	})
+
+	test('multiple late bids keep extending but never exceed max_end_at', () => {
+		// A wider window so successive late bids each push toward the cap.
+		// end_at=1000, max_end_at=2000 → 1000s window.
+		const auction = makeAuction({ id: 'v1-multi', startAt: 100, endAt: 1000, maxEndAt: 2000 })
+		const bids = [
+			// late-1@990 → remaining 10 < 1000 → extend to min(2000, 1990) = 1990.
+			makeBid({ id: 'late-1', pubkey: 'alice', amount: 1100, createdAt: 990, auctionEventId: 'v1-multi' }),
+			// late-2@1985 → remaining 1990-1985 = 5 < 1000 → extend to min(2000, 2985) = 2000.
+			makeBid({ id: 'late-2', pubkey: 'bob', amount: 1200, createdAt: 1985, auctionEventId: 'v1-multi' }),
+		]
+
+		expect(getAuctionEffectiveEndAt(auction, bids)).toBe(2000)
+		expect(getAuctionWindowValidBids(auction, bids).map((bid) => bid.id)).toEqual(['late-1', 'late-2'])
+	})
+})
+
 describe('min_bid_curve parsing + floor multiplier (AUCTIONS.md §6.1)', () => {
 	test('missing tag → none/1.0, no boost', () => {
 		const auction = makeAuction({ id: 'a', endAt: 200 })

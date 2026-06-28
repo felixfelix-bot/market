@@ -321,15 +321,45 @@ export const compareAuctionBidChronologyAscending = (left: NDKEvent, right: NDKE
 	return left.id.localeCompare(right.id)
 }
 
+/**
+ * Effective end time for an auction given its accepted bids. The nominal
+ * `end_at` is the baseline close; the hard bidding cutoff `max_end_at` caps
+ * any extension. Two encodings can push the effective end later:
+ *
+ *   1. Legacy `extension_rule:anti_sniping:<window>:<extension>` — a bid
+ *      that lands within `window` seconds of the current end extends it by
+ *      `extension` seconds. AUCTIONS.md §6.1 retired the tag, but auctions
+ *      that still emit it keep working (back-compat).
+ *
+ *   2. v1 `max_end_at` — the seller's anti-snipe window
+ *      (`max_end_at − end_at`). v1 auctions emit `max_end_at` +
+ *      `min_bid_curve` but NOT the retired `extension_rule` tag, so without
+ *      this branch they had no extension trigger at all (issue #7): the
+ *      early return on `extensionRule.kind !== 'anti_sniping'` kept the
+ *      effective end pinned at `end_at`, and bids landing in
+ *      `(end_at, max_end_at]` were silently dropped from the valid set
+ *      (see `getAuctionWindowValidBids`) and settlement ran against a stale
+ *      cutoff.
+ *
+ * For v1 the trigger is derived from the window itself: a bid in the last
+ * `window` seconds of the current end, or a late bid landing past the end
+ * but inside `(end_at, max_end_at]`, pushes the end out — always capped at
+ * `max_end_at`. An auction with no anti-snipe headroom
+ * (`max_end_at <= end_at`) keeps `effective_end_at == end_at`.
+ */
 export const getAuctionEffectiveEndAt = (auctionEvent: NDKEvent, bids: NDKEvent[]): number => {
 	const nominalEndAt = getAuctionEndAt(auctionEvent)
 	if (!nominalEndAt) return 0
 
-	const extensionRule = getAuctionExtensionRule(auctionEvent)
-	if (extensionRule.kind !== 'anti_sniping') return nominalEndAt
-
 	const maxEndAt = getAuctionMaxEndAt(auctionEvent)
 	if (!maxEndAt || maxEndAt <= nominalEndAt) return nominalEndAt
+
+	const extensionRule = getAuctionExtensionRule(auctionEvent)
+	const isLegacyExtension = extensionRule.kind === 'anti_sniping'
+	// v1 derives the trigger entirely from the anti-snipe window
+	// (`max_end_at − end_at`); legacy keeps its explicit window/extension.
+	const windowSeconds = isLegacyExtension ? extensionRule.windowSeconds : maxEndAt - nominalEndAt
+	const extensionSeconds = isLegacyExtension ? extensionRule.extensionSeconds : maxEndAt - nominalEndAt
 
 	const startAt = getAuctionStartAt(auctionEvent)
 	const auctionRootEventId = getAuctionRootEventId(auctionEvent)
@@ -341,11 +371,19 @@ export const getAuctionEffectiveEndAt = (auctionEvent: NDKEvent, bids: NDKEvent[
 
 		const bidCreatedAt = bid.created_at || 0
 		if (bidCreatedAt < startAt) continue
-		if (bidCreatedAt > effectiveEndAt) continue
+		// Past the hard cutoff → never valid, never triggers an extension.
+		if (bidCreatedAt > maxEndAt) continue
 
 		const remaining = effectiveEndAt - bidCreatedAt
-		if (remaining > 0 && remaining < extensionRule.windowSeconds) {
-			effectiveEndAt = Math.min(maxEndAt, effectiveEndAt + extensionRule.extensionSeconds)
+		if (remaining > 0 && remaining < windowSeconds) {
+			// Late bid near the current end → push the end out.
+			effectiveEndAt = Math.min(maxEndAt, effectiveEndAt + extensionSeconds)
+		} else if (!isLegacyExtension && bidCreatedAt > effectiveEndAt) {
+			// v1 (issue #7): a bid landing past the current effective end
+			// but inside the anti-snipe window is itself a late bid —
+			// extend the end to cover it (capped at max_end_at). Gated to
+			// v1 so the legacy before-end-only model is unchanged.
+			effectiveEndAt = Math.min(maxEndAt, bidCreatedAt + extensionSeconds)
 		}
 	}
 
