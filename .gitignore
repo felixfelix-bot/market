@@ -1,6 +1,9 @@
 # dependencies (bun install)
 node_modules
 
+# npm lockfile (project uses Bun — bun.lock is canonical)
+package-lock.json
+
 # playwright
 playwright-report
 test-results
@@ -21,6 +24,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # dotenv environment variable files
 .env
+.env.dev
 .env.development.local
 .env.test.local
 .env.production.local

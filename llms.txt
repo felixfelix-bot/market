@@ -1,26 +1,50 @@
-# market
+# Plebeian Market
 
-> To install dependencies:
+> Decentralized Nostr-based e-commerce marketplace with Bitcoin Lightning payments.
 
-Project orientation for LLMs (see https://llmstxt.org/). Cross-link: AGENTS.md (workflow rules), HANDOVER.md (session state).
+Project orientation for LLMs (see https://llmstxt.org/). Cross-link: AGENTS.md (workflow rules), CLAUDE.md (architecture overview).
 
 ## Stack
 
-Languages/build: npm/TS-JS.
+Runtime/build: Bun / TypeScript / React 19
+Routing: TanStack Router (file-based)
+State: TanStack Store + TanStack Query
+Styling: Tailwind CSS v4 + shadcn/ui
+Nostr: NDK (Nostr Dev Kit) v3
+Backend: Bun WebSocket server with Nostr relay integration
+Testing: bun:test (unit/integration), Playwright (E2E)
 
-## Structure (top file types)
+## Commands
 
-- `.tsx`: 256 files
-- `.ts`: 197 files
-- `.md`: 90 files
-- `.svg`: 80 files
-- `.json`: 15 files
-- `.yml`: 9 files
+```bash
+bun install                              # Install dependencies
+bun dev                                  # Dev server with hot reload
+bun dev:seed                             # Dev server with seed data
+bun run watch-routes                     # Watch route changes (separate terminal)
+bun run build                            # Build application
+bun run build:production                 # Production build with minification
+bun run format                           # Format code with Prettier
+bun run format:check                     # Check formatting
+bun run startup                          # Initialize app with default settings
+bun seed                                 # Seed relay with test data
+bun test:unit                            # Run unit tests
+bun test:integration                     # Run integration tests
+bun test:e2e                             # Run E2E tests (Playwright)
+bun test:e2e:headed                      # E2E tests with visible browser
+bun run dev:contextvm-server             # Start ContextVM currency server
+```
 
-## Build & test
+## Structure (top-level)
 
-- Inspect `Makefile` / `package.json` / `Cargo.toml` / `platformio.ini` for the canonical commands.
-
-## Optional
-
-- [README](./README.md): human readme
+- `src/` — Application source (components, routes, queries, lib, hooks, server)
+- `src/routes/` — TanStack Router file-based routing
+- `src/components/` — React components (ui/, auth/, checkout/, wallet/, etc.)
+- `src/lib/stores/` — TanStack Store state management
+- `src/queries/` — TanStack Query hooks and factories
+- `src/server/` — Bun backend (API endpoints, ZapPurchaseManager, VanityManager)
+- `e2e/` — Playwright E2E tests
+- `docs/` — Feature and architecture documentation
+- `deploy-simple/` — Relay and aggregator deployment infrastructure
+- `contextvm/` — ContextVM currency server integration
+- `scripts/` — Utility scripts (seed, startup, deployment)
+- `styles/` — Global CSS (Tailwind)
