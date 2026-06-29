@@ -28,7 +28,7 @@ Use this skill when:
 - **Routing:** TanStack Router v1 (file-based routing)
 - **State Management:** TanStack Store (client state) + React Query (server/async state)
 - **Styling:** Tailwind CSS v4 with shadcn/ui components
-- **Nostr Protocol:** NDK (Nostr Dev Kit) v2.15.2
+- **Nostr Protocol:** NDK (Nostr Dev Kit) v3.0.3
 - **Backend:** Bun WebSocket server
 
 Refer to `references/libraries.md` for complete dependency list and versions.

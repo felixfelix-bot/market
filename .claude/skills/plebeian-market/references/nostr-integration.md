@@ -8,7 +8,7 @@ Plebeian Market uses the Nostr protocol for all data storage and communication. 
 
 ### Core Library
 
-**Package:** `@nostr-dev-kit/ndk` v2.15.2
+**Package:** `@nostr-dev-kit/ndk` v3.0.3
 
 NDK is the primary interface for Nostr operations:
 
@@ -50,16 +50,6 @@ export const ndkActions = {
 	},
 }
 ```
-
-### NDK Cache (Dexie)
-
-**Package:** `@nostr-dev-kit/ndk-cache-dexie` v2.6.33
-
-IndexedDB caching layer for NDK events:
-
-- Reduces relay queries
-- Offline support
-- Faster data access
 
 ## Nostr Event Kinds
 
