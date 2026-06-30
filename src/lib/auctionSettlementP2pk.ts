@@ -114,3 +114,64 @@ export const preflightAuctionSettlementP2pk = (input: AuctionSettlementP2pkPrefl
 		tokenLockPubkey,
 	}
 }
+
+/**
+ * One leg of a settlement chain — the subset of a settlement-plan release
+ * that the P2PK preflight needs. Accepting the full release shape (extra
+ * `amount` etc.) is fine via structural typing; we only read these fields.
+ */
+export interface AuctionSettlementP2pkChainReleaseInput {
+	mintUrl: string
+	derivationPath: string
+	childPubkey: string
+	token: string
+}
+
+export interface AuctionSettlementP2pkChainPreflightInput {
+	auctionP2pkXpub: string
+	releases: AuctionSettlementP2pkChainReleaseInput[]
+	/**
+	 * Mint keysets cached per mint URL by the caller (e.g.
+	 * `nip60Actions.loadAuctionMintKeysets`). cashu-ts ≥2.x writes NUT-2 v2
+	 * short keyset IDs into tokens; `getDecodedToken` throws without a way
+	 * to map them. Lookups for an un-cached mint URL simply yield
+	 * `undefined`, which is the same as omitting `mintKeysets` per-leg.
+	 */
+	mintKeysetsByUrl: Map<string, MintKeyset[]>
+}
+
+export interface AuctionSettlementP2pkChainPreflightResult {
+	legs: AuctionSettlementP2pkPreflightResult[]
+}
+
+/**
+ * Validate EVERY settlement release leg BEFORE any redemption happens.
+ *
+ * Regression fix for issue #5 / upstream #1022: previously
+ * `publishAuctionSettlement` ran the per-leg preflight inside the same loop
+ * that redeemed each leg. If leg N failed its preflight (or redemption)
+ * after legs 1..N-1 had already been redeemed, the seller was left
+ * half-settled with no way to retry the failed legs — "settlement fails
+ * after top bid." Running all preflights up front means a validation
+ * failure aborts the whole settlement cleanly, with zero tokens redeemed.
+ *
+ * Pure / synchronous / side-effect free: safe to call before the
+ * irreversible `receiveLockedEcash` loop.
+ */
+export const preflightAuctionSettlementP2pkChain = (
+	input: AuctionSettlementP2pkChainPreflightInput,
+): AuctionSettlementP2pkChainPreflightResult => {
+	const legs: AuctionSettlementP2pkPreflightResult[] = []
+	for (const release of input.releases) {
+		legs.push(
+			preflightAuctionSettlementP2pk({
+				auctionP2pkXpub: input.auctionP2pkXpub,
+				derivationPath: release.derivationPath,
+				settlementPlanChildPubkey: release.childPubkey,
+				token: release.token,
+				mintKeysets: input.mintKeysetsByUrl.get(release.mintUrl),
+			}),
+		)
+	}
+	return { legs }
+}

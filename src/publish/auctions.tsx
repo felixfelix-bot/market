@@ -1,4 +1,4 @@
-import { preflightAuctionSettlementP2pk } from '@/lib/auctionSettlementP2pk'
+import { preflightAuctionSettlementP2pkChain } from '@/lib/auctionSettlementP2pk'
 import {
 	AUCTION_BID_KIND,
 	AUCTION_KIND,
@@ -799,16 +799,28 @@ export const publishAuctionSettlement = async (formData: AuctionSettlementFormDa
 			if (!mintKeysetsByUrl.has(release.mintUrl)) {
 				mintKeysetsByUrl.set(release.mintUrl, await nip60Actions.loadAuctionMintKeysets(release.mintUrl))
 			}
-			const p2pkPreflight = preflightAuctionSettlementP2pk({
-				auctionP2pkXpub,
-				derivationPath: release.derivationPath,
-				settlementPlanChildPubkey: release.childPubkey,
-				token: release.token,
-				mintKeysets: mintKeysetsByUrl.get(release.mintUrl),
-			})
+		}
+		// ATOMIC PREFLIGHT — validate EVERY release leg BEFORE redeeming
+		// any of them (issue #5 / upstream #1022). Previously the
+		// per-leg preflight ran inside the redemption loop, so a failure
+		// on leg N left legs 1..N-1 already redeemed and the seller
+		// stuck half-settled ("settlement fails after top bid"). Now a
+		// validation error aborts the whole settlement with zero tokens
+		// redeemed, so the seller can safely retry.
+		const chainPreflight = preflightAuctionSettlementP2pkChain({
+			auctionP2pkXpub,
+			releases: settlementPlan.releases,
+			mintKeysetsByUrl,
+		})
+		// Redemption loop — every leg is already validated above, so the
+		// only remaining failure modes are runtime mint errors (network,
+		// already-spent token), which `isSpentTokenError` tolerates.
+		for (let i = 0; i < settlementPlan.releases.length; i++) {
+			const release = settlementPlan.releases[i]
+			const leg = chainPreflight.legs[i]
 			const childPrivkey = await nip60Actions.getAuctionHdChildPrivkey({
-				derivationPath: p2pkPreflight.derivationPath,
-				expectedPubkey: p2pkPreflight.derivedChildPubkey,
+				derivationPath: leg.derivationPath,
+				expectedPubkey: leg.derivedChildPubkey,
 			})
 			try {
 				const received = await nip60Actions.receiveLockedEcash(release.token, childPrivkey)

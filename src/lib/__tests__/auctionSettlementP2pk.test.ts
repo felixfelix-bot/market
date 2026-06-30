@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { HDKey } from '@scure/bip32'
-import { getEncodedToken, type Proof } from '@cashu/cashu-ts'
+import { getEncodedToken, type MintKeyset, type Proof } from '@cashu/cashu-ts'
 import { deriveAuctionChildP2pkPubkeyFromXpub } from '@/lib/auctionP2pk'
-import { preflightAuctionSettlementP2pk } from '@/lib/auctionSettlementP2pk'
+import { preflightAuctionSettlementP2pk, preflightAuctionSettlementP2pkChain } from '@/lib/auctionSettlementP2pk'
 
 const makeFixture = () => {
 	const seed = Uint8Array.from({ length: 32 }, (_, index) => index + 1)
@@ -136,5 +136,84 @@ describe('auction settlement P2PK preflight', () => {
 				token: makeToken(makeP2pkSecret(fixture.childPubkeyXOnly)),
 			}),
 		).toThrow('Winner token P2PK lock pubkey is not compressed; cannot settle this bid safely')
+	})
+})
+
+// Regression coverage for issue #5 / upstream #1022: settlement must
+// validate EVERY release leg BEFORE redeeming any of them. Previously the
+// per-leg preflight ran inside the redemption loop, so a failure on leg N
+// left legs 1..N-1 already redeemed (partial settlement / stuck seller).
+describe('auction settlement P2PK chain preflight (atomicity, #1022)', () => {
+	const makeChainFixture = (legCount: number) => {
+		const base = makeFixture()
+		const legs = Array.from({ length: legCount }, (_, index) => {
+			const derivationPath = `7/11/13/17/${19 + index}` // unique per leg
+			const childPubkey = deriveAuctionChildP2pkPubkeyFromXpub(base.xpub, derivationPath)
+			return { derivationPath, childPubkey }
+		})
+		return { xpub: base.xpub, legs }
+	}
+
+	const buildReleases = (fixture: ReturnType<typeof makeChainFixture>, poisonLegIndex?: number) =>
+		fixture.legs.map((leg, index) => {
+			// Poison leg locks its token to a DIFFERENT leg's child pubkey,
+			// simulating a bad/unredeemable token while the settlement-plan
+			// metadata still looks plausible.
+			const lockTarget =
+				poisonLegIndex === index ? fixture.legs[(index + 1) % Math.max(1, fixture.legs.length)].childPubkey : leg.childPubkey
+			return {
+				mintUrl: 'https://mint.example',
+				derivationPath: leg.derivationPath,
+				childPubkey: leg.childPubkey,
+				token: makeToken(makeP2pkSecret(lockTarget)),
+			}
+		})
+
+	const emptyKeysetMap = () => new Map<string, MintKeyset[]>()
+
+	test('accepts a chain where every leg validates', () => {
+		const fixture = makeChainFixture(3)
+		const result = preflightAuctionSettlementP2pkChain({
+			auctionP2pkXpub: fixture.xpub,
+			releases: buildReleases(fixture),
+			mintKeysetsByUrl: emptyKeysetMap(),
+		})
+		expect(result.legs).toHaveLength(3)
+		for (let i = 0; i < fixture.legs.length; i++) {
+			expect(result.legs[i].derivedChildPubkey).toBe(fixture.legs[i].childPubkey)
+			expect(result.legs[i].tokenLockPubkey).toBe(fixture.legs[i].childPubkey)
+		}
+	})
+
+	test('rejects the ENTIRE chain when any single leg has a bad token (no partial pass)', () => {
+		const fixture = makeChainFixture(3)
+		expect(() =>
+			preflightAuctionSettlementP2pkChain({
+				auctionP2pkXpub: fixture.xpub,
+				releases: buildReleases(fixture, 1), // leg index 1 is poison
+				mintKeysetsByUrl: emptyKeysetMap(),
+			}),
+		).toThrow('Winner token P2PK lock pubkey does not match auction p2pk_xpub + derivation path')
+	})
+
+	test('a single-leg chain delegates correctly to the per-leg preflight', () => {
+		const fixture = makeChainFixture(1)
+		const result = preflightAuctionSettlementP2pkChain({
+			auctionP2pkXpub: fixture.xpub,
+			releases: buildReleases(fixture),
+			mintKeysetsByUrl: emptyKeysetMap(),
+		})
+		expect(result.legs).toHaveLength(1)
+		expect(result.legs[0].tokenLockPubkey).toBe(fixture.legs[0].childPubkey)
+	})
+
+	test('empty releases returns an empty legs array (no-op settlement)', () => {
+		const fixture = makeChainFixture(0)
+		const result = preflightAuctionSettlementP2pkChain({
+			auctionP2pkXpub: fixture.xpub,
+			releases: [],
+			mintKeysetsByUrl: emptyKeysetMap(),
+		})
+		expect(result.legs).toHaveLength(0)
 	})
 })
