@@ -92,14 +92,82 @@ export function sumReservedByMint(refs: ReservedProofRef[]): Record<string, numb
  * surface a negative balance. Mints absent from the raw balances are ignored
  * (reserved entries for unknown mints carry no spendable balance to subtract).
  */
-export function computeNetBalances(
-	rawBalances: Record<string, number>,
-	reservedByMint: Record<string, number>,
-): Record<string, number> {
+export function computeNetBalances(rawBalances: Record<string, number>, reservedByMint: Record<string, number>): Record<string, number> {
 	const net: Record<string, number> = {}
 	for (const [mint, raw] of Object.entries(rawBalances)) {
 		const reserved = reservedByMint[mint] ?? 0
 		net[mint] = Math.max(0, raw - reserved)
 	}
 	return net
+}
+
+/**
+ * Mutable, in-memory ledger of the proofs currently committed to in-flight
+ * auction bids. This is the stateful companion to the pure helpers above: it is
+ * the single source of truth that `lockAuctionBidFunds` consults to (a) exclude
+ * consumed-input proofs from re-selection (issue #4) and (b) subtract reserved
+ * value from the displayed/selected balance (issue #3).
+ *
+ * It is "pure-ish": the only side effects are mutations of its own fields, and
+ * every method is deterministic, so the whole ledger is unit-testable without a
+ * wallet or mint.
+ *
+ * Lifecycle:
+ *   - `reserve(refs)`     — called by `lockAuctionBidFunds` immediately before
+ *                            the swap consumes the selected input proofs.
+ *   - `release(secrets)`  — called on lock FAILURE (inputs were NOT spent) and
+ *                            by `consolidateMintProofs` for proofs the mint has
+ *                            confirmed SPENT (truth reconciled → reservation no
+ *                            longer needed because the local store destroyed them).
+ *   - `clearForMint(m)`   — belt-and-suspenders reset for a whole mint.
+ *
+ * De-duplication is by `secret` everywhere so the same underlying proof, however
+ * many auctions raced to reserve it, is counted exactly once.
+ */
+export class ReservedProofLedger {
+	private readonly secrets = new Set<string>()
+	private readonly refs: ReservedProofRef[] = []
+
+	/** Mark the given proofs as reserved. Duplicate secrets are ignored. */
+	reserve(refs: ReservedProofRef[]): void {
+		for (const ref of refs) {
+			if (this.secrets.has(ref.secret)) continue
+			this.secrets.add(ref.secret)
+			this.refs.push(ref)
+		}
+	}
+
+	/** Drop every listed secret (and its accumulated ref) from the ledger. */
+	release(secrets: string[]): void {
+		if (secrets.length === 0) return
+		const toRelease = new Set(secrets)
+		for (const s of toRelease) this.secrets.delete(s)
+		for (let i = this.refs.length - 1; i >= 0; i--) {
+			if (toRelease.has(this.refs[i].secret)) this.refs.splice(i, 1)
+		}
+	}
+
+	/** Remove all reservations belonging to a single mint (e.g. after a full reconcile). */
+	clearForMint(mint: string): void {
+		const keep = this.refs.filter((r) => r.mintUrl !== mint)
+		this.refs.length = 0
+		this.refs.push(...keep)
+		this.secrets.clear()
+		for (const r of keep) this.secrets.add(r.secret)
+	}
+
+	/** Defensive copy — callers must not mutate the internal set. */
+	getSecrets(): Set<string> {
+		return new Set(this.secrets)
+	}
+
+	/** Per-mint reserved totals (de-duplicated), ready for `computeNetBalances`. */
+	sumByMint(): Record<string, number> {
+		return sumReservedByMint(this.refs)
+	}
+
+	/** Number of distinct reserved proofs. */
+	get count(): number {
+		return this.secrets.size
+	}
 }

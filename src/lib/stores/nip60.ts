@@ -15,6 +15,7 @@ import {
 	toCompressedAuctionP2pkPubkey,
 } from '@/lib/auctionP2pk'
 import { getAuctionHdAccountFromWalletKeys } from '@/lib/auctionHd'
+import { ReservedProofLedger, computeNetBalances, excludeProofsBySecret } from '@/lib/auctionBidFunds'
 import {
 	CashuMint,
 	CashuWallet,
@@ -36,6 +37,28 @@ import { configStore } from './config'
 
 const DEFAULT_MINT_KEY = 'nip60_default_mint'
 const PENDING_TOKENS_KEY = 'nip60_pending_tokens'
+
+/**
+ * Per-auction proof/fund isolation for bidding (issues #3 + #4).
+ *
+ * A bid's swap CONSUMES its selected input proofs at the mint, but the NDK
+ * wallet's local proof store only reconciles that truth when
+ * `consolidateMintProofs` runs (the lone `destroy: spentProofs` call site). In
+ * the swap→consolidate window the consumed inputs are still returned by
+ * `getProofsForMint`, so a second bid re-selects them and the mint rejects with
+ * "proofs already spent" (#4); meanwhile balances read from the stale dump are
+ * inconsistent until a refresh (#3).
+ *
+ * `bidProofLedger` tracks proofs committed to in-flight bids so that:
+ *   - `lockAuctionBidFunds` excludes them from re-selection (#4) and subtracts
+ *     their value from the available balance used for mint selection (#3); and
+ *   - `consolidateMintProofs` releases them once the mint confirms SPENT (the
+ *     local store has destroyed them → the reservation is obsolete).
+ *
+ * It is module-scoped (one ledger per wallet session) and in-memory, so it
+ * resets on reload — exactly when the local proof store is reloaded fresh too.
+ */
+const bidProofLedger = new ReservedProofLedger()
 
 // Re-export for backward compatibility
 export type PendingNip60Token = PendingToken
@@ -397,6 +420,13 @@ const consolidateMintProofs = async (wallet: NDKCashuWallet, mint: string): Prom
 		},
 		'Consolidate',
 	)
+
+	// Truth is now reconciled for this mint: the destroyed proofs are gone from
+	// the local store, so any bid reservation holding their secrets is obsolete.
+	// Releasing here drains `bidProofLedger` after each successful bid — the
+	// consumed inputs finally surface as SPENT and are destroyed locally, so the
+	// reservation that excluded them from re-selection (#4) is no longer needed.
+	bidProofLedger.release(spentProofs.map((p) => p.secret))
 }
 
 const consolidateWalletProofs = async (wallet: NDKCashuWallet): Promise<void> => {
@@ -1564,31 +1594,61 @@ export const nip60Actions = {
 		//   1. `params.mint` explicit override — legacy callers only.
 		//   2. `params.preferredMints` in order — auction's trusted mints
 		//      walked seller-declared first; pick the first one where the
-		//      bidder has enough balance for `amount` (delta).
+		//      bidder has enough AVAILABLE balance for `amount` (delta).
 		//   3. wallet's `defaultMint` — only when no preferred list given.
 		//   4. any mint in the wallet with enough balance — last resort.
 		// Falling through all four with no match yields a clear error
 		// listing per-trusted-mint balances so the bidder knows where
 		// to top up.
-		const { totalBalance, mintBalances } = getBalancesFromState(wallet)
-		let targetMint: string | undefined
-		if (params.mint) {
-			targetMint = params.mint
-		} else if (params.preferredMints && params.preferredMints.length > 0) {
-			targetMint = params.preferredMints.find((mint) => (mintBalances[mint] ?? 0) >= amount)
-			if (!targetMint) {
-				const breakdown = params.preferredMints.map((mint) => `${getMintHostname(mint)}: ${mintBalances[mint] ?? 0} sats`).join(', ')
+		//
+		// "Available" = raw wallet balance MINUS proofs already committed to
+		// in-flight bids (reserved via `bidProofLedger`). Without this
+		// subtraction mint selection would double-count funds another bid has
+		// already consumed at the mint — the stale-balance symptom of #3.
+		const pickTargetMint = (balances: Record<string, number>): string | undefined => {
+			if (params.mint) return params.mint
+			if (params.preferredMints && params.preferredMints.length > 0) {
+				return params.preferredMints.find((mint) => (balances[mint] ?? 0) >= amount)
+			}
+			if (state.defaultMint && (balances[state.defaultMint] ?? 0) >= amount) return state.defaultMint
+			return Object.keys(balances).find((mint) => balances[mint] >= amount)
+		}
+
+		const availableBalances = (): Record<string, number> =>
+			computeNetBalances(getBalancesFromState(wallet).mintBalances, bidProofLedger.sumByMint())
+
+		const hasTrustedMints = !!(params.preferredMints && params.preferredMints.length > 0)
+		const buildBreakdown = (balances: Record<string, number>): string => {
+			const mints = hasTrustedMints ? params.preferredMints! : Object.keys(balances)
+			return mints.map((mint) => `${getMintHostname(mint)}: ${balances[mint] ?? 0} sats`).join(', ')
+		}
+
+		let mintBalances = availableBalances()
+		let targetMint = pickTargetMint(mintBalances)
+
+		// Issue #3: after several re-bids the local proof store drifts from mint
+		// truth (consumed inputs linger, change proofs not yet absorbed) and the
+		// balance reads low. Rather than bailing on stale data, reconcile ONCE via
+		// consolidate and re-evaluate before surfacing "insufficient funds" — the
+		// automated form of the "refresh fixes it" workaround.
+		if (!targetMint) {
+			try {
+				await consolidateWalletProofs(wallet)
+			} catch (consolidateErr) {
+				console.error('[nip60] Pre-bid consolidate failed (continuing with cached balances):', consolidateErr)
+			}
+			mintBalances = availableBalances()
+			targetMint = pickTargetMint(mintBalances)
+		}
+
+		if (!targetMint) {
+			const breakdown = buildBreakdown(mintBalances)
+			if (hasTrustedMints) {
 				throw new Error(
-					`No trusted mint has ${amount} sats. ${breakdown}. Deposit to one of the auction's trusted mints (or move existing funds there) and try again.`,
+					`No trusted mint has ${amount} sats available. ${breakdown}. Deposit to one of the auction's trusted mints (or move existing funds there) and try again.`,
 				)
 			}
-		} else if (state.defaultMint && (mintBalances[state.defaultMint] ?? 0) >= amount) {
-			targetMint = state.defaultMint
-		} else {
-			targetMint = Object.keys(mintBalances).find((mint) => mintBalances[mint] >= amount)
-		}
-		if (!targetMint) {
-			throw new Error(`No mint with sufficient balance. Available: ${totalBalance} sats`)
+			throw new Error(`No mint with sufficient balance. Available: ${breakdown}`)
 		}
 
 		const mintBalance = mintBalances[targetMint] ?? 0
@@ -1596,15 +1656,26 @@ export const nip60Actions = {
 			throw new Error(`Insufficient balance at ${getMintHostname(targetMint)}. Available: ${mintBalance} sats`)
 		}
 
-		const mintProofs = getProofsForMint(wallet, targetMint)
+		// Issue #4: never (re-)select proofs another in-flight bid has already
+		// committed — their inputs are spent at the mint but linger in the local
+		// store until consolidate destroys them, and re-selecting them is what
+		// triggers the mint's "proofs already spent" rejection.
+		const allMintProofs = getProofsForMint(wallet, targetMint)
+		const mintProofs = excludeProofsBySecret(allMintProofs, bidProofLedger.getSecrets())
 		if (mintProofs.length === 0) {
-			throw new Error(`No proofs available at ${getMintHostname(targetMint)}. Try refreshing your wallet.`)
+			throw new Error(`No unreserved proofs available at ${getMintHostname(targetMint)}. Try refreshing your wallet.`)
 		}
 
 		const { selected: selectedProofs, total: selectedTotal } = selectProofs(mintProofs, amount)
 		if (selectedTotal < amount) {
 			throw new Error(`Could not select enough proofs. Need ${amount}, have ${selectedTotal}`)
 		}
+
+		// Reserve the consumed inputs BEFORE the swap so a concurrent bid cannot
+		// re-select them in the await window. Released on lock failure (inputs not
+		// actually spent) and cleared by consolidateMintProofs once mint truth is
+		// reconciled (spent proofs destroyed locally).
+		bidProofLedger.reserve(selectedProofs.map((p) => ({ secret: p.secret, mintUrl: targetMint, amount: p.amount })))
 
 		try {
 			const { cashuWallet } = await createCashuWalletForMint(targetMint)
@@ -1745,6 +1816,11 @@ export const nip60Actions = {
 				grantId: params.grantId,
 			}
 		} catch (err) {
+			// Lock failed — the reserved inputs were NOT consumed at the mint, so
+			// release them back to the available pool (issues #3/#4). selectedProofs
+			// is always defined here: it is declared above, before this try block,
+			// and only this swap region is wrapped by the try.
+			bidProofLedger.release(selectedProofs.map((p) => p.secret))
 			console.error('[nip60] Failed to lock auction bid funds:', err)
 			throw err
 		}

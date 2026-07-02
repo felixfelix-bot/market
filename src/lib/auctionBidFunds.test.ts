@@ -1,10 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import {
-	computeNetBalances,
-	excludeProofsBySecret,
-	sumReservedByMint,
-	type ReservedProofRef,
-} from './auctionBidFunds'
+import { ReservedProofLedger, computeNetBalances, excludeProofsBySecret, sumReservedByMint, type ReservedProofRef } from './auctionBidFunds'
 
 const EMPTY = new Set<string>()
 
@@ -141,5 +136,86 @@ describe('stale-balance defense (issue #3 regression)', () => {
 		const rawBalances = { 'https://mint.a': 1000 }
 		const reserved = { 'https://mint.a': 300 }
 		expect(computeNetBalances(rawBalances, reserved)).toEqual({ 'https://mint.a': 700 })
+	})
+})
+
+describe('ReservedProofLedger', () => {
+	const ref = (secret: string, mintUrl: string, amount: number): ReservedProofRef => ({ secret, mintUrl, amount })
+
+	test('starts empty', () => {
+		const ledger = new ReservedProofLedger()
+		expect(ledger.count).toBe(0)
+		expect(ledger.getSecrets().size).toBe(0)
+		expect(ledger.sumByMint()).toEqual({})
+	})
+
+	test('reserve adds secrets and exposes them via getSecrets', () => {
+		const ledger = new ReservedProofLedger()
+		ledger.reserve([ref('s1', 'https://mint.a', 100), ref('s2', 'https://mint.a', 50)])
+		expect(ledger.count).toBe(2)
+		expect(ledger.getSecrets()).toEqual(new Set(['s1', 's2']))
+	})
+
+	test('reserve deduplicates by secret (two auctions reserve the same proof -> counted once)', () => {
+		const ledger = new ReservedProofLedger()
+		ledger.reserve([ref('s1', 'https://mint.a', 100)])
+		ledger.reserve([ref('s1', 'https://mint.a', 100), ref('s2', 'https://mint.a', 50)])
+		expect(ledger.count).toBe(2)
+		expect(ledger.sumByMint()).toEqual({ 'https://mint.a': 150 })
+	})
+
+	test('sumByMint aggregates reserved value per mint, cross-mint', () => {
+		const ledger = new ReservedProofLedger()
+		ledger.reserve([ref('s1', 'https://mint.a', 100), ref('s2', 'https://mint.b', 40), ref('s3', 'https://mint.a', 60)])
+		expect(ledger.sumByMint()).toEqual({ 'https://mint.a': 160, 'https://mint.b': 40 })
+	})
+
+	test('release drops only the listed secrets (lock-failure path)', () => {
+		const ledger = new ReservedProofLedger()
+		ledger.reserve([ref('s1', 'https://mint.a', 100), ref('s2', 'https://mint.a', 50), ref('s3', 'https://mint.a', 25)])
+		// Bid failed -> un-reserve the inputs that were NOT actually spent.
+		ledger.release(['s1', 's3'])
+		expect(ledger.getSecrets()).toEqual(new Set(['s2']))
+		expect(ledger.sumByMint()).toEqual({ 'https://mint.a': 50 })
+	})
+
+	test('release ignores unknown secrets and empty input', () => {
+		const ledger = new ReservedProofLedger()
+		ledger.reserve([ref('s1', 'https://mint.a', 100)])
+		ledger.release([])
+		ledger.release(['does-not-exist'])
+		expect(ledger.count).toBe(1)
+	})
+
+	test('clearForMint removes only that mint reservations (consolidate-per-mint path)', () => {
+		const ledger = new ReservedProofLedger()
+		ledger.reserve([ref('s1', 'https://mint.a', 100), ref('s2', 'https://mint.b', 40), ref('s3', 'https://mint.a', 60)])
+		// Mint A reconciled -> its reservations cleared; mint B untouched.
+		ledger.clearForMint('https://mint.a')
+		expect(ledger.getSecrets()).toEqual(new Set(['s2']))
+		expect(ledger.sumByMint()).toEqual({ 'https://mint.b': 40 })
+	})
+
+	test('getSecrets returns a defensive copy — mutating it does not affect the ledger', () => {
+		const ledger = new ReservedProofLedger()
+		ledger.reserve([ref('s1', 'https://mint.a', 100)])
+		const snapshot = ledger.getSecrets()
+		snapshot.add('s999')
+		snapshot.delete('s1')
+		// Internal state unchanged.
+		expect(ledger.getSecrets()).toEqual(new Set(['s1']))
+		expect(ledger.count).toBe(1)
+	})
+
+	test('end-to-end bid lifecycle: reserve -> release spent on reconcile -> ledger drains', () => {
+		const ledger = new ReservedProofLedger()
+		// Two in-flight bids reserve consumed inputs.
+		ledger.reserve([ref('in1', 'https://mint.a', 80), ref('in2', 'https://mint.a', 30)])
+		expect(ledger.sumByMint()).toEqual({ 'https://mint.a': 110 })
+		// consolidateMintProofs confirms both inputs are SPENT at the mint and
+		// releases them (local store destroys them -> reservation obsolete).
+		ledger.release(['in1', 'in2'])
+		expect(ledger.count).toBe(0)
+		expect(ledger.sumByMint()).toEqual({})
 	})
 })
