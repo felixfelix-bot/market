@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { HDKey } from '@scure/bip32'
 import {
 	auctionP2pkPubkeysMatch,
+	collectAuctionP2pkRefundPubkeys,
 	deriveAuctionChildP2pkPubkeyFromXpub,
 	getAuctionP2pkLockPubkeyFromSecret,
 	normalizeAuctionDerivationPath,
@@ -137,5 +138,66 @@ describe('auctionP2pk', () => {
 		expect(getAuctionP2pkLockPubkeyFromSecret(secret)).toBe(compressed)
 		expect(() => getAuctionP2pkLockPubkeyFromSecret('not-json')).toThrow('valid P2PK')
 		expect(() => getAuctionP2pkLockPubkeyFromSecret(JSON.stringify(['P2PK', { tags: [] }]))).toThrow('missing a lock pubkey')
+	})
+})
+
+describe('collectAuctionP2pkRefundPubkeys', () => {
+	// Issue #6: when the cached auctionContext.refundPubkey is stale/missing,
+	// reclaimToken must recover the refund pubkey from the bid token's own proof
+	// secrets. This is the "refund to single outbid bid" recovery unit — each
+	// bid's proofs carry a NUT-11 `refund` tag (refundKeys) bound at lock time.
+	const compressedRefund = '02b72fc0f74836f2066957875bc0e48c6fe734f537117c8fc80d4a365a84f31712'
+	const xonlyRefund = compressedRefund.slice(2) // canonical normalized form
+	const lockPubkey = '03' + '11'.repeat(32)
+	const buildSecret = (refund: string) =>
+		JSON.stringify([
+			'P2PK',
+			{
+				nonce: '00'.repeat(32),
+				data: lockPubkey,
+				tags: [
+					['locktime', '2000000000'],
+					['refund', refund],
+				],
+			},
+		])
+
+	test('collects refund pubkey from a single outbid bid proof', () => {
+		const proofs = [{ secret: buildSecret(compressedRefund) }]
+		expect(collectAuctionP2pkRefundPubkeys(proofs)).toEqual([xonlyRefund])
+	})
+
+	test('dedupes the same refund pubkey across multiple proofs', () => {
+		const proofs = [{ secret: buildSecret(compressedRefund) }, { secret: buildSecret(compressedRefund) }]
+		expect(collectAuctionP2pkRefundPubkeys(proofs)).toEqual([xonlyRefund])
+	})
+
+	test('normalizes compressed and x-only forms to the same canonical pubkey', () => {
+		const compressedProofs = [{ secret: buildSecret(compressedRefund) }]
+		const xonlyProofs = [{ secret: buildSecret(compressedRefund.slice(2)) }]
+		expect(collectAuctionP2pkRefundPubkeys(compressedProofs)).toEqual(collectAuctionP2pkRefundPubkeys(xonlyProofs))
+	})
+
+	test('skips proofs whose secret is not a P2PK secret', () => {
+		const proofs = [
+			{ secret: 'not-json' },
+			{ secret: buildSecret(compressedRefund) },
+			{ secret: JSON.stringify(['OTHER', { data: lockPubkey }]) },
+		]
+		expect(collectAuctionP2pkRefundPubkeys(proofs)).toEqual([xonlyRefund])
+	})
+
+	test('returns [] when no proof carries a refund tag', () => {
+		const proofs = [{ secret: JSON.stringify(['P2PK', { data: lockPubkey, tags: [['locktime', '1']] }]) }]
+		expect(collectAuctionP2pkRefundPubkeys(proofs)).toEqual([])
+	})
+
+	test('returns [] for empty proof list', () => {
+		expect(collectAuctionP2pkRefundPubkeys([])).toEqual([])
+	})
+
+	test('skips invalid (non-hex / wrong-length) refund pubkey values', () => {
+		const proofs = [{ secret: buildSecret('not-a-valid-pubkey') }]
+		expect(collectAuctionP2pkRefundPubkeys(proofs)).toEqual([])
 	})
 })

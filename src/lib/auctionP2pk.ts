@@ -1,4 +1,5 @@
 import { HDKey } from '@scure/bip32'
+import { getP2PKRefundPubkeys } from './utils/cashu'
 
 const P2PK_XONLY_HEX_LENGTH = 64
 const P2PK_COMPRESSED_HEX_LENGTH = 66
@@ -125,4 +126,46 @@ export const verifyAuctionPathGrant = (input: AuctionPathGrantVerificationInput)
 	if (!auctionP2pkPubkeysMatch(derived, input.childPubkey)) {
 		throw new Error('Path grant child_pubkey does not match xpub + derivation path derivation')
 	}
+}
+
+/**
+ * Minimal structural shape of a Cashu proof this module needs: just the
+ * encoded NUT-11 P2PK `secret` string. Keeping it structural lets us collect
+ * from a decoded bid token's proofs without a hard dependency on the full
+ * `Proof` type.
+ */
+export interface ProofLike {
+	secret: string
+}
+
+/**
+ * Collect and normalize every NUT-11 `refund` (refundKeys) pubkey embedded in a
+ * decoded bid token's proofs, deduped to canonical x-only form.
+ *
+ * Used by the refund/reclaim path as a fallback when the cached
+ * `auctionContext.refundPubkey` is stale or missing (issue #6): the proof
+ * secret is the source of truth — `lockAuctionBidProofs` encodes a `refund`
+ * tag into every bid proof, so a bidder's wallet can still recover the refund
+ * key the bid was actually locked with. Proofs whose secret isn't a P2PK
+ * secret, and refund values that aren't valid pubkeys, are skipped.
+ */
+export const collectAuctionP2pkRefundPubkeys = (proofs: ReadonlyArray<ProofLike>): string[] => {
+	const seen = new Set<string>()
+	for (const proof of proofs) {
+		let candidates: string[]
+		try {
+			candidates = getP2PKRefundPubkeys(proof.secret)
+		} catch {
+			// Proof isn't a P2PK secret — it can't contribute a refund pubkey.
+			continue
+		}
+		for (const candidate of candidates) {
+			try {
+				seen.add(normalizeAuctionP2pkPubkey(candidate))
+			} catch {
+				// Invalid pubkey value — skip.
+			}
+		}
+	}
+	return Array.from(seen)
 }
