@@ -1468,6 +1468,21 @@ export async function reclaimExpiredBid(
 }
 ```
 
+> **Recovering the refund key when cached context is stale (issue #6).** The
+> refund privkey is selected from the bidder's wallet. The client first tries
+> the cached `refundPubkey` stashed in `auctionContext` (localStorage) when the
+> bid was placed. When that context is missing or stale — an older session, a
+> partial cache clear, or a formatting drift — the reclaim path falls back to
+> the **proof secret itself**, which is the source of truth: `lockAuctionBidProofs`
+> encodes a NUT-11 `refund` tag (`refundKeys: [refundPubkey]`) into every bid
+> proof. `collectAuctionP2pkRefundPubkeys(proofs)` reads those tags, normalizes
+> them to canonical x-only form, and the wallet resolves a privkey for any
+> candidate it holds. This fallback is purely additive — it only fires when the
+> cached path fails, so a correctly-cached `refundPubkey` is never disturbed. If
+> the wallet holds none of the candidates (a genuine key mismatch from a
+> reseed/different wallet), reclaim still aborts as before — the locked sats stay
+> at the mint and can only be reclaimed by the original wallet.
+
 ### 15.5 Non-negotiable safety rules
 
 - NEVER publish `cashu_token` or raw proofs in kind `1023` public

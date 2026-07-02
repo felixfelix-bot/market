@@ -9,6 +9,7 @@ import {
 } from '@/lib/wallet'
 import {
 	auctionP2pkPubkeysMatch,
+	collectAuctionP2pkRefundPubkeys,
 	deriveAuctionChildP2pkPubkeyFromXpub,
 	getAuctionP2pkLockPubkeyFromSecret,
 	normalizeAuctionDerivationPath,
@@ -661,6 +662,41 @@ const loadWalletFromLatestEvent = async (ownerPubkey: string): Promise<NDKCashuW
 
 const resolveAuctionBidPendingContext = (pendingToken: PendingNip60Token): AuctionBidPendingTokenContext | null => {
 	return pendingToken.context?.kind === 'auction_bid' ? pendingToken.context : null
+}
+
+/**
+ * Resolve the refund privkey a reclaim should sign with.
+ *
+ * Primary path: the cached `auctionContext.refundPubkey` (localStorage). When
+ * that is stale or missing (older session, partial cache clear, formatting
+ * drift), fall back to the bid token's own proof secrets — `lockAuctionBidProofs`
+ * encodes a NUT-11 `refund` tag into every proof, so the refund key a bid was
+ * actually locked with is always recoverable. Issue #6.
+ *
+ * Returns `null` for a non-auction token (no refund key by definition) or when
+ * the wallet holds none of the candidate refund keys (true key mismatch).
+ */
+const resolveRefundPrivkey = (
+	wallet: NDKCashuWallet,
+	token: string,
+	auctionContext: AuctionBidPendingTokenContext | null,
+): string | null => {
+	if (!auctionContext) return null
+
+	const cached = getWalletPrivkeyForPubkey(wallet, auctionContext.refundPubkey)
+	if (cached) return cached
+
+	try {
+		const proofs = getDecodedToken(token)?.proofs ?? []
+		for (const candidate of collectAuctionP2pkRefundPubkeys(proofs)) {
+			const resolved = getWalletPrivkeyForPubkey(wallet, candidate)
+			if (resolved) return resolved
+		}
+	} catch {
+		// Token un-decodable — no proof-secret fallback available.
+	}
+
+	return null
 }
 
 const getOrCreateWalletP2pk = async (wallet: NDKCashuWallet): Promise<string> => {
@@ -2438,7 +2474,7 @@ export const nip60Actions = {
 			throw new Error(`Bid refund opens in ${formatReclaimWaitSeconds(waitSeconds)}`)
 		}
 
-		const refundPrivkey = auctionContext ? getWalletPrivkeyForPubkey(wallet, auctionContext.refundPubkey) : null
+		const refundPrivkey = resolveRefundPrivkey(wallet, pendingToken.token, auctionContext)
 
 		// If this is an auction bid but we don't hold the refund privkey, stop
 		// immediately. Falling through to an unsigned swap just spams the mint
