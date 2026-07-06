@@ -186,25 +186,25 @@ There is intentionally no product reference (`a` tag) in v1.
   reputation events (kind 30440); they MUST NOT use the opinions of
   unlisted validators when deciding whether bids count for _this_
   auction. At least one `auditors` tag is REQUIRED.
+
+### Optional auction tags
+
 - `min_bid_curve`: anti-snipe floor curve applied in `(end_at, max_end_at]`.
   Format `<shape>:<peak_multiplier>` where `shape ∈ {none, linear,
-exponential}` and `peak_multiplier` is a decimal in `[1.0, 100.0]`.
+  exponential}` and `peak_multiplier` is a decimal in `[1.0, 100.0]`.
   Floor computed as `baseline × multiplier(t)`:
-  - `baseline = top_bid === 0 ? starting_bid : top_bid + bid_increment`
+  - `baseline = top_bid === 0 ? reserve : top_bid + bid_increment`
   - `multiplier(t) = 1` when `t ≤ end_at` or `shape = none`
   - `multiplier(t) = peak_multiplier` when `t ≥ max_end_at`
   - In `(end_at, max_end_at)` with `t_norm = (t - end_at) / (max_end_at - end_at)`:
     - `shape = linear` → `1 + (peak_multiplier - 1) × t_norm`
     - `shape = exponential` → `peak_multiplier ^ t_norm`
-      v1 form presets for `peak_multiplier`: `2.0` / `5.0` / `10.0`. Default
-      when tag is missing: `none:1.0` (no curve, flat floor through the
-      whole bidding window). Validators enforce this floor when emitting
-      kind-30440 verdicts (a bid below the curve floor is marked
-      `bid_invalid` with `reason=under_curve`); compliant bidder clients
-      apply the same computation locally to warn before publishing.
-
-### Optional auction tags
-
+  - v1 form presets for `peak_multiplier`: `2.0` / `5.0` / `10.0`.
+  - **Default when tag is missing:** `none:1.0` (no curve, flat floor
+    through the whole bidding window). Validators enforce this floor when
+    emitting kind-30440 verdicts (a bid below the curve floor is marked
+    `bid_invalid` with `reason=under_curve`); compliant bidder clients
+    apply the same computation locally to warn before publishing.
 - `vadium_ratio_bps`: default `10000` (100%).
 - `schema`: version marker, e.g. `auction_v1`.
 - `auditor_quorum`: integer N. When present and ≥2, a bid is considered
@@ -534,6 +534,15 @@ Required tags:
   - `voluntary_late` — bidder griefed past `settlement_grace` but is
     making good now (paths may still be valid if the proof hasn't
     been refunded yet; see §8).
+- `cashu_token`: serialized Cashu token (`cashuA…` / `cashuB…`) wrapping
+  the bid leg's full locked proofs (`{amount, secret, C, id}` per proof).
+  The kind-1023 bid event publishes only `lock_secret` + `proof_y`, so the
+  seller has no way to recover the proofs' `C` value otherwise. Proofs are
+  P2PK-locked to `derive(p2pk_xpub, derivation_path)` — only the seller
+  (who holds `seller_xpriv`) can spend them, so publishing the token
+  publicly is safe. The ONLY legitimate case for omission is a synthetic /
+  non-redeemable release (e.g. seed test fixtures); compliant settlers
+  MUST refuse to redeem any kind-1025 that lacks a `cashu_token` tag.
 
 Optional tags:
 
@@ -541,15 +550,6 @@ Optional tags:
   responding to (e.g. the validator's `won_pending_settlement` event).
 - `fallback_offer`: kind-1026 event id this release is accepting (set
   on `release_reason=fallback_settlement`).
-- `cashu_token`: serialized Cashu token (`cashuA…` / `cashuB…`) wrapping
-  the bid leg's full locked proofs (`{amount, secret, C, id}` per proof).
-  REQUIRED in practice for the seller to redeem: the kind-1023 bid event
-  publishes only `lock_secret` + `proof_y`, so the seller has no way to
-  recover the proofs' `C` value otherwise. Proofs are P2PK-locked to
-  `derive(p2pk_xpub, derivation_path)` — only the seller (who holds
-  `seller_xpriv`) can spend them, so publishing the token publicly is
-  safe. Omit only on synthetic / non-redeemable releases (e.g. seed
-  fixtures); compliant settlers will refuse to redeem without it.
 - `content` (event body): MAY contain a short human note.
 
 ### Chain releases
@@ -777,6 +777,17 @@ Post-close (terminal):
   the legitimate settlement. Strongest negative.
 - `cancelled` — auction was cancelled by the seller; bid refunds at
   locktime.
+
+Optional / extension claims (MAY be emitted by validators but are not
+required for v1 compliance):
+
+- `griefed_seller` — seller was unresponsive at settlement time despite
+  receiving a valid kind-1025 path release. Inverse-side reputation event
+  for unresponsive sellers (see §8.2 `seller_offline_at_settlement`).
+- `settled_lockless` — bidder made good on a griefed auction by sending
+  the seller a fresh Cashu payment outside the auction protocol, after
+  the original lock was already refunded. Requires a seller attestation
+  of receipt (see §8.4).
 
 Common `reason` values for `bid_invalid`:
 
@@ -1107,10 +1118,10 @@ before attempting on-mint redemption.
 stateDiagram-v2
     [*] --> Draft
     Draft --> Active: start_at reached
-    Active --> Closing: effective_end_at reached
-    Closing --> Settled: issuer releases winner path + seller redeems + settlement emitted
-    Closing --> ReserveNotMet: top bid < reserve (issuer refuses release)
-    Closing --> Cancelled: policy/admin cancel before first valid bid
+    Active --> Closing: max_end_at reached
+    Closing --> Settled: bidder releases path + seller redeems + settlement emitted
+    Closing --> ReserveNotMet: top bid < reserve
+    Closing --> Cancelled: seller cancels (discouraged after first valid bid per §8.2)
     Settled --> [*]
     ReserveNotMet --> [*]
     Cancelled --> [*]
@@ -1125,7 +1136,7 @@ Deterministic close input set:
 
 ## 6.0 The three timestamps (structural invariant)
 
-Every path-oracle auction is parameterised by three monotonically ordered
+Every bidder-held-path auction is parameterised by three monotonically ordered
 timestamps. Implementations MUST treat each as a separate concern; collapsing
 any two of them into one is unsafe.
 
@@ -1143,7 +1154,7 @@ T_unlock = T_cutoff + settlement_grace
 ```
 
 **The gap `T_unlock − T_cutoff` is the seller's settlement window.** It must be wide enough to absorb worst-case settlement work — receive a path
-release from the issuer, derive every child privkey in the winner's chain,
+release from the bidder, derive every child privkey in the winner's chain,
 swap each leg at the mint, sign and publish the kind-1024 event, and absorb
 retries from transient mint 429s or relay failures.
 
@@ -1181,7 +1192,7 @@ bidder clients run the same formula locally to warn the user before
 publishing.
 
 ```text
-baseline(top_bid)      = top_bid === 0 ? starting_bid : top_bid + bid_increment
+baseline(top_bid)      = top_bid === 0 ? reserve : top_bid + bid_increment
 multiplier(t):
   if t ≤ end_at OR shape = none:   return 1
   if t ≥ max_end_at:                return peak_multiplier
@@ -1554,7 +1565,7 @@ Workflow:
    griefed top bidder. Validators mark the original winner
    `griefed` (terminal) and bidder #2 `settled_promptly`.
 5. If bidder #2 declines (explicit decline event) or doesn't act
-   before `locktime − safety_margin`, seller MAY cascade to bidder
+   before `locktime − settlement_grace / 2`, seller MAY cascade to bidder
    #3, and so on. Compliant clients SHOULD cascade automatically
    only down to a seller-configured floor (e.g. ≥ `reserve`).
 6. If the cascade exhausts without a settlement, seller publishes
@@ -1862,15 +1873,23 @@ and prod deploys, so the canonical stage is read from `/api/config`
 | `staging`     | `<app-relay>` only. `getCurrencyServerRelays('staging') === []`.                         |
 | `development` | `<app-relay>` only (default localhost). `getCurrencyServerRelays('development') === []`. |
 
-## 11.1 Platform / issuer responsibilities
+## 11.1 Seller responsibilities
+
+In the bidder-held-path scheme, the seller (not a platform or issuer) is
+responsible for the following:
 
 - Maintain pinned canonical root event ID for each auction.
 - Enforce immutable auction mechanics after first valid bid.
-- Compute `effective_end_at` deterministically and expose it in UI.
-- Re-verify candidate winning bid proofs shortly before release.
-- Refuse to release paths unless reserve, timing, and bid-validity rules
-  are satisfied.
-- Track settlement deadlines and alert seller on pending close.
+- Compute settlement deadlines from `max_end_at + settlement_grace` and
+  expose them in UI.
+- Verify candidate winning bid proofs (NUT-7 state, derivation check)
+  before attempting redemption.
+- Redeem locked proofs at the mint after receiving the bidder's kind-1025
+  path release, then publish kind-1024 settlement.
+- Track settlement deadlines and initiate fallback workflow (§8.3) if the
+  winning bidder does not publish kind-1025 within `settlement_grace`.
+- Decline or cancel the auction only per §8.2 policy (cancel after first
+  valid bid is discouraged, not mechanically prevented).
 
 ## 11.2 Gamma spec integration
 
@@ -1888,11 +1907,16 @@ field semantics. Unchanged from prior drafts:
 
 ## 12. Open Decisions Before Spec Merge
 
-1. Confirm kind mapping (`30408` listing, `1023` bid, `1024` settlement,
-   `30410` path registry) for initial implementation.
+1. ~~Confirm kind mapping (`30408` listing, `1023` bid, `1024` settlement,
+   `30410` path registry) for initial implementation.~~
+   **Resolved:** There is no kind-30410 path registry in the bidder-held-path
+   scheme. Kind mapping is `30408` listing, `1023` bid, `1024` settlement,
+   `1025` path release, `1026` fallback offer, `30440`–`30442` validator events.
 2. Canonical default `settlement_grace` value (v1 default: 3600).
-3. Grant expiry window (how long an `auction_path_grant_v1` is valid
-   before the bidder must re-request).
+3. ~~Grant expiry window (how long an `auction_path_grant_v1` is valid
+   before the bidder must re-request).~~
+   **Resolved:** Grants do not exist in the bidder-held-path scheme. The
+   bidder generates the path locally and holds it indefinitely.
 4. Exact refund transport UX:
    - direct token push to loser (issuer-side)
    - loser pull/claim endpoint
@@ -1903,8 +1927,10 @@ field semantics. Unchanged from prior drafts:
 7. Cross-mint bids:
    - single mint per bid (simpler) vs multi-mint per bid (complex).
 8. Minimum auction duration and anti-spam defaults.
-9. Federated issuers: whether `path_issuer` may be a non-app pubkey and
-   how audit guarantees change in that case.
+9. ~~Federated issuers: whether `path_issuer` may be a non-app pubkey and
+   how audit guarantees change in that case.~~
+   **Resolved:** `path_issuer` was removed in §4.1. There is no issuer role
+   in the bidder-held-path scheme; paths are bidder-generated.
 
 ---
 
