@@ -51,3 +51,5 @@ test-results
 __pycache__/
 
 .opencode/
+# auto-generated opencode session handover (do not commit)
+HANDOVER.md
