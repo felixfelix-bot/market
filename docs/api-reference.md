@@ -6,6 +6,7 @@ declared in a single `Bun.serve({ routes })` object. There is no router framewor
 Bun's built-in pattern matching is used.
 
 > **Conventions**
+>
 > - Base URL: the origin the server is deployed at (e.g. `http://localhost:3000` in
 >   development). All examples use a relative path because the frontend is served from
 >   the same origin.
@@ -16,17 +17,17 @@ Bun's built-in pattern matching is used.
 
 ## Table of contents
 
-| # | Method | Path | Purpose |
-|---|--------|------|---------|
-| 1 | `GET`  | [`/api/config`](#1-get-apiconfig) | App configuration for the frontend |
-| 2 | `POST` | [`/api/zapPurchase`](#2-post-apizappurchase) | Generate a Lightning invoice for a purchasable (vanity URL, NIP-05, …) |
-| 3 | `GET`  | [`/.well-known/nostr.json`](#3-get-well-knownnostrjson) | NIP-05 verification (Lightning address / Nostr identity) |
-| 4 | `GET`  | [`/images/:file`](#4-get-imagesfile) | Static images from `public/images/` |
-| 5 | `GET`  | [`/manifest.json`](#5-get-manifestjson) | PWA web app manifest |
-| 6 | `GET`  | [`/sw.js`](#6-get-swjs) | Service worker |
-| 7 | `GET`  | [`/favicon.ico`](#7-get-faviconico) | Favicon |
-| 8 | `GET`  | [`/*`](#8-get--spa-catch-all) | SPA catch-all (serves the React app) |
-| 9 | `WS`   | [`/` (WebSocket)](#9-websocket--nostr-relay) | Nostr relay — publish signed events |
+| #   | Method | Path                                                    | Purpose                                                                |
+| --- | ------ | ------------------------------------------------------- | ---------------------------------------------------------------------- |
+| 1   | `GET`  | [`/api/config`](#1-get-apiconfig)                       | App configuration for the frontend                                     |
+| 2   | `POST` | [`/api/zapPurchase`](#2-post-apizappurchase)            | Generate a Lightning invoice for a purchasable (vanity URL, NIP-05, …) |
+| 3   | `GET`  | [`/.well-known/nostr.json`](#3-get-well-knownnostrjson) | NIP-05 verification (Lightning address / Nostr identity)               |
+| 4   | `GET`  | [`/images/:file`](#4-get-imagesfile)                    | Static images from `public/images/`                                    |
+| 5   | `GET`  | [`/manifest.json`](#5-get-manifestjson)                 | PWA web app manifest                                                   |
+| 6   | `GET`  | [`/sw.js`](#6-get-swjs)                                 | Service worker                                                         |
+| 7   | `GET`  | [`/favicon.ico`](#7-get-faviconico)                     | Favicon                                                                |
+| 8   | `GET`  | [`/*`](#8-get--spa-catch-all)                           | SPA catch-all (serves the React app)                                   |
+| 9   | `WS`   | [`/` (WebSocket)](#9-websocket--nostr-relay)            | Nostr relay — publish signed events                                    |
 
 ---
 
@@ -52,27 +53,27 @@ None.
 
 ```jsonc
 {
-  "appRelay": "wss://relay.example.com",
-  "stage": "production",                       // "production" | "staging" | "development"
-  "nip46Relay": "wss://relay.nsec.app",
-  "appSettings": { /* AppSettings object, see below — null until setup is complete */ },
-  "appPublicKey": "29bd6461f780c07b29c89b4df8017db90973d5608a3cd811a0522b15c1064f15",
-  "cvmServerPubkey": "29bd64...c1064f15",
-  "needsSetup": false,                          // true when appSettings is null
-  "serverReady": true                           // false while the EventHandler is initializing
+	"appRelay": "wss://relay.example.com",
+	"stage": "production", // "production" | "staging" | "development"
+	"nip46Relay": "wss://relay.nsec.app",
+	"appSettings": {/* AppSettings object, see below — null until setup is complete */},
+	"appPublicKey": "29bd6461f780c07b29c89b4df8017db90973d5608a3cd811a0522b15c1064f15",
+	"cvmServerPubkey": "29bd64...c1064f15",
+	"needsSetup": false, // true when appSettings is null
+	"serverReady": true, // false while the EventHandler is initializing
 }
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `appRelay` | `string` | WebSocket URL of the app's Nostr relay (`APP_RELAY_URL` env). |
-| `stage` | `"production" \| "staging" \| "development"` | Deployment stage. Derived from `APP_STAGE`, falling back to `NODE_ENV`. |
-| `nip46Relay` | `string` | NIP-46 (Nostr Wallet Connect / bunker) relay. Defaults to `wss://relay.nsec.app`. |
-| `appSettings` | [`AppSettings`](#appsettings-object) \| `null` | App metadata loaded from the kind-31990 setup event at startup. `null` until first-run setup is complete. |
-| `appPublicKey` | `string` | Hex pubkey derived from `APP_PRIVATE_KEY`. `null` until the server initializes. |
-| `cvmServerPubkey` | `string` | ContextVM server pubkey, from `CVM_SERVER_PUBKEY`, derived from `CVM_SERVER_KEY`, or a built-in default. |
-| `needsSetup` | `boolean` | Convenience flag: `true` exactly when `appSettings` is `null`. Drives the setup wizard in the UI. |
-| `serverReady` | `boolean` | Whether the `EventHandler` is ready to accept published events over WebSocket. |
+| Field             | Type                                           | Description                                                                                               |
+| ----------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `appRelay`        | `string`                                       | WebSocket URL of the app's Nostr relay (`APP_RELAY_URL` env).                                             |
+| `stage`           | `"production" \| "staging" \| "development"`   | Deployment stage. Derived from `APP_STAGE`, falling back to `NODE_ENV`.                                   |
+| `nip46Relay`      | `string`                                       | NIP-46 (Nostr Wallet Connect / bunker) relay. Defaults to `wss://relay.nsec.app`.                         |
+| `appSettings`     | [`AppSettings`](#appsettings-object) \| `null` | App metadata loaded from the kind-31990 setup event at startup. `null` until first-run setup is complete. |
+| `appPublicKey`    | `string`                                       | Hex pubkey derived from `APP_PRIVATE_KEY`. `null` until the server initializes.                           |
+| `cvmServerPubkey` | `string`                                       | ContextVM server pubkey, from `CVM_SERVER_PUBKEY`, derived from `CVM_SERVER_KEY`, or a built-in default.  |
+| `needsSetup`      | `boolean`                                      | Convenience flag: `true` exactly when `appSettings` is `null`. Drives the setup wizard in the UI.         |
+| `serverReady`     | `boolean`                                      | Whether the `EventHandler` is ready to accept published events over WebSocket.                            |
 
 #### `AppSettings` object
 
@@ -80,17 +81,17 @@ Defined by `AppSettingsSchema` in `src/lib/schemas/app.ts`:
 
 ```jsonc
 {
-  "name": "market",                       // required, string
-  "displayName": "Plebeian Market",       // required, string
-  "picture": "https://…/logo.png",        // required, URL
-  "banner": "https://…/banner.jpg",       // required, URL
-  "ownerPk": "<hex pubkey>",              // required, the app owner's pubkey
-  "allowRegister": true,                  // required, whether new accounts may register
-  "defaultCurrency": "EUR",               // required, ISO currency code
-  "contactEmail": "hello@example.com",    // optional, string
-  "blossom_server": "https://…",          // optional, URL
-  "nip96_server": "https://…",            // optional, URL
-  "showNostrLink": false                  // optional, defaults to false
+	"name": "market", // required, string
+	"displayName": "Plebeian Market", // required, string
+	"picture": "https://…/logo.png", // required, URL
+	"banner": "https://…/banner.jpg", // required, URL
+	"ownerPk": "<hex pubkey>", // required, the app owner's pubkey
+	"allowRegister": true, // required, whether new accounts may register
+	"defaultCurrency": "EUR", // required, ISO currency code
+	"contactEmail": "hello@example.com", // optional, string
+	"blossom_server": "https://…", // optional, URL
+	"nip96_server": "https://…", // optional, URL
+	"showNostrLink": false, // optional, defaults to false
 }
 ```
 
@@ -141,16 +142,17 @@ The zap request must target the app's pubkey (`["p", appPublicKey]`).
 
 ```ts
 interface ZapPurchaseInvoiceRequestBody {
-  amountSats: number          // price in sats; must be > 0
-  registryKey: string         // the thing being bought, e.g. "alice" (lowercased)
-  zapRequest: {               // a signed Nostr kind-9734 zap request (raw event)
-    pubkey: string
-    sig: string               // required — request is rejected if unsigned
-    created_at?: number
-    kind?: number
-    content?: string
-    tags: string[][]          // must include ["L", <label>] and ["p", <appPubkey>]
-  }
+	amountSats: number // price in sats; must be > 0
+	registryKey: string // the thing being bought, e.g. "alice" (lowercased)
+	zapRequest: {
+		// a signed Nostr kind-9734 zap request (raw event)
+		pubkey: string
+		sig: string // required — request is rejected if unsigned
+		created_at?: number
+		kind?: number
+		content?: string
+		tags: string[][] // must include ["L", <label>] and ["p", <appPubkey>]
+	}
 }
 ```
 
@@ -179,7 +181,7 @@ The `zapRequest.tags` MUST contain:
 
 ```json
 {
-  "pr": "lnbc10000n1pj4...<full BOLT11 invoice string>"
+	"pr": "lnbc10000n1pj4...<full BOLT11 invoice string>"
 }
 ```
 
@@ -189,11 +191,11 @@ The `zapRequest.tags` MUST contain:
 
 All errors are JSON: `{ "error": "<message>" }`.
 
-| Status | When |
-|--------|------|
-| `400` | Malformed JSON, missing `L` tag, unknown purchase type, unsigned zap request, mismatched amount/keys, invalid or taken name, amount outside LNURL min/max. |
-| `500` | Unexpected server-side failure (e.g. app pubkey not initialized). |
-| `502` | Upstream LNURL-pay provider failure (couldn't fetch pay data or the invoice). |
+| Status | When                                                                                                                                                       |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `400`  | Malformed JSON, missing `L` tag, unknown purchase type, unsigned zap request, mismatched amount/keys, invalid or taken name, amount outside LNURL min/max. |
+| `500`  | Unexpected server-side failure (e.g. app pubkey not initialized).                                                                                          |
+| `502`  | Upstream LNURL-pay provider failure (couldn't fetch pay data or the invoice).                                                                              |
 
 ### Example — vanity URL purchase
 
@@ -208,30 +210,30 @@ const zapRequest = new NDKEvent(ndk)
 zapRequest.kind = 9734
 zapRequest.content = ''
 zapRequest.tags = [
-  ['p', appPublicKey],                       // from /api/config
-  ['amount', (10000 * 1000).toString()],     // millisats
-  ['L', 'vanity-register'],                  // select the VanityManager
-  ['vanity', 'alice'],                       // registry key (what you're buying)
-  ['relays', appRelay, 'wss://relay.damus.io', /* …more ZAP_RELAYS */],
+	['p', appPublicKey], // from /api/config
+	['amount', (10000 * 1000).toString()], // millisats
+	['L', 'vanity-register'], // select the VanityManager
+	['vanity', 'alice'], // registry key (what you're buying)
+	['relays', appRelay, 'wss://relay.damus.io' /* …more ZAP_RELAYS */],
 ]
-await zapRequest.sign()                      // creates zapRequest.sig
+await zapRequest.sign() // creates zapRequest.sig
 
 const res = await fetch('/api/zapPurchase', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    amountSats: 10000,
-    registryKey: 'alice',
-    zapRequest: zapRequest.rawEvent(),
-  }),
+	method: 'POST',
+	headers: { 'Content-Type': 'application/json' },
+	body: JSON.stringify({
+		amountSats: 10000,
+		registryKey: 'alice',
+		zapRequest: zapRequest.rawEvent(),
+	}),
 })
 
 if (!res.ok) {
-  const { error } = await res.json()
-  throw new Error(error || `Failed to create invoice (${res.status})`)
+	const { error } = await res.json()
+	throw new Error(error || `Failed to create invoice (${res.status})`)
 }
 
-const { pr } = await res.json()              // hand `pr` to a Lightning wallet
+const { pr } = await res.json() // hand `pr` to a Lightning wallet
 ```
 
 ### Example — raw `curl` (zap request omitted for brevity)
@@ -253,10 +255,10 @@ curl -X POST https://market.example.com/api/zapPurchase \
 Pricing tiers are defined per manager. In production both vanity URLs and NIP-05
 usernames use:
 
-| Tier | Price | Validity |
-|------|-------|----------|
+| Tier     | Price       | Validity |
+| -------- | ----------- | -------- |
 | 6 months | 10 000 sats | 180 days |
-| 1 year | 18 000 sats | 365 days |
+| 1 year   | 18 000 sats | 365 days |
 
 In development an additional 10-sats / 90-second tier is available for testing.
 See `src/server/VanityManager.ts` (`VANITY_PRICING`) and
@@ -280,18 +282,18 @@ None. Per NIP-05 this endpoint must be publicly reachable and CORS-enabled.
 
 ### Query parameters
 
-| Name | Required | Description |
-|------|----------|-------------|
-| `name` | no | A specific username. If omitted, **all** active registrations are returned. |
+| Name   | Required | Description                                                                 |
+| ------ | -------- | --------------------------------------------------------------------------- |
+| `name` | no       | A specific username. If omitted, **all** active registrations are returned. |
 
 ### Response — `200 OK`
 
 ```jsonc
 {
-  "names": {
-    "alice": "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d",
-    "bob":   "82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fa79_60"
-  }
+	"names": {
+		"alice": "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d",
+		"bob": "82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fa79_60",
+	},
 }
 ```
 
@@ -328,8 +330,8 @@ None.
 
 ### Path parameters
 
-| Name | Description |
-|------|-------------|
+| Name   | Description                       |
+| ------ | --------------------------------- |
 | `file` | Filename within `public/images/`. |
 
 ### Response
@@ -437,11 +439,11 @@ acknowledges with Nostr `OK` messages.
 ```js
 const ws = new WebSocket('wss://market.example.com/')
 ws.onopen = () => {
-  ws.send(JSON.stringify(['EVENT', signedEvent]))
+	ws.send(JSON.stringify(['EVENT', signedEvent]))
 }
 ws.onmessage = (msg) => {
-  const [type, eventId, accepted, message] = JSON.parse(msg.data)
-  // type === 'OK'; accepted === true/false
+	const [type, eventId, accepted, message] = JSON.parse(msg.data)
+	// type === 'OK'; accepted === true/false
 }
 ```
 
@@ -464,13 +466,13 @@ The event was accepted, re-signed, and published to the relay.
 
 The event was rejected. Common reasons:
 
-| Reason | Cause |
-|--------|-------|
-| `error: Server initializing, please try again` | The `EventHandler` is not ready yet (retry shortly). |
-| `error: Unable to verify event signature` | `verifyEvent` returned false. |
-| `error: Handler error: <detail>` | The event handler threw while processing. |
-| `Not authorized` | The submitter is not an admin/editor (or bootstrap mode is off). |
-| `error: Invalid message format <detail>` | The message could not be parsed as a `["EVENT", …]` frame. |
+| Reason                                         | Cause                                                            |
+| ---------------------------------------------- | ---------------------------------------------------------------- |
+| `error: Server initializing, please try again` | The `EventHandler` is not ready yet (retry shortly).             |
+| `error: Unable to verify event signature`      | `verifyEvent` returned false.                                    |
+| `error: Handler error: <detail>`               | The event handler threw while processing.                        |
+| `Not authorized`                               | The submitter is not an admin/editor (or bootstrap mode is off). |
+| `error: Invalid message format <detail>`       | The message could not be parsed as a `["EVENT", …]` frame.       |
 
 #### `["NOTICE", "error: Invalid JSON"]`
 
@@ -490,15 +492,15 @@ registries (`vanity-urls`, `nip05-names`).
 
 The endpoints above depend on these environment variables (see `src/index.tsx`):
 
-| Variable | Used by | Description |
-|----------|---------|-------------|
-| `APP_RELAY_URL` | config, WS, zap | **Required.** The app's Nostr relay. |
-| `APP_PRIVATE_KEY` | config, WS, zap | **Required.** Hex private key for the app identity; derives `appPublicKey`. |
-| `NIP46_RELAY_URL` | config | NIP-46 relay; defaults to `wss://relay.nsec.app`. |
-| `PORT` | server | Listen port; defaults to `3000`. |
-| `APP_STAGE` / `NODE_ENV` | config | Determine the `stage` field. |
-| `APP_LIGHTNING_ADDRESS` / `APP_LUD16` / `APP_LN_ADDRESS` / `APP_LIGHTNING_IDENTIFIER` | zap | Override the app's Lightning address used for invoice generation. Falls back to the app profile's `lud16`/`lud06`. |
-| `CVM_SERVER_PUBKEY` / `CVM_SERVER_KEY` | config | ContextVM server identity; falls back to a built-in default pubkey. |
+| Variable                                                                              | Used by         | Description                                                                                                        |
+| ------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `APP_RELAY_URL`                                                                       | config, WS, zap | **Required.** The app's Nostr relay.                                                                               |
+| `APP_PRIVATE_KEY`                                                                     | config, WS, zap | **Required.** Hex private key for the app identity; derives `appPublicKey`.                                        |
+| `NIP46_RELAY_URL`                                                                     | config          | NIP-46 relay; defaults to `wss://relay.nsec.app`.                                                                  |
+| `PORT`                                                                                | server          | Listen port; defaults to `3000`.                                                                                   |
+| `APP_STAGE` / `NODE_ENV`                                                              | config          | Determine the `stage` field.                                                                                       |
+| `APP_LIGHTNING_ADDRESS` / `APP_LUD16` / `APP_LN_ADDRESS` / `APP_LIGHTNING_IDENTIFIER` | zap             | Override the app's Lightning address used for invoice generation. Falls back to the app profile's `lud16`/`lud06`. |
+| `CVM_SERVER_PUBKEY` / `CVM_SERVER_KEY`                                                | config          | ContextVM server identity; falls back to a built-in default pubkey.                                                |
 
 ---
 
