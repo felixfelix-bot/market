@@ -2,9 +2,8 @@ name: E2E Tests
 
 on:
   push:
-    branches: [main, master, 'auctions/**']
+    branches: [main, master]
   pull_request:
-    branches: [main, master, 'auctions/**']
   workflow_dispatch:
   schedule:
     - cron: '0 6 * * 1'
