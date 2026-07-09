@@ -5,7 +5,6 @@ import { liveActivityKeys } from './queryKeyFactory'
 import {
 	LIVE_ACTIVITY_KIND,
 	LIVE_CHAT_KIND,
-	AUCTION_KIND,
 	parseLiveActivity,
 	parseLiveChatMessage,
 	type LiveActivity,
@@ -15,23 +14,23 @@ import {
 type NDKKind = NonNullable<NDKFilter['kinds']>[number]
 const LIVE_ACTIVITY_KIND_NDK = LIVE_ACTIVITY_KIND as unknown as NDKKind
 const LIVE_CHAT_KIND_NDK = LIVE_CHAT_KIND as unknown as NDKKind
-import { getAuctionId } from './auctions'
 import { configStore } from '@/lib/stores/config'
 
-export const fetchLiveActivity = async (auctionEvent: NDKEvent): Promise<LiveActivity | null> => {
-	const dTag = getAuctionId(auctionEvent)
-	if (!dTag) return null
+/**
+ * Fetch live activity for a given coordinate
+ * @param liveActivityCoord - The live activity coordinate (e.g., "30001:pubkey:dTag")
+ */
+export const fetchLiveActivity = async (liveActivityCoord: string): Promise<LiveActivity | null> => {
+	if (!liveActivityCoord) return null
 
 	const ndk = ndkActions.getNDK()
 	if (!ndk) return null
-
-	const auctionCoord = `${AUCTION_KIND}:${auctionEvent.pubkey}:${dTag}`
 
 	const cvmServerPubkey = configStore.state.config.cvmServerPubkey
 
 	const filter: NDKFilter = {
 		kinds: [LIVE_ACTIVITY_KIND_NDK],
-		'#a': [auctionCoord],
+		'#a': [liveActivityCoord],
 		limit: 10,
 	}
 
@@ -46,6 +45,10 @@ export const fetchLiveActivity = async (auctionEvent: NDKEvent): Promise<LiveAct
 	return parseLiveActivity(sorted[0])
 }
 
+/**
+ * Fetch live chat messages for a given live activity coordinate
+ * @param liveActivityCoord - The live activity coordinate
+ */
 export const fetchLiveChatMessages = async (liveActivityCoord: string): Promise<LiveChatMessage[]> => {
 	const ndk = ndkActions.getNDK()
 	if (!ndk) return []
@@ -64,27 +67,52 @@ export const fetchLiveChatMessages = async (liveActivityCoord: string): Promise<
 		.sort((a, b) => a.createdAt - b.createdAt)
 }
 
-export const useLiveActivity = (auctionEvent: NDKEvent | null) => {
-	const dTag = auctionEvent ? getAuctionId(auctionEvent) : ''
-	const auctionCoord = auctionEvent && dTag ? `${AUCTION_KIND}:${auctionEvent.pubkey}:${dTag}` : ''
-
+/**
+ * Hook for using live activity data
+ * @param liveActivityCoord - The live activity coordinate
+ */
+export const useLiveActivity = (liveActivityCoord: string) => {
 	return useQuery(
 		queryOptions({
-			queryKey: liveActivityKeys.byCoord(auctionCoord),
-			queryFn: () => (auctionEvent ? fetchLiveActivity(auctionEvent) : null),
-			enabled: !!auctionEvent && !!dTag,
+			queryKey: liveActivityKeys.byCoord(liveActivityCoord),
+			queryFn: () => fetchLiveActivity(liveActivityCoord),
+			enabled: !!liveActivityCoord,
 			refetchInterval: 60_000,
 		}),
 	)
 }
 
-export const useLiveChatMessages = (liveActivityCoord: string, isActive: boolean) => {
+/**
+ * Hook for using live chat messages
+ * @param liveActivityCoord - The live activity coordinate  
+ * @param isActive - Whether the chat is currently active (affects polling interval)
+ * @param customRefetchInterval - Optional custom refetch interval in milliseconds
+ */
+export const useLiveChatMessages = (liveActivityCoord: string, isActive: boolean, customRefetchInterval?: number) => {
 	return useQuery(
 		queryOptions({
 			queryKey: liveActivityKeys.chatMessages(liveActivityCoord),
 			queryFn: () => fetchLiveChatMessages(liveActivityCoord),
 			enabled: !!liveActivityCoord,
-			refetchInterval: isActive ? 3_000 : 15_000,
+			refetchInterval: customRefetchInterval ?? (isActive ? 3_000 : 15_000),
 		}),
 	)
+}
+
+/**
+ * Interval picker function for live activity refetch
+ * @param refetchInterval - Optional custom refetch interval
+ * @returns The refetch interval to use
+ */
+export function pickLiveActivityRefetchMs(refetchInterval?: number): number {
+	return refetchInterval ?? 60_000
+}
+
+/**
+ * Interval picker function for fast polling when activity is about to start
+ * @param customInterval - Optional custom interval in milliseconds  
+ * @returns The fast refetch interval (15 seconds by default)
+ */
+export function pickLiveActivityFastRefetchMs(customInterval?: number): number {
+	return customInterval ?? 15_000
 }
