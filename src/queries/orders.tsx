@@ -6,7 +6,7 @@ import { decryptPrivateOrderMessageWithSigner, type PrivateOrderDeliveryDetails 
 // back to the seam's default pass-throughs (fetchEvents/subscribe) to revert.
 import { applesauceIo, type NostrFilter } from '@/lib/nostr/io'
 import { ndkActions } from '@/lib/stores/ndk'
-import type { NDKEvent, NDKFilter, NDKSigner } from '@nostr-dev-kit/ndk'
+import { NDKEvent, NDKFilter, NDKSigner } from '@nostr-dev-kit/ndk'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Event } from 'nostr-tools'
 import { useEffect, useMemo } from 'react'
@@ -87,13 +87,14 @@ export const fetchSellerPrivateOrderGiftWraps = async (sellerPubkey: string): Pr
 	const ndk = ndkActions.getNDK()
 	if (!ndk) throw new Error('NDK not initialized')
 
-	const giftWrapFilter: NDKFilter = {
+	const giftWrapFilter: NostrFilter = {
 		kinds: [NIP59_GIFT_WRAP_KIND],
 		'#p': [sellerPubkey],
 		limit: 500,
 	}
 
-	return Array.from(await ndk.fetchEvents(giftWrapFilter))
+	const raw = await applesauceIo.fetchEvents(giftWrapFilter)
+	return Array.from(raw.map((event) => new NDKEvent(ndk, event)))
 }
 
 export const decryptSellerPrivateOrderGiftWraps = async (params: {
@@ -1025,13 +1026,11 @@ export const useOrderById = (orderId: string, options: UseOrderByIdOptions = {})
 		}
 
 		// Live subscription via the Nostr I/O seam (applesauce-backed); rehydrate as NDKEvent.
-		const stop = applesauceIo.subscribe(
-			relatedEventsFilter,
-			(rawEvent) => {
-				const newEvent = new NDKEvent(ndk, rawEvent)
-				const taggedOrderId = newEvent.tags.find((tag) => tag[0] === 'order')?.[1]
-				const matchesRouteId = newEvent.id === orderId || taggedOrderId === orderId
-				const matchesFetchedOrder = !!taggedOrderId && (taggedOrderId === logicalOrderId || taggedOrderId === fetchedOrderEventId)
+		const stop = applesauceIo.subscribe(relatedEventsFilter, (rawEvent) => {
+			const newEvent = new NDKEvent(ndk, rawEvent)
+			const taggedOrderId = newEvent.tags.find((tag) => tag[0] === 'order')?.[1]
+			const matchesRouteId = newEvent.id === orderId || taggedOrderId === orderId
+			const matchesFetchedOrder = !!taggedOrderId && (taggedOrderId === logicalOrderId || taggedOrderId === fetchedOrderEventId)
 
 			// Any related event should refresh order details (status, shipping, payment requests/receipts, messages)
 			if (!matchesRouteId && !matchesFetchedOrder) return
