@@ -1,7 +1,6 @@
-import { ndkStore } from '@/lib/stores/ndk'
 import { zapKeys } from './queryKeyFactory'
 import { useQuery } from '@tanstack/react-query'
-import { NDKEvent, type NDKFilter } from '@nostr-dev-kit/ndk'
+import { fetchEvents, type NostrEvent, type NostrFilter } from '@/lib/nostr/io'
 import { decode } from 'light-bolt11-decoder'
 
 export interface LightningZap {
@@ -16,7 +15,7 @@ export interface LightningZap {
 	bolt11: string
 	descriptionHash: string // SHA256 of the zap request
 	createdAt: number
-	rawEvent: NDKEvent
+	rawEvent: NostrEvent
 }
 
 interface LnurlResponse {
@@ -33,16 +32,14 @@ interface LnurlResponse {
  * Step 1: Fetch User Profile to get lud16
  */
 const getUserLud16 = async (userPubkey: string): Promise<string | null> => {
-	const ndk = ndkStore.state.zapNdk
-	if (!ndk) throw new Error('NDK not initialized')
-
-	const profileEvents = await ndk.fetchEvents({
+	// Use the main fetchEvents from the seam (which uses zapNdk internally via the active adapter)
+	const profileEvents = await fetchEvents({
 		kinds: [0],
 		authors: [userPubkey],
 		limit: 1,
 	})
 
-	const profile = Array.from(profileEvents)[0]
+	const profile = profileEvents[0]
 	if (!profile) return null
 
 	try {
@@ -81,9 +78,6 @@ const resolveLnurl = async (lud16: string): Promise<LnurlResponse> => {
  * Step 3 & 4: Fetch Zaps from Provider and Filter for User
  */
 export const fetchZapsForUserViaProvider = async (userPubkey: string, targetEventId?: string): Promise<LightningZap[]> => {
-	const ndk = ndkStore.state.zapNdk
-	if (!ndk) throw new Error('NDK not initialized')
-
 	// 1. Get lud16
 	const lud16 = await getUserLud16(userPubkey)
 	if (!lud16) {
@@ -102,7 +96,7 @@ export const fetchZapsForUserViaProvider = async (userPubkey: string, targetEven
 	}
 
 	// 3. Fetch zaps signed by the Provider
-	const filter: NDKFilter = {
+	const filter: NostrFilter = {
 		kinds: [9735],
 		authors: [providerPubkey], // Fetch events SIGNED by the provider
 		limit: 100, // Adjust based on expected volume
@@ -116,10 +110,10 @@ export const fetchZapsForUserViaProvider = async (userPubkey: string, targetEven
 		filter['#e'] = [targetEventId]
 	}
 
-	const events = await ndk.fetchEvents(filter)
+	const events = await fetchEvents(filter)
 	const validZaps: LightningZap[] = []
 
-	for (const event of Array.from(events)) {
+	for (const event of events) {
 		try {
 			const senderPubkey = event.tags.find((t: any[]) => t[0] === 'P')?.[1] ?? ''
 			const comment = event.content
@@ -154,7 +148,7 @@ export const fetchZapsForUserViaProvider = async (userPubkey: string, targetEven
 	return validZaps.sort((a, b) => b.createdAt - a.createdAt)
 }
 
-export const useZapsViaProvider = (event: NDKEvent) => {
+export const useZapsViaProvider = (event: NostrEvent) => {
 	return useQuery({
 		queryKey: zapKeys.byProvider(event.pubkey, event.id), // You'll need to add this key
 		queryFn: () => fetchZapsForUserViaProvider(event.pubkey, event.id),
