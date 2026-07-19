@@ -1,0 +1,537 @@
+{
+  "config": {
+    "configFile": "/home/c03rad0r/market/e2e/playwright.config.ts",
+    "rootDir": "/home/c03rad0r/market/e2e/tests",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": "/home/c03rad0r/market/e2e/global-setup.ts",
+    "globalTeardown": "/home/c03rad0r/market/e2e/global-teardown.ts",
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/c03rad0r/market/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/home/c03rad0r/market/e2e/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/.*\\.spec\\.ts$/"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.60.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "payments.spec.ts",
+      "file": "payments.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Receiving Payments Configuration",
+          "file": "payments.spec.ts",
+          "line": 82,
+          "column": 6,
+          "specs": [
+            {
+              "title": "displays existing seeded payment details",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 12224,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "  Seeding: base (user profiles)\n"
+                        },
+                        {
+                          "text": "    Published profile: TestMerchant\n"
+                        },
+                        {
+                          "text": "    Published profile: TestBuyer\n"
+                        },
+                        {
+                          "text": "    Published profile: TestApp\n"
+                        },
+                        {
+                          "text": "    Published admin list with devUser1\n"
+                        },
+                        {
+                          "text": "  Seeding: merchant (shipping, payments, products)\n"
+                        },
+                        {
+                          "text": "    Published shipping: Worldwide Standard\n"
+                        },
+                        {
+                          "text": "    Published shipping: Digital Delivery\n"
+                        },
+                        {
+                          "text": "    Published shipping: Local Pickup - Bitcoin Store\n"
+                        },
+                        {
+                          "text": "    Published payment: LIGHTNING_NETWORK\n"
+                        },
+                        {
+                          "text": "    Published V4V shares (10% to community)\n"
+                        },
+                        {
+                          "text": "    Published product: Bitcoin Hardware Wallet\n"
+                        },
+                        {
+                          "text": "    Published product: Nostr T-Shirt\n"
+                        },
+                        {
+                          "text": "    Published product: Bitcoin E-Book\n"
+                        },
+                        {
+                          "text": "    Published product: Bitcoin Conference Ticket\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-04T10:52:46.395Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "bd51122182d9e4115608-4593a8cf450b9dc33c2b",
+              "file": "payments.spec.ts",
+              "line": 83,
+              "column": 2
+            },
+            {
+              "title": "can add a new Lightning payment method",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 9284,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-04T10:52:58.925Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "bd51122182d9e4115608-33de3a92a6f50caff6e2",
+              "file": "payments.spec.ts",
+              "line": 97,
+              "column": 2
+            },
+            {
+              "title": "can delete a payment method",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 9536,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-04T10:53:08.266Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "bd51122182d9e4115608-91ead7ae68b8007bdc43",
+              "file": "payments.spec.ts",
+              "line": 119,
+              "column": 2
+            }
+          ]
+        },
+        {
+          "title": "NWC Wallet Management",
+          "file": "payments.spec.ts",
+          "line": 143,
+          "column": 6,
+          "specs": [
+            {
+              "title": "empty state shows add wallet prompt",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5934,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-04T10:53:17.840Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "bd51122182d9e4115608-aabf24ccf55a6df6c51d",
+              "file": "payments.spec.ts",
+              "line": 144,
+              "column": 2
+            },
+            {
+              "title": "can add NWC wallet via manual fields",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6330,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-04T10:53:23.811Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "bd51122182d9e4115608-0315b4b4d1cf4f3c3672",
+              "file": "payments.spec.ts",
+              "line": 157,
+              "column": 2
+            },
+            {
+              "title": "can delete an NWC wallet",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 8011,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-04T10:53:30.180Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "bd51122182d9e4115608-661d568925ff3e664796",
+              "file": "payments.spec.ts",
+              "line": 188,
+              "column": 2
+            }
+          ]
+        },
+        {
+          "title": "Checkout Flow",
+          "file": "payments.spec.ts",
+          "line": 314,
+          "column": 6,
+          "specs": [
+            {
+              "title": "empty cart shows redirect message",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4363,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-04T10:53:38.225Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "bd51122182d9e4115608-eff13db26c3819fe208f",
+              "file": "payments.spec.ts",
+              "line": 317,
+              "column": 2
+            },
+            {
+              "title": "full checkout flow with mocked Lightning invoices",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "location": {
+                        "file": "/home/c03rad0r/market/e2e/tests/payments.spec.ts",
+                        "line": 329,
+                        "column": 7
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-04T10:53:42.624Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "location": {
+                            "file": "/home/c03rad0r/market/e2e/tests/payments.spec.ts",
+                            "line": 329,
+                            "column": 7
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "bd51122182d9e4115608-053d1184205d154c4c92",
+              "file": "payments.spec.ts",
+              "line": 329,
+              "column": 7
+            },
+            {
+              "title": "checkout publishes order events to relay",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "location": {
+                        "file": "/home/c03rad0r/market/e2e/tests/payments.spec.ts",
+                        "line": 352,
+                        "column": 7
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-04T10:53:42.624Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "location": {
+                            "file": "/home/c03rad0r/market/e2e/tests/payments.spec.ts",
+                            "line": 352,
+                            "column": 7
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "bd51122182d9e4115608-9339c3e94a63cbebc94d",
+              "file": "payments.spec.ts",
+              "line": 352,
+              "column": 7
+            },
+            {
+              "title": "allows buyer to defer an invoice and continue checkout",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "location": {
+                        "file": "/home/c03rad0r/market/e2e/tests/payments.spec.ts",
+                        "line": 387,
+                        "column": 7
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-04T10:53:42.625Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "location": {
+                            "file": "/home/c03rad0r/market/e2e/tests/payments.spec.ts",
+                            "line": 387,
+                            "column": 7
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "bd51122182d9e4115608-375f3f9f40b1c1dba422",
+              "file": "payments.spec.ts",
+              "line": 387,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-07-04T10:52:41.948Z",
+    "duration": 60879.422,
+    "expected": 7,
+    "skipped": 3,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

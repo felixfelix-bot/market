@@ -1,0 +1,599 @@
+{
+  "config": {
+    "configFile": "/home/c03rad0r/market/e2e/playwright.config.ts",
+    "rootDir": "/home/c03rad0r/market/e2e/tests",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": "/home/c03rad0r/market/e2e/global-setup.ts",
+    "globalTeardown": "/home/c03rad0r/market/e2e/global-teardown.ts",
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/c03rad0r/market/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/home/c03rad0r/market/e2e/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/.*\\.spec\\.ts$/"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.60.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "auth.spec.ts",
+      "file": "auth.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Authentication",
+          "file": "auth.spec.ts",
+          "line": 83,
+          "column": 6,
+          "specs": [],
+          "suites": [
+            {
+              "title": "Extension Login",
+              "file": "auth.spec.ts",
+              "line": 84,
+              "column": 7,
+              "specs": [
+                {
+                  "title": "login via extension tab in dialog",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 7106,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-04T10:26:34.808Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "d748ac400d08b85935ef-b1a3a664caa00249b79f",
+                  "file": "auth.spec.ts",
+                  "line": 85,
+                  "column": 3
+                }
+              ]
+            },
+            {
+              "title": "Private Key Login",
+              "file": "auth.spec.ts",
+              "line": 115,
+              "column": 7,
+              "specs": [
+                {
+                  "title": "generate new key, encrypt, and login",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 4046,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-04T10:26:42.173Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "d748ac400d08b85935ef-1def1c33b951c200932f",
+                  "file": "auth.spec.ts",
+                  "line": 116,
+                  "column": 3
+                },
+                {
+                  "title": "login with existing seeded user private key (hex format)",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 3664,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-04T10:26:46.244Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "d748ac400d08b85935ef-70fd647d46a3c737f772",
+                  "file": "auth.spec.ts",
+                  "line": 166,
+                  "column": 3
+                },
+                {
+                  "title": "stored key login with correct password succeeds",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 4761,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-04T10:26:49.920Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "d748ac400d08b85935ef-4d6057b6c01601d55ec5",
+                  "file": "auth.spec.ts",
+                  "line": 203,
+                  "column": 3
+                },
+                {
+                  "title": "stored key login with wrong password fails",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 4511,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-04T10:26:54.717Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "d748ac400d08b85935ef-3e5813ccbc0d6e337dda",
+                  "file": "auth.spec.ts",
+                  "line": 241,
+                  "column": 3
+                },
+                {
+                  "title": "remove stored key shows fresh key input",
+                  "ok": false,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "timedOut",
+                          "duration": 30205,
+                          "error": {
+                            "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                            "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                          },
+                          "errors": [
+                            {
+                              "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                            },
+                            {
+                              "location": {
+                                "file": "/home/c03rad0r/market/e2e/tests/auth.spec.ts",
+                                "column": 5,
+                                "line": 315
+                              },
+                              "message": "Error: browserContext.close: Target page, context or browser has been closed\n\n  313 | \t\t\t\texpect(storedKey).toBeNull()\n  314 | \t\t\t} finally {\n> 315 | \t\t\t\tawait context.close()\n      | \t\t\t\t^\n  316 | \t\t\t}\n  317 | \t\t})\n  318 | \t})\n    at /home/c03rad0r/market/e2e/tests/auth.spec.ts:315:5"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-04T10:26:59.247Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "screenshot",
+                              "contentType": "image/png",
+                              "path": "/home/c03rad0r/market/test-results/auth-Authentication-Privat-f3a23-d-key-shows-fresh-key-input-chromium/test-failed-1.png"
+                            },
+                            {
+                              "name": "error-context",
+                              "contentType": "text/markdown",
+                              "path": "/home/c03rad0r/market/test-results/auth-Authentication-Privat-f3a23-d-key-shows-fresh-key-input-chromium/error-context.md"
+                            }
+                          ]
+                        }
+                      ],
+                      "status": "unexpected"
+                    }
+                  ],
+                  "id": "d748ac400d08b85935ef-79800cc41b02e8a10779",
+                  "file": "auth.spec.ts",
+                  "line": 280,
+                  "column": 3
+                }
+              ]
+            },
+            {
+              "title": "Bunker URL Validation",
+              "file": "auth.spec.ts",
+              "line": 320,
+              "column": 7,
+              "specs": [
+                {
+                  "title": "validates bunker URL format",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 3431,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-04T10:27:30.787Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "d748ac400d08b85935ef-2d2783694c1eb700a51c",
+                  "file": "auth.spec.ts",
+                  "line": 321,
+                  "column": 3
+                }
+              ]
+            },
+            {
+              "title": "NIP-46 Nostr Connect",
+              "file": "auth.spec.ts",
+              "line": 355,
+              "column": 7,
+              "specs": [
+                {
+                  "title": "QR code login with NIP-46 mock",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 5065,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-04T10:27:34.425Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "d748ac400d08b85935ef-2b3b5240614313ce72c8",
+                  "file": "auth.spec.ts",
+                  "line": 356,
+                  "column": 3
+                },
+                {
+                  "title": "bunker URL connect with NIP-46 mock",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 3804,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-04T10:27:39.517Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "d748ac400d08b85935ef-17c49da13657d5baf13a",
+                  "file": "auth.spec.ts",
+                  "line": 406,
+                  "column": 3
+                }
+              ]
+            },
+            {
+              "title": "Persistence and Reload",
+              "file": "auth.spec.ts",
+              "line": 447,
+              "column": 7,
+              "specs": [
+                {
+                  "title": "auto-login with extension after reload",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 4961,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-04T10:27:43.336Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "d748ac400d08b85935ef-1895bcc9b7a8b985fc2e",
+                  "file": "auth.spec.ts",
+                  "line": 448,
+                  "column": 3
+                },
+                {
+                  "title": "decrypt fails for wrong password with stored private key after reload",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 4623,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-04T10:27:48.319Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "d748ac400d08b85935ef-0593318248665315db80",
+                  "file": "auth.spec.ts",
+                  "line": 477,
+                  "column": 3
+                },
+                {
+                  "title": "decrypt dialog appears for stored private key after reload",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 4729,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-04T10:27:52.985Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "d748ac400d08b85935ef-15f1687f94f30aa58fb7",
+                  "file": "auth.spec.ts",
+                  "line": 511,
+                  "column": 3
+                }
+              ]
+            },
+            {
+              "title": "Logout",
+              "file": "auth.spec.ts",
+              "line": 545,
+              "column": 7,
+              "specs": [
+                {
+                  "title": "logout clears auth state and localStorage",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 6218,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-04T10:27:57.740Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "d748ac400d08b85935ef-5a06a359b2f8ab33db2b",
+                  "file": "auth.spec.ts",
+                  "line": 546,
+                  "column": 3
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-07-04T10:26:29.798Z",
+    "duration": 94477.88699999999,
+    "expected": 12,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}

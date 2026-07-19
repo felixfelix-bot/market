@@ -1,0 +1,370 @@
+[1A[2K[WebServer] 
+[WebServer] --- Seeding relay for e2e tests ---
+[WebServer]   App pubkey: ed29ae1859d35e17...
+
+[1A[2K[WebServer]   Published app settings (Kind 31990)
+
+[1A[2K[WebServer]   Published admin list (Kind 30000)
+
+[1A[2K[WebServer]   Published relay list (Kind 10002)
+
+[1A[2K[WebServer] --- Relay seeding complete ---
+[WebServer] 
+
+[1A[2K[WebServer] [0m[2m[35m$[0m [2m[1mbun --hot src/index.tsx --host 0.0.0.0[0m
+
+[1A[2K[WebServer] Fetching app settings from relay: ws://localhost:10547 for pubkey: ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035
+
+[1A[2K[WebServer] Bootstrap manager initialized in bootstrap mode
+
+[1A[2K[WebServer] Bootstrap manager initialized in bootstrap mode
+
+[1A[2K[WebServer] App port: 34567
+
+[1A[2K[WebServer] 🚀 Server running at http://localhost:34567/
+
+[1A[2K[WebServer] NDK service connected to relay: ws://localhost:10547
+
+
+--- E2E Global Setup ---
+  App pubkey: ed29ae1859d35e17...
+[1A[2K[WebServer] Found existing setup event
+
+[1A[2K[WebServer] Found existing admin list, updating internal list
+
+[1A[2K[WebServer] Updated admin list with 2 admins: [ [0m[32m"ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"[0m[0m[0m[2m,[0m
+[WebServer]   [0m[32m"86a82cab18b293f53cbaaae8cdcbee3f7ec427fdf9f9c933db77800bb5ef38a0"[0m[0m
+[WebServer] ]
+
+[1A[2K[WebServer] [vanity-urls] No existing registry found
+
+[1A[2K[WebServer] [nip05-names] No existing registry found
+
+[1A[2K[WebServer] Subscribed to zap purchase receipts (App relay)
+[WebServer] Connecting to zap relays: ws://localhost:10547, wss://relay.damus.io, wss://nos.lol, wss://relay.nostr.net, wss://relay.minibits.cash, wss://relay.coinos.io, wss://nwc.primal.net, wss://relay.primal.net
+
+[1A[2K[WebServer] Fetching with filter: {"kinds":[31990],"authors":["ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"],"#d":["plebeian-market-handler"],"limit":1}
+
+[1A[2K[WebServer] Fetch returned 1 events
+[WebServer] Found 1 app settings events
+
+[1A[2K[WebServer] App settings loaded successfully
+
+  Server health: OK (app settings loaded)
+--- Global Setup Complete ---
+
+
+Running 8 tests using 1 worker
+
+[1A[2K[WebServer] Marking event handler ready after initial delay (core components ready)
+
+[1A[2K[1/8] [chromium] › e2e/tests/marketplace.spec.ts:184:2 › Marketplace Display › shows products from multiple sellers
+[1A[2K[chromium] › e2e/tests/marketplace.spec.ts:184:2 › Marketplace Display › shows products from multiple sellers
+  Seeding: base (user profiles)
+
+[1A[2K    Published profile: TestMerchant
+
+[1A[2K    Published profile: TestBuyer
+
+[1A[2K    Published profile: TestApp
+
+[1A[2K    Published admin list with devUser1
+
+[1A[2K  Seeding: merchant (shipping, payments, products)
+
+[1A[2K[WebServer] Live admin list update received (created_at=1783163808)
+
+[1A[2K[WebServer] Updated admin list with 2 admins: [ [0m[32m"ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"[0m[0m[0m[2m,[0m
+[WebServer]   [0m[32m"86a82cab18b293f53cbaaae8cdcbee3f7ec427fdf9f9c933db77800bb5ef38a0"[0m[0m
+[WebServer] ]
+
+[1A[2K    Published shipping: Worldwide Standard
+
+[1A[2K    Published shipping: Digital Delivery
+
+[1A[2K    Published shipping: Local Pickup - Bitcoin Store
+
+[1A[2K    Published payment: LIGHTNING_NETWORK
+
+[1A[2K    Published V4V shares (10% to community)
+
+[1A[2K    Published product: Bitcoin Hardware Wallet
+
+[1A[2K    Published product: Nostr T-Shirt
+
+[1A[2K    Published product: Bitcoin E-Book
+
+[1A[2K    Published product: Bitcoin Conference Ticket
+
+[1A[2K  Seeding: marketplace (second merchant)
+
+[1A[2K    Published shipping: Express Shipping
+
+[1A[2K    Published shipping: Digital Delivery
+
+[1A[2K    Published payment: LIGHTNING_NETWORK
+
+[1A[2K    Published V4V shares (10% to community)
+
+[1A[2K    Published product: Lightning Node Setup Guide
+
+[1A[2K[WebServer] Subscribed to zap purchase receipts (Zap relays)
+[WebServer] EventHandler initialized successfully
+[WebServer] ✅ EventHandler initialized successfully
+
+[1A[2K[WebServer] [32mBundled page in 3307ms[0m[2m:[0m src/index.html
+
+[1A[2K[2/8] [chromium] › e2e/tests/marketplace.spec.ts:218:2 › Multi-Merchant Cart › can add products from two different sellers to cart
+[1A[2K  1) [chromium] › e2e/tests/marketplace.spec.ts:218:2 › Multi-Merchant Cart › can add products from two different sellers to cart 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  getByRole('dialog', { name: /your cart/i }).getByText('Select shipping method')
+    Expected: [32m2[39m
+    Received: [31m0[39m
+    Timeout:  10000ms
+
+    Call log:
+    [2m  - Expect "toHaveCount" with timeout 10000ms[22m
+    [2m  - waiting for getByRole('dialog', { name: /your cart/i }).getByText('Select shipping method')[22m
+    [2m    23 × locator resolved to 0 elements[22m
+    [2m       - unexpected value "0"[22m
+
+
+      232 | 		// with separate shipping selectors for each seller
+      233 | 		const shippingTriggers = cartDialog.getByText('Select shipping method')
+    > 234 | 		await expect(shippingTriggers).toHaveCount(2, { timeout: 10_000 })
+          | 		                               ^
+      235 | 	})
+      236 |
+      237 | 	test('cart requires shipping per seller before checkout', async ({ newUserPage }) => {
+        at /home/c03rad0r/market/e2e/tests/marketplace.spec.ts:234:34
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/marketplace-Multi-Merchant-5b09b-o-different-sellers-to-cart-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/marketplace-Multi-Merchant-5b09b-o-different-sellers-to-cart-chromium/error-context.md
+
+
+[1A[2K[3/8] [chromium] › e2e/tests/marketplace.spec.ts:237:2 › Multi-Merchant Cart › cart requires shipping per seller before checkout
+[1A[2K[chromium] › e2e/tests/marketplace.spec.ts:237:2 › Multi-Merchant Cart › cart requires shipping per seller before checkout
+  Seeding: base (user profiles)
+
+[1A[2K    Published profile: TestMerchant
+
+[1A[2K    Published profile: TestBuyer
+
+[1A[2K    Published profile: TestApp
+
+[1A[2K    Published admin list with devUser1
+
+[1A[2K  Seeding: merchant (shipping, payments, products)
+
+[1A[2K[WebServer] Live admin list update received (created_at=1783163845)
+[WebServer] Updated admin list with 2 admins: [ [0m[32m"ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"[0m[0m[0m[2m,[0m
+[WebServer]   [0m[32m"86a82cab18b293f53cbaaae8cdcbee3f7ec427fdf9f9c933db77800bb5ef38a0"[0m[0m
+[WebServer] ]
+
+[1A[2K    Published shipping: Worldwide Standard
+
+[1A[2K    Published shipping: Digital Delivery
+
+[1A[2K    Published shipping: Local Pickup - Bitcoin Store
+
+[1A[2K    Published payment: LIGHTNING_NETWORK
+
+[1A[2K    Published V4V shares (10% to community)
+
+[1A[2K    Published product: Bitcoin Hardware Wallet
+
+[1A[2K    Published product: Nostr T-Shirt
+
+[1A[2K    Published product: Bitcoin E-Book
+
+[1A[2K    Published product: Bitcoin Conference Ticket
+
+[1A[2K  Seeding: marketplace (second merchant)
+
+[1A[2K    Published shipping: Express Shipping
+
+[1A[2K    Published shipping: Digital Delivery
+
+[1A[2K    Published payment: LIGHTNING_NETWORK
+
+[1A[2K    Published V4V shares (10% to community)
+
+[1A[2K    Published product: Lightning Node Setup Guide
+
+[1A[2K  2) [chromium] › e2e/tests/marketplace.spec.ts:237:2 › Multi-Merchant Cart › cart requires shipping per seller before checkout 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByText(/please select shipping options for/i)
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 10000ms[22m
+    [2m  - waiting for getByText(/please select shipping options for/i)[22m
+
+
+      242 |
+      243 | 		// Warning should show that shipping is missing
+    > 244 | 		await expect(newUserPage.getByText(/please select shipping options for/i)).toBeVisible({ timeout: 10_000 })
+          | 		                                                                           ^
+      245 |
+      246 | 		// Checkout button should be disabled
+      247 | 		const checkoutButton = cartDialog.getByRole('button', { name: /^checkout$/i })
+        at /home/c03rad0r/market/e2e/tests/marketplace.spec.ts:244:78
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/marketplace-Multi-Merchant-47053--per-seller-before-checkout-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/marketplace-Multi-Merchant-47053--per-seller-before-checkout-chromium/error-context.md
+
+
+[1A[2K[4/8] [chromium] › e2e/tests/marketplace.spec.ts:274:2 › Multi-Seller Checkout with V4V › cart shows V4V payment breakdown per seller
+[1A[2K[chromium] › e2e/tests/marketplace.spec.ts:274:2 › Multi-Seller Checkout with V4V › cart shows V4V payment breakdown per seller
+  Seeding: base (user profiles)
+
+[1A[2K    Published profile: TestMerchant
+
+[1A[2K    Published profile: TestBuyer
+
+[1A[2K    Published profile: TestApp
+
+[1A[2K    Published admin list with devUser1
+
+[1A[2K  Seeding: merchant (shipping, payments, products)
+
+[1A[2K[WebServer] Live admin list update received (created_at=1783163864)
+
+[1A[2K[WebServer] Updated admin list with 2 admins: [ [0m[32m"ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"[0m[0m[0m[2m,[0m
+[WebServer]   [0m[32m"86a82cab18b293f53cbaaae8cdcbee3f7ec427fdf9f9c933db77800bb5ef38a0"[0m[0m
+[WebServer] ]
+
+[1A[2K    Published shipping: Worldwide Standard
+
+[1A[2K    Published shipping: Digital Delivery
+
+[1A[2K    Published shipping: Local Pickup - Bitcoin Store
+
+[1A[2K    Published payment: LIGHTNING_NETWORK
+
+[1A[2K    Published V4V shares (10% to community)
+
+[1A[2K    Published product: Bitcoin Hardware Wallet
+
+[1A[2K    Published product: Nostr T-Shirt
+
+[1A[2K    Published product: Bitcoin E-Book
+
+[1A[2K    Published product: Bitcoin Conference Ticket
+
+[1A[2K  Seeding: marketplace (second merchant)
+
+[1A[2K    Published shipping: Express Shipping
+
+[1A[2K    Published shipping: Digital Delivery
+
+[1A[2K    Published payment: LIGHTNING_NETWORK
+
+[1A[2K    Published V4V shares (10% to community)
+
+[1A[2K    Published product: Lightning Node Setup Guide
+
+[1A[2K[5/8] [chromium] › e2e/tests/marketplace.spec.ts:302:7 › Multi-Seller Checkout with V4V › multi-seller checkout generates correct invoice count
+[1A[2K[6/8] [chromium] › e2e/tests/marketplace.spec.ts:330:2 › Multi-Seller Checkout with V4V › can complete multi-seller checkout with all invoices
+[1A[2K  3) [chromium] › e2e/tests/marketplace.spec.ts:330:2 › Multi-Seller Checkout with V4V › can complete multi-seller checkout with all invoices 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('dialog', { name: /your cart/i }).getByText('Select shipping method').first()
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 10000ms[22m
+    [2m  - waiting for getByRole('dialog', { name: /your cart/i }).getByText('Select shipping method').first()[22m
+
+
+      85 |
+      86 | 	// Wait for at least one shipping trigger to appear
+    > 87 | 	await expect(shippingTriggers.first()).toBeVisible({ timeout: 10_000 })
+         | 	                                       ^
+      88 |
+      89 | 	// Count how many need selecting
+      90 | 	const count = await shippingTriggers.count()
+        at selectShippingForAllSellers (/home/c03rad0r/market/e2e/tests/marketplace.spec.ts:87:41)
+        at /home/c03rad0r/market/e2e/tests/marketplace.spec.ts:337:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/marketplace-Multi-Seller-C-1558c--checkout-with-all-invoices-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/marketplace-Multi-Seller-C-1558c--checkout-with-all-invoices-chromium/error-context.md
+
+
+[1A[2K[7/8] [chromium] › e2e/tests/marketplace.spec.ts:374:2 › V4V Dashboard Management › circular economy page shows V4V configuration
+[1A[2K[chromium] › e2e/tests/marketplace.spec.ts:374:2 › V4V Dashboard Management › circular economy page shows V4V configuration
+  Seeding: base (user profiles)
+
+[1A[2K    Published profile: TestMerchant
+
+[1A[2K    Published profile: TestBuyer
+
+[1A[2K    Published profile: TestApp
+
+[1A[2K    Published admin list with devUser1
+
+[1A[2K  Seeding: merchant (shipping, payments, products)
+
+[1A[2K    Published shipping: Worldwide Standard
+
+[1A[2K[WebServer] Live admin list update received (created_at=1783163896)
+[WebServer] Updated admin list with 2 admins: [ [0m[32m"ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"[0m[0m[0m[2m,[0m
+[WebServer]   [0m[32m"86a82cab18b293f53cbaaae8cdcbee3f7ec427fdf9f9c933db77800bb5ef38a0"[0m[0m
+[WebServer] ]
+
+[1A[2K    Published shipping: Digital Delivery
+
+[1A[2K    Published shipping: Local Pickup - Bitcoin Store
+
+[1A[2K    Published payment: LIGHTNING_NETWORK
+
+[1A[2K    Published V4V shares (10% to community)
+
+[1A[2K    Published product: Bitcoin Hardware Wallet
+
+[1A[2K    Published product: Nostr T-Shirt
+
+[1A[2K    Published product: Bitcoin E-Book
+
+[1A[2K    Published product: Bitcoin Conference Ticket
+
+[1A[2K  Seeding: marketplace (second merchant)
+
+[1A[2K    Published shipping: Express Shipping
+
+[1A[2K    Published shipping: Digital Delivery
+
+[1A[2K    Published payment: LIGHTNING_NETWORK
+
+[1A[2K    Published V4V shares (10% to community)
+
+[1A[2K    Published product: Lightning Node Setup Guide
+
+[1A[2K[8/8] [chromium] › e2e/tests/marketplace.spec.ts:389:2 › V4V Dashboard Management › can add a V4V recipient and save
+
+--- E2E Global Teardown ---
+  Cleanup complete
+[1A[2K  3 failed
+    [chromium] › e2e/tests/marketplace.spec.ts:218:2 › Multi-Merchant Cart › can add products from two different sellers to cart 
+    [chromium] › e2e/tests/marketplace.spec.ts:237:2 › Multi-Merchant Cart › cart requires shipping per seller before checkout 
+    [chromium] › e2e/tests/marketplace.spec.ts:330:2 › Multi-Seller Checkout with V4V › can complete multi-seller checkout with all invoices 
+  1 skipped
+  4 passed (1.9m)

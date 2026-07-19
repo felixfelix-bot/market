@@ -1,0 +1,538 @@
+[1A[2K[WebServer] 
+[WebServer] --- Seeding relay for e2e tests ---
+[WebServer]   App pubkey: ed29ae1859d35e17...
+
+[1A[2K[WebServer]   Published app settings (Kind 31990)
+
+[1A[2K[WebServer]   Published admin list (Kind 30000)
+
+[1A[2K[WebServer]   Published relay list (Kind 10002)
+
+[1A[2K[WebServer] --- Relay seeding complete ---
+[WebServer] 
+
+[1A[2K[WebServer] [0m[2m[35m$[0m [2m[1mbun --hot src/index.tsx --host 0.0.0.0[0m
+
+[1A[2K[WebServer] Fetching app settings from relay: ws://localhost:10547 for pubkey: ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035
+
+[1A[2K[WebServer] Bootstrap manager initialized in bootstrap mode
+
+[1A[2K[WebServer] Bootstrap manager initialized in bootstrap mode
+
+[1A[2K[WebServer] App port: 34567
+
+[1A[2K[WebServer] 🚀 Server running at http://localhost:34567/
+
+[1A[2K[WebServer] NDK service connected to relay: ws://localhost:10547
+
+[1A[2K[WebServer] Found existing admin list, updating internal list
+
+[1A[2K[WebServer] Updated admin list with 2 admins: [ [0m[32m"ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"[0m[0m[0m[2m,[0m
+[WebServer]   [0m[32m"86a82cab18b293f53cbaaae8cdcbee3f7ec427fdf9f9c933db77800bb5ef38a0"[0m[0m
+[WebServer] ]
+
+[1A[2K[WebServer] Found existing setup event
+
+[1A[2K[WebServer] Fetching with filter: {"kinds":[31990],"authors":["ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"],"#d":["plebeian-market-handler"],"limit":1}
+
+[1A[2K[WebServer] Fetch returned 1 events
+[WebServer] Found 1 app settings events
+
+[1A[2K[WebServer] App settings loaded successfully
+
+
+--- E2E Global Setup ---
+  App pubkey: ed29ae1859d35e17...
+  Server health: OK (app settings loaded)
+--- Global Setup Complete ---
+
+[1A[2K[WebServer] [vanity-urls] No existing registry found
+
+[1A[2K[WebServer] [nip05-names] No existing registry found
+[WebServer] Subscribed to zap purchase receipts (App relay)
+[WebServer] Connecting to zap relays: ws://localhost:10547, wss://relay.damus.io, wss://nos.lol, wss://relay.nostr.net, wss://relay.minibits.cash, wss://relay.coinos.io, wss://nwc.primal.net, wss://relay.primal.net
+
+
+Running 13 tests using 1 worker
+
+[1A[2K[1/13] [chromium] › e2e/tests/cart.spec.ts:99:2 › Cart - Remove Items › can remove a single item from cart
+[1A[2K[WebServer] Marking event handler ready after initial delay (core components ready)
+
+[1A[2K[chromium] › e2e/tests/cart.spec.ts:99:2 › Cart - Remove Items › can remove a single item from cart
+  Seeding: base (user profiles)
+
+[1A[2K    Published profile: TestMerchant
+
+[1A[2K    Published profile: TestBuyer
+
+[1A[2K    Published profile: TestApp
+
+[1A[2K    Published admin list with devUser1
+
+[1A[2K  Seeding: merchant (shipping, payments, products)
+
+[1A[2K[WebServer] Live admin list update received (created_at=1783161371)
+[WebServer] Updated admin list with 2 admins: [ [0m[32m"ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"[0m[0m[0m[2m,[0m
+[WebServer]   [0m[32m"86a82cab18b293f53cbaaae8cdcbee3f7ec427fdf9f9c933db77800bb5ef38a0"[0m[0m
+[WebServer] ]
+
+[1A[2K    Published shipping: Worldwide Standard
+
+[1A[2K    Published shipping: Digital Delivery
+
+[1A[2K    Published shipping: Local Pickup - Bitcoin Store
+
+[1A[2K    Published payment: LIGHTNING_NETWORK
+
+[1A[2K    Published V4V shares (10% to community)
+
+[1A[2K    Published product: Bitcoin Hardware Wallet
+
+[1A[2K    Published product: Nostr T-Shirt
+
+[1A[2K    Published product: Bitcoin E-Book
+
+[1A[2K    Published product: Bitcoin Conference Ticket
+
+[1A[2K  Seeding: marketplace (second merchant)
+
+[1A[2K    Published shipping: Express Shipping
+
+[1A[2K    Published shipping: Digital Delivery
+
+[1A[2K    Published payment: LIGHTNING_NETWORK
+
+[1A[2K    Published V4V shares (10% to community)
+
+[1A[2K    Published product: Lightning Node Setup Guide
+
+[1A[2K[WebServer] [32mBundled page in 2984ms[0m[2m:[0m src/index.html
+
+[1A[2K[2/13] [chromium] › e2e/tests/cart.spec.ts:118:2 › Cart - Remove Items › removing one item from multi-item cart keeps others
+[1A[2K[WebServer] ⚠️ Failed to connect zap relay NDK; zap purchase receipts may not be processed: [0m[33mwarn[0m[2m:[0m [1mZap relay connection timeout[0m
+[WebServer] [0m      [2mat [0m[0m[2m<anonymous>[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/server/EventHandler.ts[0m[2m:[0m[33m136[0m[2m:[33m61[0m[2m)[0m
+[WebServer] 
+
+[1A[2K[WebServer] Subscribed to zap purchase receipts (Zap relays (partial))
+[WebServer] EventHandler initialized successfully
+[WebServer] ✅ EventHandler initialized successfully
+
+[1A[2K[3/13] [chromium] › e2e/tests/cart.spec.ts:153:2 › Cart - Change Quantity › can increment product quantity using the plus button
+[1A[2K[4/13] [chromium] › e2e/tests/cart.spec.ts:174:2 › Cart - Change Quantity › can decrement product quantity using the minus button
+[1A[2K[5/13] [chromium] › e2e/tests/cart.spec.ts:200:2 › Cart - Change Quantity › decrement button is disabled at quantity 1
+[1A[2K[6/13] [chromium] › e2e/tests/cart.spec.ts:214:2 › Cart - Change Quantity › can add same product multiple times from product listing
+[1A[2K[7/13] [chromium] › e2e/tests/cart.spec.ts:251:2 › Cart - Multiple Merchants › products from different sellers are grouped separately
+[1A[2K  1) [chromium] › e2e/tests/cart.spec.ts:251:2 › Cart - Multiple Merchants › products from different sellers are grouped separately 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  getByRole('dialog', { name: /your cart/i }).getByText('Select shipping method')
+    Expected: [32m2[39m
+    Received: [31m0[39m
+    Timeout:  10000ms
+
+    Call log:
+    [2m  - Expect "toHaveCount" with timeout 10000ms[22m
+    [2m  - waiting for getByRole('dialog', { name: /your cart/i }).getByText('Select shipping method')[22m
+    [2m    24 × locator resolved to 0 elements[22m
+    [2m       - unexpected value "0"[22m
+
+
+      266 | 		// so there should be 2 "Select shipping method" triggers
+      267 | 		const shippingTriggers = dialog.getByText('Select shipping method')
+    > 268 | 		await expect(shippingTriggers).toHaveCount(2, { timeout: 10_000 })
+          | 		                               ^
+      269 | 	})
+      270 |
+      271 | 	test('can add multiple products from same seller', async ({ newUserPage }) => {
+        at /home/c03rad0r/market/e2e/tests/cart.spec.ts:268:34
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/cart-Cart---Multiple-Merch-8aa0d-lers-are-grouped-separately-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/cart-Cart---Multiple-Merch-8aa0d-lers-are-grouped-separately-chromium/error-context.md
+
+
+[1A[2K[8/13] [chromium] › e2e/tests/cart.spec.ts:271:2 › Cart - Multiple Merchants › can add multiple products from same seller
+[1A[2K[chromium] › e2e/tests/cart.spec.ts:271:2 › Cart - Multiple Merchants › can add multiple products from same seller
+  Seeding: base (user profiles)
+
+[1A[2K    Published profile: TestMerchant
+
+[1A[2K    Published profile: TestBuyer
+
+[1A[2K    Published profile: TestApp
+
+[1A[2K    Published admin list with devUser1
+
+[1A[2K  Seeding: merchant (shipping, payments, products)
+
+[1A[2K[WebServer] Live admin list update received (created_at=1783161445)
+[WebServer] Updated admin list with 2 admins: [ [0m[32m"ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"[0m[0m[0m[2m,[0m
+[WebServer]   [0m[32m"86a82cab18b293f53cbaaae8cdcbee3f7ec427fdf9f9c933db77800bb5ef38a0"[0m[0m
+[WebServer] ]
+
+[1A[2K    Published shipping: Worldwide Standard
+
+[1A[2K    Published shipping: Digital Delivery
+
+[1A[2K    Published shipping: Local Pickup - Bitcoin Store
+
+[1A[2K    Published payment: LIGHTNING_NETWORK
+
+[1A[2K    Published V4V shares (10% to community)
+
+[1A[2K    Published product: Bitcoin Hardware Wallet
+
+[1A[2K    Published product: Nostr T-Shirt
+
+[1A[2K    Published product: Bitcoin E-Book
+
+[1A[2K    Published product: Bitcoin Conference Ticket
+
+[1A[2K  Seeding: marketplace (second merchant)
+
+[1A[2K    Published shipping: Express Shipping
+
+[1A[2K    Published shipping: Digital Delivery
+
+[1A[2K    Published payment: LIGHTNING_NETWORK
+
+[1A[2K    Published V4V shares (10% to community)
+
+[1A[2K    Published product: Lightning Node Setup Guide
+
+[1A[2K  2) [chromium] › e2e/tests/cart.spec.ts:271:2 › Cart - Multiple Merchants › can add multiple products from same seller 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  getByRole('dialog', { name: /your cart/i }).getByText('Select shipping method')
+    Expected: [32m1[39m
+    Received: [31m0[39m
+    Timeout:  10000ms
+
+    Call log:
+    [2m  - Expect "toHaveCount" with timeout 10000ms[22m
+    [2m  - waiting for getByRole('dialog', { name: /your cart/i }).getByText('Select shipping method')[22m
+    [2m    23 × locator resolved to 0 elements[22m
+    [2m       - unexpected value "0"[22m
+
+
+      286 | 		// They're grouped under the same seller, so only 1 shipping selector
+      287 | 		const shippingTriggers = dialog.getByText('Select shipping method')
+    > 288 | 		await expect(shippingTriggers).toHaveCount(1, { timeout: 10_000 })
+          | 		                               ^
+      289 | 	})
+      290 |
+      291 | 	test('removing all items from one seller keeps other seller items', async ({ newUserPage }) => {
+        at /home/c03rad0r/market/e2e/tests/cart.spec.ts:288:34
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/cart-Cart---Multiple-Merch-3f604-e-products-from-same-seller-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/cart-Cart---Multiple-Merch-3f604-e-products-from-same-seller-chromium/error-context.md
+
+
+[1A[2K[9/13] [chromium] › e2e/tests/cart.spec.ts:291:2 › Cart - Multiple Merchants › removing all items from one seller keeps other seller items
+[1A[2K[chromium] › e2e/tests/cart.spec.ts:291:2 › Cart - Multiple Merchants › removing all items from one seller keeps other seller items
+  Seeding: base (user profiles)
+
+[1A[2K    Published profile: TestMerchant
+
+[1A[2K    Published profile: TestBuyer
+
+[1A[2K    Published profile: TestApp
+
+[1A[2K    Published admin list with devUser1
+
+[1A[2K  Seeding: merchant (shipping, payments, products)
+
+[1A[2K[WebServer] Live admin list update received (created_at=1783161464)
+[WebServer] Updated admin list with 2 admins: [ [0m[32m"ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"[0m[0m[0m[2m,[0m
+[WebServer]   [0m[32m"86a82cab18b293f53cbaaae8cdcbee3f7ec427fdf9f9c933db77800bb5ef38a0"[0m[0m
+[WebServer] ]
+
+[1A[2K    Published shipping: Worldwide Standard
+
+[1A[2K    Published shipping: Digital Delivery
+
+[1A[2K    Published shipping: Local Pickup - Bitcoin Store
+
+[1A[2K    Published payment: LIGHTNING_NETWORK
+
+[1A[2K    Published V4V shares (10% to community)
+
+[1A[2K    Published product: Bitcoin Hardware Wallet
+
+[1A[2K    Published product: Nostr T-Shirt
+
+[1A[2K    Published product: Bitcoin E-Book
+
+[1A[2K    Published product: Bitcoin Conference Ticket
+
+[1A[2K  Seeding: marketplace (second merchant)
+
+[1A[2K    Published shipping: Express Shipping
+
+[1A[2K    Published shipping: Digital Delivery
+
+[1A[2K    Published payment: LIGHTNING_NETWORK
+
+[1A[2K    Published V4V shares (10% to community)
+
+[1A[2K    Published product: Lightning Node Setup Guide
+
+[1A[2K  3) [chromium] › e2e/tests/cart.spec.ts:291:2 › Cart - Multiple Merchants › removing all items from one seller keeps other seller items 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  getByRole('dialog', { name: /your cart/i }).locator('[data-slot="select-trigger"]:visible')
+    Expected: [32m1[39m
+    Received: [31m0[39m
+    Timeout:  10000ms
+
+    Call log:
+    [2m  - Expect "toHaveCount" with timeout 10000ms[22m
+    [2m  - waiting for getByRole('dialog', { name: /your cart/i }).locator('[data-slot="select-trigger"]:visible')[22m
+    [2m    24 × locator resolved to 0 elements[22m
+    [2m       - unexpected value "0"[22m
+
+
+      313 | 		// don't get mistaken for an active seller section.
+      314 | 		const shippingSelectors = dialog.locator('[data-slot="select-trigger"]:visible')
+    > 315 | 		await expect(shippingSelectors).toHaveCount(1, { timeout: 10_000 })
+          | 		                                ^
+      316 | 	})
+      317 | })
+      318 |
+        at /home/c03rad0r/market/e2e/tests/cart.spec.ts:315:35
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/cart-Cart---Multiple-Merch-42afa-er-keeps-other-seller-items-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/cart-Cart---Multiple-Merch-42afa-er-keeps-other-seller-items-chromium/error-context.md
+
+
+[1A[2K[10/13] [chromium] › e2e/tests/cart.spec.ts:324:2 › Cart - Persistence › cart items persist after page reload
+[1A[2K[chromium] › e2e/tests/cart.spec.ts:324:2 › Cart - Persistence › cart items persist after page reload
+  Seeding: base (user profiles)
+
+[1A[2K    Published profile: TestMerchant
+
+[1A[2K    Published profile: TestBuyer
+
+[1A[2K    Published profile: TestApp
+
+[1A[2K    Published admin list with devUser1
+
+[1A[2K  Seeding: merchant (shipping, payments, products)
+
+[1A[2K[WebServer] Live admin list update received (created_at=1783161486)
+
+[1A[2K[WebServer] Updated admin list with 2 admins: [ [0m[32m"ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"[0m[0m[0m[2m,[0m
+[WebServer]   [0m[32m"86a82cab18b293f53cbaaae8cdcbee3f7ec427fdf9f9c933db77800bb5ef38a0"[0m[0m
+[WebServer] ]
+
+[1A[2K    Published shipping: Worldwide Standard
+
+[1A[2K    Published shipping: Digital Delivery
+
+[1A[2K    Published shipping: Local Pickup - Bitcoin Store
+
+[1A[2K    Published payment: LIGHTNING_NETWORK
+
+[1A[2K    Published V4V shares (10% to community)
+
+[1A[2K    Published product: Bitcoin Hardware Wallet
+
+[1A[2K    Published product: Nostr T-Shirt
+
+[1A[2K    Published product: Bitcoin E-Book
+
+[1A[2K    Published product: Bitcoin Conference Ticket
+
+[1A[2K  Seeding: marketplace (second merchant)
+
+[1A[2K    Published shipping: Express Shipping
+
+[1A[2K    Published shipping: Digital Delivery
+
+[1A[2K    Published payment: LIGHTNING_NETWORK
+
+[1A[2K    Published V4V shares (10% to community)
+
+[1A[2K    Published product: Lightning Node Setup Guide
+
+[1A[2K  4) [chromium] › e2e/tests/cart.spec.ts:324:2 › Cart - Persistence › cart items persist after page reload 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('dialog', { name: /your cart/i }).getByText('Lightning Node Setup Guide')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByRole('dialog', { name: /your cart/i }).getByText('Lightning Node Setup Guide')[22m
+
+
+      340 | 		const dialog = cartDialog(newUserPage)
+      341 | 		await expect(dialog.getByText('Bitcoin Hardware Wallet')).toBeVisible({ timeout: 10_000 })
+    > 342 | 		await expect(dialog.getByText('Lightning Node Setup Guide')).toBeVisible()
+          | 		                                                             ^
+      343 | 	})
+      344 |
+      345 | 	test('cart quantity persists after page reload', async ({ newUserPage }) => {
+        at /home/c03rad0r/market/e2e/tests/cart.spec.ts:342:64
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/cart-Cart---Persistence-cart-items-persist-after-page-reload-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/cart-Cart---Persistence-cart-items-persist-after-page-reload-chromium/error-context.md
+
+
+[1A[2K[11/13] [chromium] › e2e/tests/cart.spec.ts:345:2 › Cart - Persistence › cart quantity persists after page reload
+[1A[2K[chromium] › e2e/tests/cart.spec.ts:345:2 › Cart - Persistence › cart quantity persists after page reload
+  Seeding: base (user profiles)
+
+[1A[2K    Published profile: TestMerchant
+
+[1A[2K    Published profile: TestBuyer
+
+[1A[2K    Published profile: TestApp
+
+[1A[2K    Published admin list with devUser1
+
+[1A[2K  Seeding: merchant (shipping, payments, products)
+
+[1A[2K[WebServer] Live admin list update received (created_at=1783161505)
+[WebServer] Updated admin list with 2 admins: [ [0m[32m"ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"[0m[0m[0m[2m,[0m
+[WebServer]   [0m[32m"86a82cab18b293f53cbaaae8cdcbee3f7ec427fdf9f9c933db77800bb5ef38a0"[0m[0m
+[WebServer] ]
+
+[1A[2K    Published shipping: Worldwide Standard
+
+[1A[2K    Published shipping: Digital Delivery
+
+[1A[2K    Published shipping: Local Pickup - Bitcoin Store
+
+[1A[2K    Published payment: LIGHTNING_NETWORK
+
+[1A[2K    Published V4V shares (10% to community)
+
+[1A[2K    Published product: Bitcoin Hardware Wallet
+
+[1A[2K    Published product: Nostr T-Shirt
+
+[1A[2K    Published product: Bitcoin E-Book
+
+[1A[2K    Published product: Bitcoin Conference Ticket
+
+[1A[2K  Seeding: marketplace (second merchant)
+
+[1A[2K    Published shipping: Express Shipping
+
+[1A[2K    Published shipping: Digital Delivery
+
+[1A[2K    Published payment: LIGHTNING_NETWORK
+
+[1A[2K    Published V4V shares (10% to community)
+
+[1A[2K    Published product: Lightning Node Setup Guide
+
+[1A[2K[12/13] [chromium] › e2e/tests/cart.spec.ts:376:2 › Cart - Persistence › cart persists after navigating to another page and back
+[1A[2K  5) [chromium] › e2e/tests/cart.spec.ts:376:2 › Cart - Persistence › cart persists after navigating to another page and back 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('dialog', { name: /your cart/i }).getByText('Bitcoin Hardware Wallet')
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 10000ms[22m
+    [2m  - waiting for getByRole('dialog', { name: /your cart/i }).getByText('Bitcoin Hardware Wallet')[22m
+
+
+      390 | 		await openCart(newUserPage)
+      391 | 		const dialog = cartDialog(newUserPage)
+    > 392 | 		await expect(dialog.getByText('Bitcoin Hardware Wallet')).toBeVisible({ timeout: 10_000 })
+          | 		                                                          ^
+      393 | 	})
+      394 |
+      395 | 	test('clearing cart removes all items after reload', async ({ buyerPage }) => {
+        at /home/c03rad0r/market/e2e/tests/cart.spec.ts:392:61
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/cart-Cart---Persistence-ca-89926-ng-to-another-page-and-back-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/cart-Cart---Persistence-ca-89926-ng-to-another-page-and-back-chromium/error-context.md
+
+
+[1A[2K[13/13] [chromium] › e2e/tests/cart.spec.ts:395:2 › Cart - Persistence › clearing cart removes all items after reload
+[1A[2K[chromium] › e2e/tests/cart.spec.ts:395:2 › Cart - Persistence › clearing cart removes all items after reload
+  Seeding: base (user profiles)
+
+[1A[2K    Published profile: TestMerchant
+
+[1A[2K    Published profile: TestBuyer
+
+[1A[2K    Published profile: TestApp
+
+[1A[2K    Published admin list with devUser1
+
+[1A[2K  Seeding: merchant (shipping, payments, products)
+
+[1A[2K[WebServer] Live admin list update received (created_at=1783161536)
+
+[1A[2K[WebServer] Updated admin list with 2 admins: [ [0m[32m"ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"[0m[0m[0m[2m,[0m
+[WebServer]   [0m[32m"86a82cab18b293f53cbaaae8cdcbee3f7ec427fdf9f9c933db77800bb5ef38a0"[0m[0m
+[WebServer] ]
+
+[1A[2K    Published shipping: Worldwide Standard
+
+[1A[2K    Published shipping: Digital Delivery
+
+[1A[2K    Published shipping: Local Pickup - Bitcoin Store
+
+[1A[2K    Published payment: LIGHTNING_NETWORK
+
+[1A[2K    Published V4V shares (10% to community)
+
+[1A[2K    Published product: Bitcoin Hardware Wallet
+
+[1A[2K    Published product: Nostr T-Shirt
+
+[1A[2K    Published product: Bitcoin E-Book
+
+[1A[2K    Published product: Bitcoin Conference Ticket
+
+[1A[2K  Seeding: marketplace (second merchant)
+
+[1A[2K    Published shipping: Express Shipping
+
+[1A[2K    Published shipping: Digital Delivery
+
+[1A[2K    Published payment: LIGHTNING_NETWORK
+
+[1A[2K    Published V4V shares (10% to community)
+
+[1A[2K    Published product: Lightning Node Setup Guide
+
+
+--- E2E Global Teardown ---
+  Cleanup complete
+[1A[2K  5 failed
+    [chromium] › e2e/tests/cart.spec.ts:251:2 › Cart - Multiple Merchants › products from different sellers are grouped separately 
+    [chromium] › e2e/tests/cart.spec.ts:271:2 › Cart - Multiple Merchants › can add multiple products from same seller 
+    [chromium] › e2e/tests/cart.spec.ts:291:2 › Cart - Multiple Merchants › removing all items from one seller keeps other seller items 
+    [chromium] › e2e/tests/cart.spec.ts:324:2 › Cart - Persistence › cart items persist after page reload 
+    [chromium] › e2e/tests/cart.spec.ts:376:2 › Cart - Persistence › cart persists after navigating to another page and back 
+  8 passed (3.0m)

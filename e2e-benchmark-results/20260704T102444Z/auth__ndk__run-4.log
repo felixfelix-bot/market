@@ -1,0 +1,105 @@
+[1A[2K[WebServer] 
+[WebServer] --- Seeding relay for e2e tests ---
+[WebServer]   App pubkey: ed29ae1859d35e17...
+
+[1A[2K[WebServer]   Published app settings (Kind 31990)
+
+[1A[2K[WebServer]   Published admin list (Kind 30000)
+
+[1A[2K[WebServer]   Published relay list (Kind 10002)
+
+[1A[2K[WebServer] --- Relay seeding complete ---
+[WebServer] 
+
+[1A[2K[WebServer] [0m[2m[35m$[0m [2m[1mbun --hot src/index.tsx --host 0.0.0.0[0m
+
+[1A[2K[WebServer] Fetching app settings from relay: ws://localhost:10547 for pubkey: ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035
+
+[1A[2K[WebServer] Bootstrap manager initialized in bootstrap mode
+
+[1A[2K[WebServer] Bootstrap manager initialized in bootstrap mode
+
+[1A[2K[WebServer] App port: 34567
+
+[1A[2K[WebServer] 🚀 Server running at http://localhost:34567/
+
+[1A[2K[WebServer] NDK service connected to relay: ws://localhost:10547
+
+[1A[2K[WebServer] Fetching with filter: {"kinds":[31990],"authors":["ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"],"#d":["plebeian-market-handler"],"limit":1}
+
+[1A[2K[WebServer] Found existing setup event
+
+[1A[2K[WebServer] Found existing admin list, updating internal list
+
+[1A[2K[WebServer] Updated admin list with 2 admins: [ [0m[32m"ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"[0m[0m[0m[2m,[0m
+[WebServer]   [0m[32m"86a82cab18b293f53cbaaae8cdcbee3f7ec427fdf9f9c933db77800bb5ef38a0"[0m[0m
+[WebServer] ]
+
+[1A[2K[WebServer] Fetch returned 1 events
+[WebServer] Found 1 app settings events
+
+[1A[2K[WebServer] App settings loaded successfully
+
+
+--- E2E Global Setup ---
+  App pubkey: ed29ae1859d35e17...
+  Server health: OK (app settings loaded)
+--- Global Setup Complete ---
+
+[1A[2K[WebServer] [vanity-urls] No existing registry found
+
+[1A[2K[WebServer] [nip05-names] No existing registry found
+[WebServer] Subscribed to zap purchase receipts (App relay)
+[WebServer] Connecting to zap relays: ws://localhost:10547, wss://relay.damus.io, wss://nos.lol, wss://relay.nostr.net, wss://relay.minibits.cash, wss://relay.coinos.io, wss://nwc.primal.net, wss://relay.primal.net
+
+
+Running 13 tests using 1 worker
+
+[1A[2K[WebServer] Subscribed to zap purchase receipts (Zap relays)
+[WebServer] EventHandler initialized successfully
+
+[1A[2K[WebServer] ✅ EventHandler initialized successfully
+
+[1A[2K[1/13] [chromium] › e2e/tests/auth.spec.ts:85:3 › Authentication › Extension Login › login via extension tab in dialog
+[1A[2K[WebServer] [32mBundled page in 2323ms[0m[2m:[0m src/index.html
+
+[1A[2K[2/13] [chromium] › e2e/tests/auth.spec.ts:116:3 › Authentication › Private Key Login › generate new key, encrypt, and login
+[1A[2K[3/13] [chromium] › e2e/tests/auth.spec.ts:166:3 › Authentication › Private Key Login › login with existing seeded user private key (hex format)
+[1A[2K[4/13] [chromium] › e2e/tests/auth.spec.ts:203:3 › Authentication › Private Key Login › stored key login with correct password succeeds
+[1A[2K[5/13] [chromium] › e2e/tests/auth.spec.ts:241:3 › Authentication › Private Key Login › stored key login with wrong password fails
+[1A[2K[6/13] [chromium] › e2e/tests/auth.spec.ts:280:3 › Authentication › Private Key Login › remove stored key shows fresh key input
+[1A[2K  1) [chromium] › e2e/tests/auth.spec.ts:280:3 › Authentication › Private Key Login › remove stored key shows fresh key input 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: browserContext.close: Target page, context or browser has been closed
+
+      313 | 				expect(storedKey).toBeNull()
+      314 | 			} finally {
+    > 315 | 				await context.close()
+          | 				^
+      316 | 			}
+      317 | 		})
+      318 | 	})
+        at /home/c03rad0r/market/e2e/tests/auth.spec.ts:315:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/auth-Authentication-Privat-f3a23-d-key-shows-fresh-key-input-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/auth-Authentication-Privat-f3a23-d-key-shows-fresh-key-input-chromium/error-context.md
+
+
+[1A[2K[7/13] [chromium] › e2e/tests/auth.spec.ts:321:3 › Authentication › Bunker URL Validation › validates bunker URL format
+[1A[2K[8/13] [chromium] › e2e/tests/auth.spec.ts:356:3 › Authentication › NIP-46 Nostr Connect › QR code login with NIP-46 mock
+[1A[2K[9/13] [chromium] › e2e/tests/auth.spec.ts:406:3 › Authentication › NIP-46 Nostr Connect › bunker URL connect with NIP-46 mock
+[1A[2K[10/13] [chromium] › e2e/tests/auth.spec.ts:448:3 › Authentication › Persistence and Reload › auto-login with extension after reload
+[1A[2K[11/13] [chromium] › e2e/tests/auth.spec.ts:477:3 › Authentication › Persistence and Reload › decrypt fails for wrong password with stored private key after reload
+[1A[2K[12/13] [chromium] › e2e/tests/auth.spec.ts:511:3 › Authentication › Persistence and Reload › decrypt dialog appears for stored private key after reload
+[1A[2K[13/13] [chromium] › e2e/tests/auth.spec.ts:546:3 › Authentication › Logout › logout clears auth state and localStorage
+
+--- E2E Global Teardown ---
+  Cleanup complete
+[1A[2K  1 failed
+    [chromium] › e2e/tests/auth.spec.ts:280:3 › Authentication › Private Key Login › remove stored key shows fresh key input 
+  12 passed (1.8m)

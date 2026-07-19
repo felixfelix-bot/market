@@ -1,0 +1,70 @@
+{
+  "config": {
+    "configFile": "/home/c03rad0r/market/e2e/playwright.config.ts",
+    "rootDir": "/home/c03rad0r/market/e2e/tests",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": "/home/c03rad0r/market/e2e/global-setup.ts",
+    "globalTeardown": "/home/c03rad0r/market/e2e/global-teardown.ts",
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {},
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/c03rad0r/market/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/home/c03rad0r/market/e2e/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/.*\\.spec\\.ts$/"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.60.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [],
+  "errors": [
+    {
+      "message": "Error: Dev server reports needsSetup=true after 10 retries — app settings not loaded.\nThis usually happens when the relay was restarted but the dev server was reused.\nFix: stop the dev server (kill port 34567) and re-run tests.",
+      "stack": "Error: Dev server reports needsSetup=true after 10 retries — app settings not loaded.\nThis usually happens when the relay was restarted but the dev server was reused.\nFix: stop the dev server (kill port 34567) and re-run tests.\n    at globalSetup (/home/c03rad0r/market/e2e/global-setup.ts:45:8)",
+      "location": {
+        "file": "/home/c03rad0r/market/e2e/global-setup.ts",
+        "column": 8,
+        "line": 45
+      },
+      "snippet": "   at ../global-setup.ts:45\n\n  43 | \t}\n  44 |\n> 45 | \tthrow new Error(\n     | \t      ^\n  46 | \t\t`Dev server reports needsSetup=true after ${maxRetries} retries — app settings not loaded.\\n` +\n  47 | \t\t\t'This usually happens when the relay was restarted but the dev server was reused.\\n' +\n  48 | \t\t\t'Fix: stop the dev server (kill port ' +"
+    }
+  ],
+  "stats": {
+    "startTime": "2026-07-04T10:10:35.528Z",
+    "duration": 10065.081,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

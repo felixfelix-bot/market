@@ -1,0 +1,250 @@
+[1A[2K[WebServer] 
+[WebServer] --- Seeding relay for e2e tests ---
+[WebServer]   App pubkey: ed29ae1859d35e17...
+
+[1A[2K[WebServer]   Published app settings (Kind 31990)
+
+[1A[2K[WebServer]   Published admin list (Kind 30000)
+
+[1A[2K[WebServer]   Published relay list (Kind 10002)
+
+[1A[2K[WebServer] --- Relay seeding complete ---
+[WebServer] 
+
+[1A[2K[WebServer] [0m[2m[35m$[0m [2m[1mbun --hot src/index.tsx --host 0.0.0.0[0m
+
+[1A[2K[WebServer] Fetching app settings from relay: ws://localhost:10547 for pubkey: ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035
+
+[1A[2K[WebServer] Bootstrap manager initialized in bootstrap mode
+
+[1A[2K[WebServer] Bootstrap manager initialized in bootstrap mode
+
+[1A[2K[WebServer] App port: 34567
+
+[1A[2K[WebServer] 🚀 Server running at http://localhost:34567/
+
+[1A[2K[WebServer] Fetching with filter: {"kinds":[31990],"authors":["ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"],"#d":["plebeian-market-handler"],"limit":1}
+
+[1A[2K[WebServer] NDK service connected to relay: ws://localhost:10547
+
+[1A[2K[WebServer] Fetch returned 1 events
+[WebServer] Found 1 app settings events
+
+[1A[2K[WebServer] App settings loaded successfully
+
+[1A[2K[WebServer] Found existing admin list, updating internal list
+
+[1A[2K[WebServer] Updated admin list with 2 admins: [ [0m[32m"ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"[0m[0m[0m[2m,[0m
+[WebServer]   [0m[32m"86a82cab18b293f53cbaaae8cdcbee3f7ec427fdf9f9c933db77800bb5ef38a0"[0m[0m
+[WebServer] ]
+[WebServer] Found existing setup event
+
+[1A[2K[WebServer] [vanity-urls] No existing registry found
+
+[1A[2K[WebServer] [nip05-names] No existing registry found
+
+[1A[2K[WebServer] Subscribed to zap purchase receipts (App relay)
+[WebServer] Connecting to zap relays: ws://localhost:10547, wss://relay.damus.io, wss://nos.lol, wss://relay.nostr.net, wss://relay.minibits.cash, wss://relay.coinos.io, wss://nwc.primal.net, wss://relay.primal.net
+
+
+--- E2E Global Setup ---
+  App pubkey: ed29ae1859d35e17...
+  Server health: OK (app settings loaded)
+--- Global Setup Complete ---
+
+
+Running 7 tests using 1 worker
+
+[1A[2K[WebServer] Subscribed to zap purchase receipts (Zap relays)
+[WebServer] EventHandler initialized successfully
+[WebServer] ✅ EventHandler initialized successfully
+
+[1A[2K[1/7] [chromium] › e2e/tests/pii-exposure-remediation.spec.ts:177:2 › PII Exposure Remediation Workflow › scanner flags affected kind 16 order events with sensitive delivery/contact fields
+[1A[2K[chromium] › e2e/tests/pii-exposure-remediation.spec.ts:177:2 › PII Exposure Remediation Workflow › scanner flags affected kind 16 order events with sensitive delivery/contact fields
+  Seeding: base (user profiles)
+
+[1A[2K    Published profile: TestMerchant
+
+[1A[2K    Published profile: TestBuyer
+
+[1A[2K    Published profile: TestApp
+
+[1A[2K    Published admin list with devUser1
+
+[1A[2K[WebServer] Live admin list update received (created_at=1783162686)
+[WebServer] Updated admin list with 2 admins: [ [0m[32m"ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"[0m[0m[0m[2m,[0m
+[WebServer]   [0m[32m"86a82cab18b293f53cbaaae8cdcbee3f7ec427fdf9f9c933db77800bb5ef38a0"[0m[0m
+[WebServer] ]
+
+[1A[2K[WebServer] [32mBundled page in 5675ms[0m[2m:[0m src/index.html
+
+[1A[2KDeleted 1 kind 16 events
+
+[1A[2K[2/7] [chromium] › e2e/tests/pii-exposure-remediation.spec.ts:214:2 › PII Exposure Remediation Workflow › scanner ignores unrelated/non-PII events
+[1A[2K[chromium] › e2e/tests/pii-exposure-remediation.spec.ts:214:2 › PII Exposure Remediation Workflow › scanner ignores unrelated/non-PII events
+Deleted 1 kind 16 events
+
+[1A[2K[3/7] [chromium] › e2e/tests/pii-exposure-remediation.spec.ts:255:2 › PII Exposure Remediation Workflow › successfully deletes PII events through UI and confirms deletion via relay query
+[1A[2K[chromium] › e2e/tests/pii-exposure-remediation.spec.ts:255:2 › PII Exposure Remediation Workflow › successfully deletes PII events through UI and confirms deletion via relay query
+Deleted 1 kind 16 events
+
+[1A[2K  1) [chromium] › e2e/tests/pii-exposure-remediation.spec.ts:255:2 › PII Exposure Remediation Workflow › successfully deletes PII events through UI and confirms deletion via relay query 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32mtrue[39m
+    Received: [31mfalse[39m
+
+      264 | 		// Wait for PII modal to appear using header text detection
+      265 | 		const modalVisible = await waitForPIIModal(merchantPage, 10000)
+    > 266 | 		expect(modalVisible).toBe(true)
+          | 		                     ^
+      267 |
+      268 | 		// Click the "Request Deletion and Verify" button
+      269 | 		await merchantPage.click('button:has-text("Request Deletion and Verify")')
+        at /home/c03rad0r/market/e2e/tests/pii-exposure-remediation.spec.ts:266:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/pii-exposure-remediation-P-ec54b-ms-deletion-via-relay-query-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/pii-exposure-remediation-P-ec54b-ms-deletion-via-relay-query-chromium/error-context.md
+
+
+[1A[2K[4/7] [chromium] › e2e/tests/pii-exposure-remediation.spec.ts:297:2 › PII Exposure Remediation Workflow › prevents deletion of events not authored by the current user
+[1A[2K[chromium] › e2e/tests/pii-exposure-remediation.spec.ts:297:2 › PII Exposure Remediation Workflow › prevents deletion of events not authored by the current user
+  Seeding: base (user profiles)
+
+[1A[2K    Published profile: TestMerchant
+
+[1A[2K    Published profile: TestBuyer
+
+[1A[2K    Published profile: TestApp
+
+[1A[2K    Published admin list with devUser1
+
+[1A[2K[WebServer] Live admin list update received (created_at=1783162726)
+[WebServer] Updated admin list with 2 admins: [ [0m[32m"ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"[0m[0m[0m[2m,[0m
+[WebServer]   [0m[32m"86a82cab18b293f53cbaaae8cdcbee3f7ec427fdf9f9c933db77800bb5ef38a0"[0m[0m
+[WebServer] ]
+
+[1A[2K[5/7] [chromium] › e2e/tests/pii-exposure-remediation.spec.ts:321:2 › PII Exposure Remediation Workflow › modal copy says "request deleted," not "deleted"
+[1A[2K[chromium] › e2e/tests/pii-exposure-remediation.spec.ts:321:2 › PII Exposure Remediation Workflow › modal copy says "request deleted," not "deleted"
+Deleted 1 kind 16 events
+
+[1A[2K  2) [chromium] › e2e/tests/pii-exposure-remediation.spec.ts:321:2 › PII Exposure Remediation Workflow › modal copy says "request deleted," not "deleted" 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32mtrue[39m
+    Received: [31mfalse[39m
+
+      330 | 		// Wait for PII modal to appear using header text detection
+      331 | 		const modalVisible = await waitForPIIModal(merchantPage, 10000)
+    > 332 | 		expect(modalVisible).toBe(true)
+          | 		                     ^
+      333 |
+      334 | 		// Check button text
+      335 | 		const buttonText = await merchantPage.locator('button:has-text("Request Deletion and Verify")').textContent()
+        at /home/c03rad0r/market/e2e/tests/pii-exposure-remediation.spec.ts:332:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/pii-exposure-remediation-P-26734-equest-deleted-not-deleted--chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/pii-exposure-remediation-P-26734-equest-deleted-not-deleted--chromium/error-context.md
+
+
+[1A[2K[6/7] [chromium] › e2e/tests/pii-exposure-remediation.spec.ts:340:2 › PII Exposure Remediation Workflow › hides raw PII values in UI showing only field types
+[1A[2K[chromium] › e2e/tests/pii-exposure-remediation.spec.ts:340:2 › PII Exposure Remediation Workflow › hides raw PII values in UI showing only field types
+  Seeding: base (user profiles)
+
+[1A[2K    Published profile: TestMerchant
+
+[1A[2K    Published profile: TestBuyer
+
+[1A[2K    Published profile: TestApp
+
+[1A[2K    Published admin list with devUser1
+
+[1A[2K[WebServer] Live admin list update received (created_at=1783162755)
+[WebServer] Updated admin list with 2 admins: [ [0m[32m"ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"[0m[0m[0m[2m,[0m
+[WebServer]   [0m[32m"86a82cab18b293f53cbaaae8cdcbee3f7ec427fdf9f9c933db77800bb5ef38a0"[0m[0m
+[WebServer] ]
+
+[1A[2KDeleted 1 kind 16 events
+
+[1A[2K  3) [chromium] › e2e/tests/pii-exposure-remediation.spec.ts:340:2 › PII Exposure Remediation Workflow › hides raw PII values in UI showing only field types 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32mtrue[39m
+    Received: [31mfalse[39m
+
+      349 | 		// Wait for PII modal to appear using header text detection
+      350 | 		const modalVisible = await waitForPIIModal(merchantPage, 10000)
+    > 351 | 		expect(modalVisible).toBe(true)
+          | 		                     ^
+      352 |
+      353 | 		// Get modal content
+      354 | 		const modalContent = await (await merchantPage.getByRole('dialog', { name: 'Personal Information Leak' }).allTextContents()).join('')
+        at /home/c03rad0r/market/e2e/tests/pii-exposure-remediation.spec.ts:351:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/pii-exposure-remediation-P-a1c91-UI-showing-only-field-types-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/pii-exposure-remediation-P-a1c91-UI-showing-only-field-types-chromium/error-context.md
+
+
+[1A[2K[7/7] [chromium] › e2e/tests/pii-exposure-remediation.spec.ts:376:2 › PII Exposure Remediation Workflow › completely executes deletion workflow and verifies event removal
+[1A[2K[chromium] › e2e/tests/pii-exposure-remediation.spec.ts:376:2 › PII Exposure Remediation Workflow › completely executes deletion workflow and verifies event removal
+  Seeding: base (user profiles)
+
+[1A[2K    Published profile: TestMerchant
+
+[1A[2K    Published profile: TestBuyer
+
+[1A[2K    Published profile: TestApp
+
+[1A[2K    Published admin list with devUser1
+
+[1A[2K[WebServer] Live admin list update received (created_at=1783162772)
+[WebServer] Updated admin list with 2 admins: [ [0m[32m"ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"[0m[0m[0m[2m,[0m
+[WebServer]   [0m[32m"86a82cab18b293f53cbaaae8cdcbee3f7ec427fdf9f9c933db77800bb5ef38a0"[0m[0m
+[WebServer] ]
+
+[1A[2KDeleted 2 kind 16 events
+
+[1A[2K  4) [chromium] › e2e/tests/pii-exposure-remediation.spec.ts:376:2 › PII Exposure Remediation Workflow › completely executes deletion workflow and verifies event removal 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32mtrue[39m
+    Received: [31mfalse[39m
+
+      388 | 		// Wait for PII modal to appear
+      389 | 		const modalVisible = await waitForPIIModal(merchantPage, 10000)
+    > 390 | 		expect(modalVisible).toBe(true)
+          | 		                     ^
+      391 |
+      392 | 		// Verify both events are listed in the modal
+      393 | 		const event1ListItem = await merchantPage.locator(`li:has-text("Event ${piiEvent1.id.substring(0, 8)}")`)
+        at /home/c03rad0r/market/e2e/tests/pii-exposure-remediation.spec.ts:390:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/pii-exposure-remediation-P-1fdf5--and-verifies-event-removal-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/pii-exposure-remediation-P-1fdf5--and-verifies-event-removal-chromium/error-context.md
+
+
+
+--- E2E Global Teardown ---
+  Cleanup complete
+[1A[2K  4 failed
+    [chromium] › e2e/tests/pii-exposure-remediation.spec.ts:255:2 › PII Exposure Remediation Workflow › successfully deletes PII events through UI and confirms deletion via relay query 
+    [chromium] › e2e/tests/pii-exposure-remediation.spec.ts:321:2 › PII Exposure Remediation Workflow › modal copy says "request deleted," not "deleted" 
+    [chromium] › e2e/tests/pii-exposure-remediation.spec.ts:340:2 › PII Exposure Remediation Workflow › hides raw PII values in UI showing only field types 
+    [chromium] › e2e/tests/pii-exposure-remediation.spec.ts:376:2 › PII Exposure Remediation Workflow › completely executes deletion workflow and verifies event removal 
+  3 passed (1.8m)

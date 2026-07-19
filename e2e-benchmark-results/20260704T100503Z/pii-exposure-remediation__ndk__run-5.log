@@ -1,0 +1,206 @@
+[1A[2K[WebServer] 
+[WebServer] --- Seeding relay for e2e tests ---
+[WebServer]   App pubkey: ed29ae1859d35e17...
+
+[1A[2K[WebServer]   Published app settings (Kind 31990)
+
+[1A[2K[WebServer]   Published admin list (Kind 30000)
+
+[1A[2K[WebServer]   Published relay list (Kind 10002)
+
+[1A[2K[WebServer] --- Relay seeding complete ---
+[WebServer] 
+
+[1A[2K[WebServer] [0m[2m[35m$[0m [2m[1mbun --hot src/index.tsx --host 0.0.0.0[0m
+
+[1A[2K[WebServer] Fetching app settings from relay: ws://localhost:10547 for pubkey: ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035
+
+[1A[2K[WebServer] Bootstrap manager initialized in bootstrap mode
+
+[1A[2K[WebServer] Bootstrap manager initialized in bootstrap mode
+
+[1A[2K[WebServer] App port: 34567
+
+[1A[2K[WebServer] 🚀 Server running at http://localhost:34567/
+
+
+--- E2E Global Setup ---
+  App pubkey: ed29ae1859d35e17...
+[1A[2K[WebServer] [0m[1m29 |[0m 	[0m[35mconst[0m privateKey = process.env.CVM_SERVER_KEY
+[WebServer] [0m[1m30 |[0m 	[0m[35mif[0m (privateKey && isValidHexPubkey(privateKey)) {
+[WebServer] [0m[1m31 |[0m 		[0m[35mreturn[0m getPublicKey(hexToBytes(privateKey))
+[WebServer] [0m[1m32 |[0m 	}
+[WebServer] [0m[1m33 |[0m 
+[WebServer] [0m[1m34 |[0m 	[0m[35mthrow[0m [0m[35mnew[0m [0m[1mError[0m([0m[32m'No CVM server pubkey available. Set CVM_SERVER_PUBLIC_KEY or CVM_SERVER_KEY in your environment.'[0m)
+[WebServer]                 [31m[1m^[0m
+[WebServer] [0m[31merror[0m[2m:[0m [1mNo CVM server pubkey available. Set CVM_SERVER_PUBLIC_KEY or CVM_SERVER_KEY in your environment.[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mresolveCvmServerPubkey[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/lib/cvm-identity.ts[0m[2m:[0m[33m34[0m[2m:[33m12[0m[2m)[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mgetCvmServerPublicKey[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/index.tsx[0m[2m:[0m[33m45[0m[2m:[33m22[0m[2m)[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mGET[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/index.tsx[0m[2m:[0m[33m250[0m[2m:[33m23[0m[2m)[0m
+[WebServer] [0m[31mGET[0m - [1m/api/config[0m failed
+
+[1A[2K[WebServer] NDK service connected to relay: ws://localhost:10547
+
+[1A[2K[WebServer] Fetching with filter: {"kinds":[31990],"authors":["ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"],"#d":["plebeian-market-handler"],"limit":1}
+
+[1A[2K[WebServer] Found existing setup event
+
+[1A[2K[WebServer] Found existing admin list, updating internal list
+
+[1A[2K[WebServer] Updated admin list with 2 admins: [ [0m[32m"ed29ae1859d35e17c8f9b9a1a21bd135881ddd2f8783466dd03723f439727035"[0m[0m[0m[2m,[0m
+[WebServer]   [0m[32m"86a82cab18b293f53cbaaae8cdcbee3f7ec427fdf9f9c933db77800bb5ef38a0"[0m[0m
+[WebServer] ]
+
+[1A[2K[WebServer] Fetch returned 1 events
+[WebServer] Found 1 app settings events
+
+[1A[2K[WebServer] App settings loaded successfully
+
+[1A[2K[WebServer] [vanity-urls] No existing registry found
+
+[1A[2K[WebServer] [nip05-names] No existing registry found
+[WebServer] Subscribed to zap purchase receipts (App relay)
+
+[1A[2K[WebServer] Connecting to zap relays: ws://localhost:10547, wss://relay.damus.io, wss://nos.lol, wss://relay.nostr.net, wss://relay.minibits.cash, wss://relay.coinos.io, wss://nwc.primal.net, wss://relay.primal.net
+
+[1A[2K[WebServer] [0m[1m29 |[0m 	[0m[35mconst[0m privateKey = process.env.CVM_SERVER_KEY
+[WebServer] [0m[1m30 |[0m 	[0m[35mif[0m (privateKey && isValidHexPubkey(privateKey)) {
+[WebServer] [0m[1m31 |[0m 		[0m[35mreturn[0m getPublicKey(hexToBytes(privateKey))
+[WebServer] [0m[1m32 |[0m 	}
+[WebServer] [0m[1m33 |[0m 
+[WebServer] [0m[1m34 |[0m 	[0m[35mthrow[0m [0m[35mnew[0m [0m[1mError[0m([0m[32m'No CVM server pubkey available. Set CVM_SERVER_PUBLIC_KEY or CVM_SERVER_KEY in your environment.'[0m)
+[WebServer]                 [31m[1m^[0m
+[WebServer] [0m[31merror[0m[2m:[0m [1mNo CVM server pubkey available. Set CVM_SERVER_PUBLIC_KEY or CVM_SERVER_KEY in your environment.[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mresolveCvmServerPubkey[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/lib/cvm-identity.ts[0m[2m:[0m[33m34[0m[2m:[33m12[0m[2m)[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mgetCvmServerPublicKey[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/index.tsx[0m[2m:[0m[33m45[0m[2m:[33m22[0m[2m)[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mGET[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/index.tsx[0m[2m:[0m[33m250[0m[2m:[33m23[0m[2m)[0m
+[WebServer] [0m[31mGET[0m - [1m/api/config[0m failed
+
+[1A[2K[WebServer] Subscribed to zap purchase receipts (Zap relays)
+[WebServer] EventHandler initialized successfully
+
+[1A[2K[WebServer] ✅ EventHandler initialized successfully
+
+[1A[2K[WebServer] [0m[1m29 |[0m 	[0m[35mconst[0m privateKey = process.env.CVM_SERVER_KEY
+[WebServer] [0m[1m30 |[0m 	[0m[35mif[0m (privateKey && isValidHexPubkey(privateKey)) {
+[WebServer] [0m[1m31 |[0m 		[0m[35mreturn[0m getPublicKey(hexToBytes(privateKey))
+[WebServer] [0m[1m32 |[0m 	}
+[WebServer] [0m[1m33 |[0m 
+[WebServer] [0m[1m34 |[0m 	[0m[35mthrow[0m [0m[35mnew[0m [0m[1mError[0m([0m[32m'No CVM server pubkey available. Set CVM_SERVER_PUBLIC_KEY or CVM_SERVER_KEY in your environment.'[0m)
+[WebServer]                 [31m[1m^[0m
+[WebServer] [0m[31merror[0m[2m:[0m [1mNo CVM server pubkey available. Set CVM_SERVER_PUBLIC_KEY or CVM_SERVER_KEY in your environment.[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mresolveCvmServerPubkey[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/lib/cvm-identity.ts[0m[2m:[0m[33m34[0m[2m:[33m12[0m[2m)[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mgetCvmServerPublicKey[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/index.tsx[0m[2m:[0m[33m45[0m[2m:[33m22[0m[2m)[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mGET[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/index.tsx[0m[2m:[0m[33m250[0m[2m:[33m23[0m[2m)[0m
+[WebServer] [0m[31mGET[0m - [1m/api/config[0m failed
+
+[1A[2K[WebServer] [0m[1m29 |[0m 	[0m[35mconst[0m privateKey = process.env.CVM_SERVER_KEY
+[WebServer] [0m[1m30 |[0m 	[0m[35mif[0m (privateKey && isValidHexPubkey(privateKey)) {
+[WebServer] [0m[1m31 |[0m 		[0m[35mreturn[0m getPublicKey(hexToBytes(privateKey))
+[WebServer] [0m[1m32 |[0m 	}
+[WebServer] [0m[1m33 |[0m 
+[WebServer] [0m[1m34 |[0m 	[0m[35mthrow[0m [0m[35mnew[0m [0m[1mError[0m([0m[32m'No CVM server pubkey available. Set CVM_SERVER_PUBLIC_KEY or CVM_SERVER_KEY in your environment.'[0m)
+[WebServer]                 [31m[1m^[0m
+[WebServer] [0m[31merror[0m[2m:[0m [1mNo CVM server pubkey available. Set CVM_SERVER_PUBLIC_KEY or CVM_SERVER_KEY in your environment.[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mresolveCvmServerPubkey[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/lib/cvm-identity.ts[0m[2m:[0m[33m34[0m[2m:[33m12[0m[2m)[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mgetCvmServerPublicKey[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/index.tsx[0m[2m:[0m[33m45[0m[2m:[33m22[0m[2m)[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mGET[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/index.tsx[0m[2m:[0m[33m250[0m[2m:[33m23[0m[2m)[0m
+[WebServer] [0m[31mGET[0m - [1m/api/config[0m failed
+
+[1A[2K[WebServer] [0m[1m29 |[0m 	[0m[35mconst[0m privateKey = process.env.CVM_SERVER_KEY
+[WebServer] [0m[1m30 |[0m 	[0m[35mif[0m (privateKey && isValidHexPubkey(privateKey)) {
+[WebServer] [0m[1m31 |[0m 		[0m[35mreturn[0m getPublicKey(hexToBytes(privateKey))
+[WebServer] [0m[1m32 |[0m 	}
+[WebServer] [0m[1m33 |[0m 
+[WebServer] [0m[1m34 |[0m 	[0m[35mthrow[0m [0m[35mnew[0m [0m[1mError[0m([0m[32m'No CVM server pubkey available. Set CVM_SERVER_PUBLIC_KEY or CVM_SERVER_KEY in your environment.'[0m)
+[WebServer]                 [31m[1m^[0m
+[WebServer] [0m[31merror[0m[2m:[0m [1mNo CVM server pubkey available. Set CVM_SERVER_PUBLIC_KEY or CVM_SERVER_KEY in your environment.[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mresolveCvmServerPubkey[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/lib/cvm-identity.ts[0m[2m:[0m[33m34[0m[2m:[33m12[0m[2m)[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mgetCvmServerPublicKey[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/index.tsx[0m[2m:[0m[33m45[0m[2m:[33m22[0m[2m)[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mGET[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/index.tsx[0m[2m:[0m[33m250[0m[2m:[33m23[0m[2m)[0m
+[WebServer] [0m[31mGET[0m - [1m/api/config[0m failed
+
+[1A[2K[WebServer] [0m[1m29 |[0m 	[0m[35mconst[0m privateKey = process.env.CVM_SERVER_KEY
+[WebServer] [0m[1m30 |[0m 	[0m[35mif[0m (privateKey && isValidHexPubkey(privateKey)) {
+[WebServer] [0m[1m31 |[0m 		[0m[35mreturn[0m getPublicKey(hexToBytes(privateKey))
+[WebServer] [0m[1m32 |[0m 	}
+[WebServer] [0m[1m33 |[0m 
+[WebServer] [0m[1m34 |[0m 	[0m[35mthrow[0m [0m[35mnew[0m [0m[1mError[0m([0m[32m'No CVM server pubkey available. Set CVM_SERVER_PUBLIC_KEY or CVM_SERVER_KEY in your environment.'[0m)
+[WebServer]                 [31m[1m^[0m
+[WebServer] [0m[31merror[0m[2m:[0m [1mNo CVM server pubkey available. Set CVM_SERVER_PUBLIC_KEY or CVM_SERVER_KEY in your environment.[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mresolveCvmServerPubkey[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/lib/cvm-identity.ts[0m[2m:[0m[33m34[0m[2m:[33m12[0m[2m)[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mgetCvmServerPublicKey[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/index.tsx[0m[2m:[0m[33m45[0m[2m:[33m22[0m[2m)[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mGET[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/index.tsx[0m[2m:[0m[33m250[0m[2m:[33m23[0m[2m)[0m
+[WebServer] [0m[31mGET[0m - [1m/api/config[0m failed
+
+[1A[2K[WebServer] [0m[1m29 |[0m 	[0m[35mconst[0m privateKey = process.env.CVM_SERVER_KEY
+[WebServer] [0m[1m30 |[0m 	[0m[35mif[0m (privateKey && isValidHexPubkey(privateKey)) {
+[WebServer] [0m[1m31 |[0m 		[0m[35mreturn[0m getPublicKey(hexToBytes(privateKey))
+[WebServer] [0m[1m32 |[0m 	}
+[WebServer] [0m[1m33 |[0m 
+[WebServer] [0m[1m34 |[0m 	[0m[35mthrow[0m [0m[35mnew[0m [0m[1mError[0m([0m[32m'No CVM server pubkey available. Set CVM_SERVER_PUBLIC_KEY or CVM_SERVER_KEY in your environment.'[0m)
+[WebServer]                 [31m[1m^[0m
+[WebServer] [0m[31merror[0m[2m:[0m [1mNo CVM server pubkey available. Set CVM_SERVER_PUBLIC_KEY or CVM_SERVER_KEY in your environment.[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mresolveCvmServerPubkey[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/lib/cvm-identity.ts[0m[2m:[0m[33m34[0m[2m:[33m12[0m[2m)[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mgetCvmServerPublicKey[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/index.tsx[0m[2m:[0m[33m45[0m[2m:[33m22[0m[2m)[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mGET[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/index.tsx[0m[2m:[0m[33m250[0m[2m:[33m23[0m[2m)[0m
+[WebServer] [0m[31mGET[0m - [1m/api/config[0m failed
+
+[1A[2K[WebServer] [0m[1m29 |[0m 	[0m[35mconst[0m privateKey = process.env.CVM_SERVER_KEY
+[WebServer] [0m[1m30 |[0m 	[0m[35mif[0m (privateKey && isValidHexPubkey(privateKey)) {
+[WebServer] [0m[1m31 |[0m 		[0m[35mreturn[0m getPublicKey(hexToBytes(privateKey))
+[WebServer] [0m[1m32 |[0m 	}
+[WebServer] [0m[1m33 |[0m 
+[WebServer] [0m[1m34 |[0m 	[0m[35mthrow[0m [0m[35mnew[0m [0m[1mError[0m([0m[32m'No CVM server pubkey available. Set CVM_SERVER_PUBLIC_KEY or CVM_SERVER_KEY in your environment.'[0m)
+[WebServer]                 [31m[1m^[0m
+[WebServer] [0m[31merror[0m[2m:[0m [1mNo CVM server pubkey available. Set CVM_SERVER_PUBLIC_KEY or CVM_SERVER_KEY in your environment.[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mresolveCvmServerPubkey[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/lib/cvm-identity.ts[0m[2m:[0m[33m34[0m[2m:[33m12[0m[2m)[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mgetCvmServerPublicKey[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/index.tsx[0m[2m:[0m[33m45[0m[2m:[33m22[0m[2m)[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mGET[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/index.tsx[0m[2m:[0m[33m250[0m[2m:[33m23[0m[2m)[0m
+[WebServer] [0m[31mGET[0m - [1m/api/config[0m failed
+
+[1A[2K[WebServer] [0m[1m29 |[0m 	[0m[35mconst[0m privateKey = process.env.CVM_SERVER_KEY
+[WebServer] [0m[1m30 |[0m 	[0m[35mif[0m (privateKey && isValidHexPubkey(privateKey)) {
+[WebServer] [0m[1m31 |[0m 		[0m[35mreturn[0m getPublicKey(hexToBytes(privateKey))
+[WebServer] [0m[1m32 |[0m 	}
+[WebServer] [0m[1m33 |[0m 
+[WebServer] [0m[1m34 |[0m 	[0m[35mthrow[0m [0m[35mnew[0m [0m[1mError[0m([0m[32m'No CVM server pubkey available. Set CVM_SERVER_PUBLIC_KEY or CVM_SERVER_KEY in your environment.'[0m)
+[WebServer]                 [31m[1m^[0m
+[WebServer] [0m[31merror[0m[2m:[0m [1mNo CVM server pubkey available. Set CVM_SERVER_PUBLIC_KEY or CVM_SERVER_KEY in your environment.[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mresolveCvmServerPubkey[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/lib/cvm-identity.ts[0m[2m:[0m[33m34[0m[2m:[33m12[0m[2m)[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mgetCvmServerPublicKey[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/index.tsx[0m[2m:[0m[33m45[0m[2m:[33m22[0m[2m)[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mGET[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/index.tsx[0m[2m:[0m[33m250[0m[2m:[33m23[0m[2m)[0m
+[WebServer] [0m[31mGET[0m - [1m/api/config[0m failed
+
+[1A[2K[WebServer] [0m[1m29 |[0m 	[0m[35mconst[0m privateKey = process.env.CVM_SERVER_KEY
+[WebServer] [0m[1m30 |[0m 	[0m[35mif[0m (privateKey && isValidHexPubkey(privateKey)) {
+[WebServer] [0m[1m31 |[0m 		[0m[35mreturn[0m getPublicKey(hexToBytes(privateKey))
+[WebServer] [0m[1m32 |[0m 	}
+[WebServer] [0m[1m33 |[0m 
+[WebServer] [0m[1m34 |[0m 	[0m[35mthrow[0m [0m[35mnew[0m [0m[1mError[0m([0m[32m'No CVM server pubkey available. Set CVM_SERVER_PUBLIC_KEY or CVM_SERVER_KEY in your environment.'[0m)
+[WebServer]                 [31m[1m^[0m
+[WebServer] [0m[31merror[0m[2m:[0m [1mNo CVM server pubkey available. Set CVM_SERVER_PUBLIC_KEY or CVM_SERVER_KEY in your environment.[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mresolveCvmServerPubkey[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/lib/cvm-identity.ts[0m[2m:[0m[33m34[0m[2m:[33m12[0m[2m)[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mgetCvmServerPublicKey[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/index.tsx[0m[2m:[0m[33m45[0m[2m:[33m22[0m[2m)[0m
+[WebServer] [0m      [2mat [0m[0m[1m[3mGET[0m[2m ([0m[0m[36m[2m/home/c03rad0r/market/[0m[36msrc/index.tsx[0m[2m:[0m[33m250[0m[2m:[33m23[0m[2m)[0m
+[WebServer] [0m[31mGET[0m - [1m/api/config[0m failed
+
+Error: Dev server reports needsSetup=true after 10 retries — app settings not loaded.
+This usually happens when the relay was restarted but the dev server was reused.
+Fix: stop the dev server (kill port 34567) and re-run tests.
+
+   at ../global-setup.ts:45
+
+  43 | 	}
+  44 |
+> 45 | 	throw new Error(
+     | 	      ^
+  46 | 		`Dev server reports needsSetup=true after ${maxRetries} retries — app settings not loaded.\n` +
+  47 | 			'This usually happens when the relay was restarted but the dev server was reused.\n' +
+  48 | 			'Fix: stop the dev server (kill port ' +
+    at globalSetup (/home/c03rad0r/market/e2e/global-setup.ts:45:8)
+
+
+--- E2E Global Teardown ---
+  Cleanup complete
+[1A[2K
