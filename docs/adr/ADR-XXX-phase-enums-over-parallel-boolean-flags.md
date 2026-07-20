@@ -235,9 +235,9 @@ documents. This ADR is the implementation plan to close that gap.
 
 The 7-phase model covers the primary client-payment lifecycle. AGENTS.md §41
 enumerates 10 lifecycle states. The additional 3 states (invoice_requested,
-wallet_acked, expired) are documented in the superseded detailed analysis
-(ADR-XXX-payment-lifecycle-state-machine.md) as a potential future enrichment.
-This should not slow down the initial introduction of phase enums.
+wallet_acked, expired) were identified during detailed analysis and are noted
+here as a potential future enrichment. This should not slow down the initial
+introduction of phase enums.
 
 `src/lib/payments/proof.ts` is referenced because `PaymentProof` is the
 existing discriminated-union precedent in this repo — `PaymentPhase` follows
