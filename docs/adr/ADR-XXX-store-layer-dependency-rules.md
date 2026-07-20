@@ -1,4 +1,4 @@
-# ADR: Store Layer Dependency Rules
+# ADR-XXX: Store Layer Dependency Rules
 
 ## Status
 
@@ -11,11 +11,9 @@ Proposed
 ## Related
 
 - AGENTS.md §37–38 (state-type separation)
-- Issue #16 (fork) — Store layer dependency inversion
 - ADR-0002 (Strangler-fig I/O migration — stores benefit from clean layering
   during module-by-module migration)
-- ADR-0003 (Phase enums — same `cart.ts` file, different concern)
-- Supersedes draft ADR-004 (`ADR-004-dependency-layering-stores-must-not-import-queries.md`)
+- ADR: Phase Enums over Parallel Boolean Flags (same `cart.ts` file, different concern)
 
 ---
 
@@ -29,7 +27,7 @@ This was re-verified on upstream/master `8706d74a`.
 
 ### Verified Violations (5 stores — NOT 6)
 
-> **CRITICAL CORRECTION from ADR-004:** `nip60.ts` was previously listed as a
+> **CRITICAL CORRECTION:** `nip60.ts` was previously listed as a
 > violating store. It has since been **refactored upstream** and is now **clean**:
 > 933 lines, **zero** query imports, **zero** publish imports, **zero** dynamic
 > imports. It is **excluded** from the violation table and all remediation
@@ -485,7 +483,7 @@ Both must be removed during migration.
 - The ~27 query files that import from stores are **not** a problem — that
   direction is architecturally correct. The issue is solely the 5 store files
   that import back into queries/publish, creating cycles.
-- `nip60.ts` (933 lines) was previously listed as a 6th violator in ADR-004.
+- `nip60.ts` (933 lines) was previously listed as a 6th violator.
   It has been refactored upstream and is now clean. It requires **no action**.
 - The root `AGENTS.md` §37–38 covers state-type separation (payment lifecycle,
   sensitive data) but does **not** mention import-direction layering. This ADR
