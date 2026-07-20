@@ -1,4 +1,4 @@
-# ADR-003: Phase enums (state machines) instead of parallel boolean flags
+# ADR-XXX: Phase enums (state machines) instead of parallel boolean flags
 
 ## Status
 
@@ -14,8 +14,6 @@ Proposed
   payment lifecycles into booleans"
 - Same constraint repeated in `src/AGENTS.md`, `src/lib/AGENTS.md`,
   `src/queries/AGENTS.md`, `src/publish/AGENTS.md`, `src/hooks/AGENTS.md`
-- Issue #1155
-- Issue #1064 (Architecture Audit)
 
 ## Context
 
@@ -95,6 +93,56 @@ describe a sequential process must be consolidated.
 This rule makes the existing AGENTS.md constraint ("Do not collapse payment
 lifecycles into booleans") mechanically enforceable — the type system rejects
 impossible states rather than relying on convention.
+
+## Bug Prevention Table
+
+Every confirmed bug maps to a structural prevention mechanism in the new state
+machine — the fix is in the types, not in discipline.
+
+| Bug                                                  | Severity | Prevention mechanism                                                                                                                                                             |
+| ---------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1** double-pay race (L387–391, 458–462, 523–527)   | MEDIUM   | Reducer only allows `attempting` from `invoice_ready`. While in `awaiting_receipt`, dispatch is a no-op. Pay button cannot re-arm on a live invoice.                             |
+| **2** stale-flag window                              | LOW      | Single phase value — no "between flags" frame is representable.                                                                                                                  |
+| **3** settlement conflation (L398, 469, 534)         | LOW      | `wallet_acked` is distinct from `settled`. Reaching `settled` requires a `PaymentProof` (preimage / zap receipt), not a `wallet_ack` marker. Directly satisfies `AGENTS.md` §45. |
+| **4** re-entry after failure                         | MEDIUM   | `failed` is terminal. Recovery requires an explicit `reset` action — no boolean to flip back. `hasCompletedRef`'s failure-side gap is eliminated.                                |
+| **5** manual-verify blind spot (L118)                | LOW      | `attempting` with `method: 'manual'` covers it. Button gated on `phase.kind === 'invoice_ready'`, so "awaiting manual confirmation" is a real phase, not a side check.           |
+| **6** `handleSkipPayment` partial cleanup (L603–611) | LOW      | Terminal states no-op. Skip dispatches a terminal phase (`fulfilled` or `failed`); there is no partial boolean set to forget.                                                    |
+| **+** no invoice expiry handling                     | MEDIUM   | `expired` is terminal. An invoice-expiry timer dispatches it; background monitoring keys off `phase.kind` and stops cleanly.                                                     |
+
+## Scope Clarification
+
+`AGENTS.md` §41 enumerates **10** lifecycle states. Not all of them belong in
+`LightningPaymentProcessor` — that component tracks the **client-payment**
+layer, not the merchant/server-side order consensus layer. Splitting them
+correctly is what keeps the `PaymentPhase` union bounded without
+overreaching into order-state that this component cannot authoritatively set.
+
+| Layer                   | §41 states                                                                 | Owner                                                        |
+| ----------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| **Client-payment** (6)  | requested, attempted, wallet acknowledged, settled/proven, expired, failed | `LightningPaymentProcessor` — what this ADR covers           |
+| **Order consensus** (4) | receipt published, merchant confirmed, refunded, fulfilled                 | server / order reducer — _not_ client UI to set unilaterally |
+
+The `fulfilled` variant appears in `PaymentPhase` because the client may
+_observe_ it (skip / merchant-confirmed), but it is driven by order-layer
+events, not by a local boolean. Conflating the two layers is itself a §45
+violation — this split prevents it.
+
+## Test Coverage Gap
+
+**This is the dominant risk factor for any refactor.** Only the **WebLN happy
+path** is covered by e2e (`e2e/tests/order-lifecycle.spec.ts`). The following
+are completely untested:
+
+- NWC payment path
+- NIP-60 payment path
+- Manual preimage entry
+- All failure paths
+- Invoice expiry
+- Double-pay / re-entry guards
+
+No unit tests exist for `LightningPaymentProcessor`. Before the booleans are
+removed (PR 3 below), each phase transition must have at least one test —
+otherwise the refactor substitutes one set of unverified behaviors for another.
 
 ## Invariants
 
@@ -182,3 +230,15 @@ migration path for the most prominent violator (`LightningPaymentProcessor`).
 The AGENTS.md itself says: "Do not use AGENTS text as proof that behavior
 already exists." The code does not yet comply with the constraint it
 documents. This ADR is the implementation plan to close that gap.
+
+### Future Enrichment
+
+The 7-phase model covers the primary client-payment lifecycle. AGENTS.md §41
+enumerates 10 lifecycle states. The additional 3 states (invoice_requested,
+wallet_acked, expired) are documented in the superseded detailed analysis
+(ADR-XXX-payment-lifecycle-state-machine.md) as a potential future enrichment.
+This should not slow down the initial introduction of phase enums.
+
+`src/lib/payments/proof.ts` is referenced because `PaymentProof` is the
+existing discriminated-union precedent in this repo — `PaymentPhase` follows
+the same shape rather than inventing a new pattern.
