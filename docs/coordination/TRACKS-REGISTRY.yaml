@@ -1,0 +1,65 @@
+# Plebeian Market — Tracks Registry
+# Machine-readable registry of all Signal groups in the plebeian hierarchy.
+# Source of truth for the orchestrator (plebeian-manager).
+
+orchestrator:
+  name: plebeian-manager
+  signal_group_id: "rBB1J3KQuLy+dE4Te97ZxSsnPyQ+j3PclpFdxHnk2Ho="
+  role: ORCHESTRATOR
+  description: "Coordinates all plebeian market sub-tracks. Maintains coordinator files. Sends status requests to sub-managers."
+  worktree: ~/worktrees/ws-plebeian-market/
+  repo: https://github.com/felixfelix-bot/market
+  upstream: https://github.com/PlebeianApp/market
+  maintains:
+    - docs/coordination/TRACKS-REGISTRY.yaml
+    - docs/coordination/INDEX.md
+    - docs/coordination/DECISIONS-AND-BLOCKERS.md
+    - docs/coordination/STATUS-REQUEST-PROMPT.md
+
+tracks:
+  - name: plebeian-my-prs
+    signal_group_id: "Y1khFZRsYeAHnhjvW1vaQd531mewVMCoD8q9QwPCURs="
+    role: SUB-MANAGER
+    description: "Manages our own PRs to upstream PlebeianApp/market. Fork-first workflow: branch on felixfelix-bot/market, PR upstream."
+    worktree: ~/worktrees/ws-plebeian-market/
+    branch: main
+    repo: https://github.com/felixfelix-bot/market
+    upstream: https://github.com/PlebeianApp/market
+    kanban_board: plebeian-my-prs
+    depends_on: []
+    blocks: []
+    shared_resources:
+      - "RP2040/ESP32 boards (none — pure software track)"
+
+  - name: plebeian-market-reviews
+    signal_group_id: "PcJ7DYOjstuANFz0qUsJ9kFmLA+w2d+kkdufVs05jpA="
+    role: SUB-MANAGER
+    description: "Reviews other people's PRs to PlebeianApp/market. Provides feedback, suggests improvements, identifies issues."
+    worktree: ~/worktrees/ws-plebeian-market/
+    branch: main
+    repo: https://github.com/PlebeianApp/market
+    kanban_board: plebeian-pr-reviews
+    depends_on: []
+    blocks: []
+    shared_resources: []
+
+  - name: plebeian-market-ADRs
+    signal_group_id: "/n8BZdL5KPkOGyGSVbQ1IMD4xXV5501hRgwMvcjMnew="
+    role: SUB-MANAGER
+    description: "Architectural Decision Records for Plebeian Market. Discusses and documents architecture decisions, design patterns, and technical direction."
+    worktree: ~/worktrees/ws-plebeian-market/
+    branch: main
+    repo: https://github.com/felixfelix-bot/market
+    upstream: https://github.com/PlebeianApp/market
+    kanban_board: plebeian-adr
+    depends_on: []
+    blocks: ["plebeian-my-prs", "plebeian-market-reviews"]
+    shared_resources: []
+
+# Dependency graph:
+# plebeian-manager (orchestrator) -> coordinates all 3 tracks
+# plebeian-market-ADRs -> blocks: [plebeian-my-prs, plebeian-market-reviews]
+#   (ADR decisions should inform PR work and reviews)
+#
+# Cross-group messaging: via hermes send --to "signal:plebeian-my-prs" etc.
+# File-IPC: /tmp/hermes-self-delivery/ picked up by gateway poll loop.
