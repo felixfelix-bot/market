@@ -171,22 +171,25 @@ curl http://localhost:10549/healthz  # verify counts match
 
 ---
 
-## REFERENCE FILES
+## REFERENCE FILES — CLICK TO OPEN
 
-All in `~/repos/market/docs/`:
+Base: `felixfelix-bot/market` branch `docs/team-call-2026-07-23-package`
 
-| File | When to read |
-|------|-------------|
-| **THIS FILE** | Always — start here |
-| `TIME-CAPSULE-2026-07-23.md` | Need full project state (25KB, exhaustive) |
-| `handover/HANDOVER-A-MY-PRS.md` | Implementing #1171 changes |
-| `handover/HANDOVER-B-REVIEWS.md` | Reviewing external PRs |
-| `handover/HANDOVER-C-ADRS.md` | ADR decisions + numbering crisis |
-| `handover/HANDOVER-D-MARKETING.md` | Writing marketing content |
-| `handover/HANDOVER-E-STAGING-RELAY.md` | DevOps / relay work |
-| `handover/SIGNAL-GROUP-RECOMMENDATIONS.md` | Setting up new groups |
-| `V2-CONTENT-BRIEF-2026-07.md` | Marketing person's verified brief |
-| `adr/MEETING-BRIEF-2026-07-23.md` | Pre-call deep analysis (406 lines) |
+| Document | What's in it | Who should read |
+|----------|-------------|-----------------|
+| **[MASTER-PACKAGE (this file)](https://github.com/felixfelix-bot/market/blob/docs/team-call-2026-07-23-package/docs/MASTER-PACKAGE-2026-07-23.md)** | Decisions, action items, per-person sections, index | Everyone — start here |
+| [Meeting Notes](https://github.com/felixfelix-bot/market/blob/docs/team-call-2026-07-23-package/docs/MEETING-NOTES-2026-07-23.md) | 7 decisions, 16 action items, full call writeup | Everyone |
+| [Time Capsule](https://github.com/felixfelix-bot/market/blob/docs/team-call-2026-07-23-package/docs/TIME-CAPSULE-2026-07-23.md) | 25KB full project state — all contributors, all PRs, all ADRs | Need deep context on project state |
+| [High-Level Overview](https://github.com/felixfelix-bot/market/blob/docs/team-call-2026-07-23-package/docs/HIGH-LEVEL-OVERVIEW-2026-07-23.md) | Condensed project state, quick read | Need overview fast |
+| [V2 Content & Announcement Brief](https://github.com/felixfelix-bot/market/blob/docs/team-call-2026-07-23-package/docs/V2-CONTENT-BRIEF-2026-07.md) | Merge-verified marketing reference, what to announce/hold | Marketing person |
+| [Pre-Call Meeting Brief](https://github.com/felixfelix-bot/market/blob/docs/team-call-2026-07-23-package/docs/adr/MEETING-BRIEF-2026-07-23.md) | 406 lines ADR analysis, code smells, strategic recommendations | Architecture discussion |
+| [Handover A: #1171 Architecture](https://github.com/felixfelix-bot/market/blob/docs/team-call-2026-07-23-package/docs/handover/HANDOVER-A-1171-ARCHITECTURE.md) | CVM status-first change + pubkey derivation chain codebase map | plebeian-my-prs, anyone touching NIP-53 |
+| [Handover A: Our PRs](https://github.com/felixfelix-bot/market/blob/docs/team-call-2026-07-23-package/docs/handover/HANDOVER-A-MY-PRS.md) | All our PRs, quick wins, #1115/#1116/#1118 recommendations | plebeian-my-prs |
+| [Handover B: Review Queue](https://github.com/felixfelix-bot/market/blob/docs/team-call-2026-07-23-package/docs/handover/HANDOVER-B-REVIEWS.md) | turizspace #1132/#1160, hkarani #1170, Franchovy #1168, priority order | plebeian-market-reviews |
+| [Handover C: ADR Decisions](https://github.com/felixfelix-bot/market/blob/docs/team-call-2026-07-23-package/docs/handover/HANDOVER-C-ADRS.md) | ADR-015 deprioritized, numbering crisis, CVM pubkey ADR outline, missing ADRs | plebeian-market-ADRs |
+| [Handover D: Marketing Brief](https://github.com/felixfelix-bot/market/blob/docs/team-call-2026-07-23-package/docs/handover/HANDOVER-D-MARKETING.md) | V2 corrections, narrative angles, "Under the Hood" series | Marketing person |
+| [Handover E: Staging Relay](https://github.com/felixfelix-bot/market/blob/docs/team-call-2026-07-23-package/docs/handover/HANDOVER-E-STAGING-RELAY.md) | Health-Z upgrade, reindex tool, yolo-nuke procedure | DevOps / maximotodev |
+| [Signal Group Recommendations](https://github.com/felixfelix-bot/market/blob/docs/team-call-2026-07-23-package/docs/handover/SIGNAL-GROUP-RECOMMENDATIONS.md) | 3 new groups proposed, information flow diagram | Operator / coordination |
 
 ---
 
