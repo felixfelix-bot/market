@@ -1,4 +1,4 @@
-# ADR-015: E2E Test Stabilization & Migration Strategy
+# ADR-XXX: E2E Test Stabilization & Migration Strategy
 
 ## Status
 
@@ -6,7 +6,7 @@ Proposed
 
 ## Related
 
-- PR #1107: Auth + cart + marketplace e2e fixes (feat/e2e-reliability-comprehensive)
+- PR #1116: Test infrastructure + e2e reliability fixes (fix/test-infra-and-e2e-reliability) — this PR consolidated the e2e fixes from the closed PR #1107 into a broader test-infra effort. The consolidation was motivated by the unwieldy rebase overhead of maintaining a stacked PR chain (see Notes).
 - ARCHITECTURE.md (e2e/ARCHITECTURE.md): Pragmatic Exceptions section
 - Issue #1088: E2E tracking issue
 
@@ -174,3 +174,33 @@ Tests that query relay events are inherently timing-dependent. These stay skippe
 - Some tests remain skipped (relay-dependent) until infrastructure work
 - networkidle migration requires per-test element selector identification
 - Validation protocol (3 runs + cold restart) adds time to unskip work
+
+## Notes
+
+### PR #1116 History and Scope
+
+PR #1116 was not deliberately designed as a single mega-PR. It began as a
+stacked PR chain — a sequence of focused PRs targeting the 5 phases above.
+However, every time `master` moved, the entire stacking chain required
+rebasing. With 5+ interdependent PRs, this became unsustainable: each rebase
+risked merge conflicts, CI re-runs across all PRs, and reviewer confusion
+about which PR to review first.
+
+The consolidation into PR #1116 was a pragmatic decision to preserve the work
+as a single unit. The trade-off was a large diff (209 files) that is difficult
+to review upstream.
+
+### Proposed Path Forward
+
+PR #1116 should NOT target upstream directly. Instead:
+
+1. The e2e test-infra fixes (networkidle migration, bunfig.toml, prettier,
+   auth hydration) should be shaved off into a focused upstream PR.
+2. Each additional concern (auction components, wallet features, etc.) should
+   be extracted into its own focused PR targeting the appropriate branch
+   (master, v2-integration, or auctions branch as appropriate).
+3. Over time, PR #1116 shrinks as pieces are promoted individually.
+
+This preserves the work done in #1116 while giving upstream reviewers
+tightly-scoped, independently reviewable PRs. Once the ADR's 5-phase strategy
+is accepted, the individual phases can be re-stacked as focused PRs if desired.
