@@ -6,11 +6,6 @@ on:
   pull_request:
     branches: [main, master, 'auctions/**']
   workflow_dispatch:
-    inputs:
-      test_grep:
-        description: 'Optional grep filter (runs only matching tests). Empty = default full run.'
-        required: false
-        default: ''
   schedule:
     - cron: '0 6 * * 1'
 
@@ -22,15 +17,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          bun-version: latest
+          bun-version: 1.3.10
 
       - name: Cache bun dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
@@ -38,27 +33,19 @@ jobs:
             bun-${{ runner.os }}-
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: '>=1.22'
 
       - name: Install nak
         run: |
-          # NOTE: We pin to commit b6568388 because the upstream 'nak' repository 
-          # (commit 9c35de2 on Jul 16) introduced a breaking 'replace' directive 
-          # in go.mod: `replace fiatjaf.com/nostr => ../nostrlib`.
-          # This local path reference fails in CI where the sibling 'nostrlib' repo 
-          # does not exist, causing build failures.
-          # Pinning to this pre-regression commit ensures the build uses the 
-          # remote module source until the upstream issue is resolved.
-          git clone https://github.com/fiatjaf/nak.git /tmp/nak
+          git clone --depth 1 https://github.com/fiatjaf/nak.git /tmp/nak
           cd /tmp/nak
-          git checkout b65683886b58382890888fbdda90e5c2129df488
-
           GOBIN="$(go env GOPATH)/bin"
           mkdir -p "$GOBIN"
           go build -o "$GOBIN/nak" .
           echo "nak installed at: $(which nak)"
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
@@ -67,7 +54,7 @@ jobs:
 
       - name: Cache Playwright browsers
         id: playwright-cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
@@ -131,7 +118,7 @@ jobs:
           cat /tmp/devserver.log 2>/dev/null || echo "(no dev server log)"
 
       - name: Upload pricing test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ !cancelled() }}
         with:
           name: test-results-pricing
@@ -148,15 +135,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          bun-version: latest
+          bun-version: 1.3.10
 
       - name: Cache bun dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
@@ -164,23 +151,14 @@ jobs:
             bun-${{ runner.os }}-
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: '>=1.22'
 
       - name: Install nak
         run: |
-          # NOTE: We pin to commit b6568388 because the upstream 'nak' repository 
-          # (commit 9c35de2 on Jul 16) introduced a breaking 'replace' directive 
-          # in go.mod: `replace fiatjaf.com/nostr => ../nostrlib`.
-          # This local path reference fails in CI where the sibling 'nostrlib' repo 
-          # does not exist, causing build failures.
-          # Pinning to this pre-regression commit ensures the build uses the 
-          # remote module source until the upstream issue is resolved.
-          git clone https://github.com/fiatjaf/nak.git /tmp/nak
+          git clone --depth 1 https://github.com/fiatjaf/nak.git /tmp/nak
           cd /tmp/nak
-          git checkout b65683886b58382890888fbdda90e5c2129df488
-
           GOBIN="$(go env GOPATH)/bin"
           mkdir -p "$GOBIN"
           go build -o "$GOBIN/nak" .
@@ -194,7 +172,7 @@ jobs:
 
       - name: Cache Playwright browsers
         id: playwright-cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
@@ -246,14 +224,7 @@ jobs:
           LOCAL_RELAY_ONLY: 'true'
 
       - name: Run remaining E2E tests
-        env:
-          TEST_GREP: ${{ inputs.test_grep }}
-        run: |
-          if [ -n "$TEST_GREP" ]; then
-            bun run test:e2e -- --grep "$TEST_GREP"
-          else
-            bun run test:e2e -- --grep-invert 'Product Page - View Only|Collection Management'
-          fi
+        run: bun run test:e2e -- --grep-invert 'Product Page - View Only|Collection Management'
 
       - name: Show server logs on failure
         if: failure()
@@ -265,7 +236,7 @@ jobs:
           cat /tmp/devserver.log 2>/dev/null || echo "(no dev server log)"
 
       - name: Upload full test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ !cancelled() }}
         with:
           name: test-results-full
