@@ -9,15 +9,15 @@
 
 ## 0. PROGRESS TRACKER (updated 2026-07-26)
 
-### Immediate Action Items — 5 of 10 complete
+### Immediate Action Items — 4 done, 2 partial, 4 pending/unknown (of 10)
 
 - [x] **1.** #1171 Change 1: CVM status-first — DONE. #1171 closed, replaced by #1180 (MERGEABLE, awaiting review)
 - [x] **2.** #1171 Change 2: CVM pubkey derivation chain — DONE. #1180 implements `resolveCvmServerPubkey()` chain
 - [x] **3.** Fix prettier on #1171, #1164, #1165 — DONE. All 3 closed. New PRs #1180, #1178, #1179, #1191 all MERGEABLE (no CI failures)
 - [x] **4.** Close #1150 (dead PR) — DONE. Closed 2026-07-25
-- [ ] **5.** Review #1132, #1160 (turizspace) — NOT DONE. felixfelix-bot commented on #1132 pre-meeting (Jul 21). No post-meeting follow-up. maximotodev raised new CHANGES_REQUESTED on both Jul 23
-- [ ] **6.** Prepare briefing on hkarani #1170 — NOT DONE. #1170 unchanged since Jul 23. No ADR file added yet
-- [ ] **7.** Monitor #1168 (Franchovy) — WAITING. Still CHANGES_REQUESTED. No update from Franchovy
+- [~] **5.** Review #1132, #1160 (turizspace) — PARTIALLY DONE. We reviewed (4 comments on #1132). Waiting on Franchovy + maximotodev CHANGES_REQUESTED to be addressed by turizspace
+- [ ] **6.** Prepare briefing on hkarani #1170 — NOT DONE. hkarani updated Jul 24, CI green, needs human review
+- [~] **7.** Monitor #1168 (Franchovy) — ONGOING. Our CHANGES_REQUESTED sent Jul 22, Franchovy hasn't responded since Jul 23
 - [ ] **8.** Revise V2 marketing plan with 6 corrections — STATUS UNKNOWN
 - [ ] **9.** Improve Health-Z liveness check — NOT DONE
 - [ ] **10.** Improve start-up scripts for search index handling — NOT DONE
@@ -27,7 +27,7 @@
 - [x] Close #1115 (aggregator relay, 20 days stale) — Closed 2026-07-25
 - [x] Close #1116 (e2e + CI, 209 files unreviewable) — Closed 2026-07-25
 - [x] Close #1118 (SHA-pin CI security) — Closed 2026-07-25
-- [x] Close #1172, #1173, #1175, #1176, #1177 (stacked PRs) — All closed 2026-07-25
+- [x] Close #1172, #1173, #1164, #1165, #1175, #1176, #1177 (stacked PRs) — All closed/replaced 2026-07-25
 - [x] Open #1191 (e2e reliability, focused fix) — Replaces scope from #1116
 
 ### Planning Items (next meeting) — 0 of 6 complete
@@ -175,41 +175,43 @@ The marketing person wrote a V2 marketing plan (PDF attached). Team reviewed and
 
 ## 3. ACTION ITEMS — WHO DOES WHAT
 
-### IMMEDIATE (this week) — progress checked 2026-07-26:
+> Checklist legend (standard GitHub markdown): `[x]` done · `[ ]` pending · `[~]` partially done / in progress. Status as of 2026-07-26.
 
-| #   | Done? | Action                                              | Owner                   | Priority | Notes                                                           |
-| --- | ----- | --------------------------------------------------- | ----------------------- | -------- | --------------------------------------------------------------- |
-| 1   | ✅    | Address #1171 Change 1: Resolve to CVM status       | plebeian-my-prs         | HIGH     | #1180 open, MERGEABLE, awaiting review                          |
-| 2   | ✅    | Address #1171 Change 2: CVM pubkey derivation chain | plebeian-my-prs         | HIGH     | #1180 implements `resolveCvmServerPubkey()` chain               |
-| 3   | ✅    | Fix prettier on #1171, #1164, #1165                 | plebeian-my-prs         | HIGH     | All 3 closed. New PRs #1180/#1178/#1179/#1191 all clean         |
-| 4   | ✅    | Close #1150 (dead PR)                               | plebeian-my-prs         | MEDIUM   | Closed 2026-07-25                                               |
-| 5   | ❌    | Follow-up review on #1132, #1160 (turizspace)       | plebeian-market-reviews | HIGH     | No post-meeting follow-up. maximotodev raised new issues Jul 23 |
-| 6   | ❌    | Prepare briefing on hkarani #1170                   | plebeian-market-reviews | MEDIUM   | #1170 unchanged since Jul 23. No ADR file yet                   |
-| 7   | ⏳    | Monitor #1168 for Franchovy's update                | plebeian-market-reviews | MEDIUM   | Still CHANGES_REQUESTED. No update from Franchovy               |
-| 8   | ❓    | Revise V2 marketing plan with feedback              | NEW GROUP?              | MEDIUM   | Status unknown — no evidence of revision                        |
-| 9   | ❌    | Improve Health-Z liveness check                     | devops/relay ops        | HIGH     | No evidence of work                                             |
-| 10  | ❌    | Improve start-up scripts for search index handling  | devops/relay ops        | MEDIUM   | No evidence of work                                             |
+### IMMEDIATE (this week) — status as of 2026-07-26:
 
-**Additional completed beyond scope:** Closed #1115, #1116, #1118, #1172, #1173, #1175, #1176, #1177 (all 2026-07-25). Opened #1191 (focused e2e fix replacing #1116 scope).
+- [x] **1.** **DONE** — Address #1171 Change 1: Resolve to CVM status-first _(owner: plebeian-my-prs · HIGH)_ — SUPERSEDED by #1180 (status resolver with hard time boundaries + CVM identity enforcement)
+- [x] **2.** **DONE** — Address #1171 Change 2: CVM pubkey derivation chain _(owner: plebeian-my-prs · HIGH)_ — SUPERSEDED by #1180 (implements `resolveCvmServerPubkey()` chain)
+- [x] **3.** **DONE** — Fix prettier on #1171, #1164, #1165 _(owner: plebeian-my-prs · HIGH)_ — Old PRs closed. New PRs #1178, #1179, #1180 created Jul 25; #1191 CI green including prettier
+- [x] **4.** **DONE** — Close #1150 (dead PR) _(owner: plebeian-my-prs · MEDIUM)_ — Closed 2026-07-25
+- [~] **5.** **PARTIALLY DONE** — Follow-up review on #1132, #1160 (turizspace) _(owner: plebeian-market-reviews · HIGH)_ — We reviewed (4 comments on #1132). Waiting on Franchovy + maximotodev CHANGES_REQUESTED to be addressed by turizspace
+- [ ] **6.** **PENDING** — Prepare briefing on hkarani #1170 _(owner: plebeian-market-reviews · MEDIUM)_ — NOT DONE. hkarani updated Jul 24, CI green, needs human review (only Copilot bot so far)
+- [~] **7.** **ONGOING** — Monitor #1168 for Franchovy's update _(owner: plebeian-market-reviews · MEDIUM)_ — Our CHANGES_REQUESTED sent Jul 22. Franchovy hasn't responded since Jul 23
+- [ ] **8.** **UNKNOWN** — Revise V2 marketing plan with feedback _(owner: NEW GROUP? · MEDIUM)_ — Status unknown
+- [ ] **9.** **UNKNOWN** — Improve Health-Z liveness check _(owner: devops/relay ops · HIGH)_ — Status unknown
+- [ ] **10.** **UNKNOWN** — Improve start-up scripts for search index handling _(owner: devops/relay ops · MEDIUM)_ — Status unknown
 
-### PLANNING (next meeting) — not started:
+### CLEANUP COMPLETED (bonus work, beyond original scope):
 
-| #   | Done? | Action                                                  | Owner                | Notes                                                    |
-| --- | ----- | ------------------------------------------------------- | -------------------- | -------------------------------------------------------- |
-| 11  | ❌    | Discuss hkarani's adjusted ADR for auction validation   | All                  | Blocked: hkarani hasn't pushed update to #1170           |
-| 12  | ❌    | Resolve ADR numbering crisis                            | All                  | 3 incompatible schemes. Not started                      |
-| 13  | ❌    | Align our ADR strategy with Franchovy's #1152 framework | plebeian-market-ADRs | Not started                                              |
-| 14  | ❌    | Coordinate #1138 (Auctions V1 umbrella) merge timing    | All                  | 5 file overlaps with our stack. Not started              |
-| 15  | 🟡    | Consider drafting CVM pubkey derivation ADR             | plebeian-market-ADRs | #1180 implements the pattern. Standalone ADR not drafted |
-| 16  | ❌    | Verify Gamma Markets cross-client compatibility         | NEW GROUP?           | NIP-99 interop testing. Not started                      |
+- [x] Old stale PRs #1115, #1116, #1118 all cleaned up (closed/rebased, 2026-07-25)
+- [x] Old PRs #1172, #1173, #1164, #1165, #1175, #1176, #1177 all consolidated (closed/replaced by the new clean stack)
+- [x] New PR #1191 (e2e reliability, focused fix) created — bonus work not in original action items
+
+### PLANNING (next meeting) — all PENDING as of 2026-07-26:
+
+> Note: #1178 (phase enums / state machines ADR) and #1179 (store layer dependency rules ADR) are now **open PRs** awaiting review.
+
+- [ ] **11.** **PENDING** — Discuss hkarani's adjusted ADR for auction validation _(owner: All)_ — hkarani updated #1170 Jul 24, CI green, but no human review yet
+- [ ] **12.** **PENDING** — Resolve ADR numbering crisis _(owner: All)_ — 3 incompatible schemes. Not started
+- [ ] **13.** **PENDING** — Align our ADR strategy with Franchovy's #1152 framework _(owner: plebeian-market-ADRs)_ — Not started
+- [ ] **14.** **PENDING** — Coordinate #1138 (Auctions V1 umbrella) merge timing _(owner: All)_ — 5 file overlaps with our stack. Not started
+- [ ] **15.** **PENDING** — Consider drafting CVM pubkey derivation ADR _(owner: plebeian-market-ADRs)_ — #1180 implements the pattern. Standalone ADR not drafted
+- [ ] **16.** **PENDING** — Verify Gamma Markets cross-client compatibility _(owner: NEW GROUP?)_ — NIP-99 interop testing. Not started
 
 ### DEFERRED / DEPRIORITIZED:
 
-| #   | Item                                | Decision                                             |
-| --- | ----------------------------------- | ---------------------------------------------------- |
-| -   | ADR-015 (relay persistence)         | NO ADR. Yolo-nuke staging instead.                   |
-| -   | State machines in marketing         | Remove from marketing claims. ADR stays as proposed. |
-| -   | NIP-17 as separate marketing bullet | Fold into NIP-99 interoperability                    |
+- **ADR-015 (relay persistence)** — NO ADR. Yolo-nuke staging instead.
+- **State machines in marketing** — Remove from marketing claims. ADR stays as proposed (now open as #1178).
+- **NIP-17 as separate marketing bullet** — Fold into NIP-99 interoperability.
 
 ---
 
