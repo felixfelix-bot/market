@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 env:
-  BUN_VERSION: 'latest'
+  BUN_VERSION: '1.3.10'
 
 concurrency:
   group: deploy-staging
@@ -25,12 +25,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.ref }}
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
 
@@ -55,7 +55,7 @@ jobs:
           cp package.json bun.lock tsconfig.json deploy-package/
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: deploy-package
           path: deploy-package/
@@ -70,12 +70,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.ref }}
 
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: deploy-package
           path: deploy-package/
@@ -133,7 +133,7 @@ jobs:
 
       - name: Create environment file
         run: |
-          cat > deploy-package/.env << 'EOF'
+          cat > deploy-package/.env << EOF
           APP_STAGE=staging
           NODE_ENV=production
           PORT=3000
@@ -144,60 +144,57 @@ jobs:
           EOF
 
       - name: Prepare server directories
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
-          password: ${{ secrets.STAGING_PASSWORD }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
             mkdir -p ~/releases ~/logs
             chmod 755 ~
-            rm -rf ~/deploy-package
-            rm -f ~/deploy-package.tar.gz ~/Caddyfile.staging ~/caddyfile-staging.tar.gz
+            rm -rf /tmp/deploy-package
 
-      - name: Upload files to deployer staging
-        uses: appleboy/scp-action@v0.1.7
+      - name: Upload files to tmp
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634 # v0.1.7
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
-          password: ${{ secrets.STAGING_PASSWORD }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
           source: 'deploy-package/*'
-          target: '/home/deployer/deploy-package'
-          tar_tmp_path: '/home/deployer/deploy-package.tar.gz'
+          target: '/tmp/deploy-package'
           strip_components: 1
 
       - name: Upload Caddyfile
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634 # v0.1.7
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
-          password: ${{ secrets.STAGING_PASSWORD }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
           source: 'deploy-simple/caddyfiles/Caddyfile.staging'
-          target: '/home/deployer'
-          tar_tmp_path: '/home/deployer/caddyfile-staging.tar.gz'
+          target: '/tmp'
           strip_components: 2
 
       - name: Move files to release directory
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
-          password: ${{ secrets.STAGING_PASSWORD }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
-            mv ~/deploy-package ~/releases/${{ needs.build.outputs.release_name }}
+            mv /tmp/deploy-package ~/releases/${{ needs.build.outputs.release_name }}
 
       - name: Activate release
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
-          password: ${{ secrets.STAGING_PASSWORD }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
             set -euo pipefail
             RELEASE_DIR="/home/deployer/releases/${{ needs.build.outputs.release_name }}"
             APP_DIR="/home/deployer/market-staging"
             PREVIOUS_RELEASE="$(readlink -f "$APP_DIR" || true)"
-            CADDY_BACKUP="$(mktemp "$HOME/caddy-backup.XXXXXX")"
+            CADDY_BACKUP="$(mktemp)"
             sudo cp /etc/caddy/Caddyfile "$CADDY_BACKUP" 2>/dev/null || true
 
             rollback() {
@@ -233,8 +230,8 @@ jobs:
             pm2 save --force
 
             # Update Caddy
-            grep -q 'auctionsdev\.plebeian\.market' "$HOME/Caddyfile.staging"
-            sudo cp "$HOME/Caddyfile.staging" /etc/caddy/Caddyfile
+            grep -q 'auctionsdev\.plebeian\.market' /tmp/Caddyfile.staging
+            sudo cp /tmp/Caddyfile.staging /etc/caddy/Caddyfile
             sudo mkdir -p /var/log/caddy
             sudo caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile || \
               sudo caddy start --config /etc/caddy/Caddyfile --adapter caddyfile
