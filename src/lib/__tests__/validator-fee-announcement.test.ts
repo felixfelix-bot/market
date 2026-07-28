@@ -147,6 +147,33 @@ describe('Kind 30409 — Validator Fee Announcement schema', () => {
 			)
 			expect(result).toBeNull()
 		})
+
+		test('rejects fee_min_bps above 10000 (100%)', () => {
+			const result = parseValidatorFeeAnnouncement(
+				makeRawEvent({
+					tags: [
+						['d', 'v'],
+						['fee_min_bps', '10001'],
+						['mint', MINT_A],
+					],
+				}),
+			)
+			expect(result).toBeNull()
+		})
+
+		test('rejects max_duration above 1 year (31536000 seconds)', () => {
+			const result = parseValidatorFeeAnnouncement(
+				makeRawEvent({
+					tags: [
+						['d', 'v'],
+						['fee_min_bps', '100'],
+						['mint', MINT_A],
+						['max_duration', '31536001'],
+					],
+				}),
+			)
+			expect(result).toBeNull()
+		})
 	})
 
 	describe('missing required tags', () => {

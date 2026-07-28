@@ -102,8 +102,8 @@ export const validatorKeys = {
 	/** Validators compatible with a given auction type + locking scheme. */
 	compatible: (opts: { mintUrl?: string; auctionType?: string; lockingScheme?: string }) =>
 		[...validatorKeys.all, 'compatible', opts.mintUrl ?? 'any', opts.auctionType ?? 'any', opts.lockingScheme ?? 'any'] as const,
-	/** A single validator by its d-tag identifier. */
-	details: (validatorId: string) => [...validatorKeys.all, 'details', validatorId] as const,
+	/** A single validator by its NIP-33 coordinate (pubkey + d tag). */
+	details: (pubkey: string, validatorId: string) => [...validatorKeys.all, 'details', pubkey, validatorId] as const,
 } as const
 
 export const walletKeys = {

@@ -19,43 +19,13 @@
  */
 
 import { z } from 'zod'
-import { VALIDATOR_FEE_ANNOUNCEMENT_KIND, DEFAULT_MAX_DURATION_SECONDS } from './auction-kinds'
+import { VALIDATOR_FEE_ANNOUNCEMENT_KIND, DEFAULT_MAX_DURATION_SECONDS, TOTAL_BPS } from './auction-kinds'
 
-// ---------------------------------------------------------------------------
-// Tag schemas
-// ---------------------------------------------------------------------------
+/** Maximum validator fee in basis points (100% = 10000). */
+const MAX_FEE_MIN_BPS = TOTAL_BPS
 
-/** NIP-33 dedup key — validator identifier. */
-export const ValidatorDTagSchema = z.tuple([z.literal('d'), z.string().min(1, 'Validator identifier (d tag) must not be empty')])
-
-/** Minimum fee in basis points. 100 = 1%, 1 bps = 0.01%. Minimum non-zero = 1. */
-export const ValidatorFeeMinBpsTagSchema = z.tuple([
-	z.literal('fee_min_bps'),
-	z
-		.string()
-		.regex(/^\d+$/, 'fee_min_bps must be a non-negative integer string')
-		.transform(Number)
-		.refine((n) => n >= 1, 'fee_min_bps must be at least 1 (0.01%)'),
-])
-
-/** A single supported mint URL. There must be at least one mint tag. */
-export const ValidatorMintTagSchema = z.tuple([z.literal('mint'), z.string().url('Mint must be a valid URL')])
-
-/** Optional: compatible auction format (e.g. "english"). */
-export const ValidatorAuctionTypeTagSchema = z.tuple([z.literal('auction_type'), z.string().min(1)])
-
-/** Optional: compatible locking scheme (e.g. "P2PK"). */
-export const ValidatorLockingSchemeTagSchema = z.tuple([z.literal('locking_scheme'), z.string().min(1)])
-
-/** Optional: max auction duration in seconds. Default 30 days (2_592_000). */
-export const ValidatorMaxDurationTagSchema = z.tuple([
-	z.literal('max_duration'),
-	z
-		.string()
-		.regex(/^\d+$/, 'max_duration must be a non-negative integer string')
-		.transform(Number)
-		.refine((n) => n >= 1, 'max_duration must be at least 1 second'),
-])
+/** Maximum allowed max_duration value in seconds (1 year). */
+const MAX_MAX_DURATION_SECONDS = 31_536_000
 
 // ---------------------------------------------------------------------------
 // Parsed / application-level types
@@ -68,7 +38,7 @@ export const ValidatorFeeAnnouncementSchema = z.object({
 	/** Validator identifier (the `d` tag value). */
 	validatorId: z.string().min(1),
 	/** Minimum fee in basis points (100 = 1%). */
-	feeMinBps: z.number().int().min(1),
+	feeMinBps: z.number().int().min(1).max(MAX_FEE_MIN_BPS),
 	/** Supported mint URLs. */
 	mints: z.array(z.string().url()).min(1, 'At least one mint URL is required'),
 	/** Compatible auction format, if specified. */
@@ -76,7 +46,7 @@ export const ValidatorFeeAnnouncementSchema = z.object({
 	/** Compatible locking scheme, if specified. */
 	lockingScheme: z.string().optional(),
 	/** Max auction duration in seconds (default 30 days). */
-	maxDuration: z.number().int().positive().default(DEFAULT_MAX_DURATION_SECONDS),
+	maxDuration: z.number().int().positive().max(MAX_MAX_DURATION_SECONDS).default(DEFAULT_MAX_DURATION_SECONDS),
 	/** Author pubkey of the announcement. */
 	pubkey: z.string().regex(/^[0-9a-f]{64}$/, 'Must be a 64-char hex pubkey'),
 	/** Creation timestamp (unix seconds). */

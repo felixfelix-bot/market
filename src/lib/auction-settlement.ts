@@ -16,7 +16,7 @@
  * @see docs/adr/proposals/adr-v4v-dev-splits-DECISIONS.md (D2, D3)
  */
 
-import type { AuctionSettlementContent, AuctionBidContent, BidNoteEntry } from '@/lib/schemas/auction-v4v'
+import type { AuctionBidContent, BidNoteEntry } from '@/lib/schemas/auction-v4v'
 import type { AuctionPaymentState } from '@/lib/schemas/auction-v4v'
 
 // ===========================================================================
@@ -62,7 +62,7 @@ export interface MintQueryPort {
  * Verifies all notes referenced in the winning bid at settlement time.
  *
  * Logic (ADR section 5, decision D2):
- * 1. Fetch all notes from the winning bid (kind 1023).
+ * 1. The winning bid (kind 1023) contains one locked note per recipient.
  * 2. For each note: query the mint to verify:
  *    (a) funds are still valid
  *    (b) note points to correct recipient pubkey
@@ -72,33 +72,32 @@ export interface MintQueryPort {
  * confirming or denying the settlement.
  */
 export async function verifySettlementNotes(
-	settlement: AuctionSettlementContent,
 	winningBid: AuctionBidContent,
 	mintQuery: MintQueryPort,
 ): Promise<{ results: NoteVerificationResult[]; allValid: boolean }> {
-	const results: NoteVerificationResult[] = []
-
-	for (const note of winningBid.notes) {
-		try {
-			const mintResult = await mintQuery.verifyLockedNote(note.mint_url, note.locked_note_ref, note.recipient_npub)
-			results.push({
-				note,
-				fundsValid: mintResult.fundsValid,
-				recipientCorrect: mintResult.recipientCorrect,
-				valid: mintResult.fundsValid && mintResult.recipientCorrect,
-				error: mintResult.error,
-			})
-		} catch (err) {
-			const message = err instanceof Error ? err.message : String(err)
-			results.push({
-				note,
-				fundsValid: false,
-				recipientCorrect: false,
-				valid: false,
-				error: message,
-			})
-		}
-	}
+	const results = await Promise.all(
+		winningBid.notes.map(async (note) => {
+			try {
+				const mintResult = await mintQuery.verifyLockedNote(note.mint_url, note.locked_note_ref, note.recipient_npub)
+				return {
+					note,
+					fundsValid: mintResult.fundsValid,
+					recipientCorrect: mintResult.recipientCorrect,
+					valid: mintResult.fundsValid && mintResult.recipientCorrect,
+					error: mintResult.error,
+				}
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err)
+				return {
+					note,
+					fundsValid: false,
+					recipientCorrect: false,
+					valid: false,
+					error: message,
+				}
+			}
+		}),
+	)
 
 	return {
 		results,

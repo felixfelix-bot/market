@@ -69,35 +69,43 @@ export async function fetchValidators(opts?: ValidatorFilterOptions): Promise<Va
 		if (announcement) parsed.push(announcement)
 	}
 
-	// Deduplicate by validator d-tag, keeping the most recent (latest created_at wins).
-	const byId = new Map<string, ValidatorFeeAnnouncement>()
+	// Deduplicate by NIP-33 coordinate (pubkey + d tag), keeping the most recent
+	// (latest created_at wins). A bare d tag is not a unique validator identity —
+	// any pubkey can publish a kind 30409 with the same d value, so the dedup key
+	// must include the author's pubkey to prevent d-tag squatting.
+	const byCoordinate = new Map<string, ValidatorFeeAnnouncement>()
 	for (const v of parsed) {
-		const existing = byId.get(v.validatorId)
+		const coordinate = `${v.pubkey}:${v.validatorId}`
+		const existing = byCoordinate.get(coordinate)
 		if (!existing || v.createdAt > existing.createdAt) {
-			byId.set(v.validatorId, v)
+			byCoordinate.set(coordinate, v)
 		}
 	}
-	const deduped = Array.from(byId.values())
+	const deduped = Array.from(byCoordinate.values())
 
 	return opts ? filterCompatibleValidators(deduped, opts) : deduped
 }
 
 /**
- * Fetches a single validator by its d-tag identifier.
+ * Fetches a single validator by its NIP-33 coordinate (pubkey + d-tag).
  * Returns `null` when the validator is not found or malformed.
  */
-export async function fetchValidatorById(validatorId: string): Promise<ValidatorFeeAnnouncement | null> {
+export async function fetchValidatorById(pubkey: string, validatorId: string): Promise<ValidatorFeeAnnouncement | null> {
 	const io = getNostrIo()
 	const events = await io.fetchEvents({
 		kinds: [VALIDATOR_FEE_ANNOUNCEMENT_KIND],
+		authors: [pubkey],
 		'#d': [validatorId],
 	})
 
+	const coordinate = `${pubkey}:${validatorId}`
 	let best: ValidatorFeeAnnouncement | null = null
 	for (const event of events) {
 		const announcement = parseValidatorFeeAnnouncement(event as unknown as NostrEvent)
-		if (announcement && (!best || announcement.createdAt > best.createdAt)) {
-			best = announcement
+		if (announcement && `${announcement.pubkey}:${announcement.validatorId}` === coordinate) {
+			if (!best || announcement.createdAt > best.createdAt) {
+				best = announcement
+			}
 		}
 	}
 	return best
@@ -123,12 +131,12 @@ export function useValidators(opts?: ValidatorFilterOptions) {
 	})
 }
 
-/** Fetches a single validator announcement by its d-tag identifier. */
-export function useValidator(validatorId: string) {
+/** Fetches a single validator announcement by its NIP-33 coordinate. */
+export function useValidator(pubkey: string, validatorId: string) {
 	return useQuery({
-		queryKey: validatorKeys.details(validatorId),
-		queryFn: () => fetchValidatorById(validatorId),
-		enabled: !!validatorId,
+		queryKey: validatorKeys.details(pubkey, validatorId),
+		queryFn: () => fetchValidatorById(pubkey, validatorId),
+		enabled: !!pubkey && !!validatorId,
 		staleTime: 1000 * 60 * 5,
 	})
 }

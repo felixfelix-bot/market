@@ -1,27 +1,31 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { verifySettlementNotes, checkLosingBidderRefund, type MintQueryPort } from '@/lib/auction-settlement'
-import type { AuctionSettlementContent, AuctionBidContent } from '@/lib/schemas/auction-v4v'
+import type { AuctionBidContent } from '@/lib/schemas/auction-v4v'
 
 const SELLER_PUBKEY = 'a'.repeat(64)
 const VALIDATOR_PUBKEY = 'b'.repeat(64)
 const MINT_A = 'https://mint-a.example.com'
+const MINT_B = 'https://mint-b.example.com'
 
 // ---------------------------------------------------------------------------
 // 6a. Settlement note verification (Section 5)
 // ---------------------------------------------------------------------------
 
 describe('Settlement note verification', () => {
-	const settlement: AuctionSettlementContent = {
-		derivation_path: 'm/44/0/0/0/1',
-		winning_bid_id: 'e'.repeat(64),
-	}
-
 	const validBid: AuctionBidContent = {
 		notes: [
 			{ recipient_npub: SELLER_PUBKEY, mint_url: MINT_A, locked_note_ref: 'ref-seller' },
 			{ recipient_npub: VALIDATOR_PUBKEY, mint_url: MINT_A, locked_note_ref: 'ref-validator' },
 		],
 		derivation_commitment: 'commitment-hash',
+	}
+
+	const crossMintBid: AuctionBidContent = {
+		notes: [
+			{ recipient_npub: SELLER_PUBKEY, mint_url: MINT_A, locked_note_ref: 'ref-seller' },
+			{ recipient_npub: VALIDATOR_PUBKEY, mint_url: MINT_B, locked_note_ref: 'ref-validator' },
+		],
+		derivation_commitment: 'cross-mint-commitment',
 	}
 
 	test('returns allValid=true when every note passes verification', async () => {
@@ -32,7 +36,7 @@ describe('Settlement note verification', () => {
 			})),
 		}
 
-		const result = await verifySettlementNotes(settlement, validBid, mintQuery)
+		const result = await verifySettlementNotes(validBid, mintQuery)
 
 		expect(result.allValid).toBe(true)
 		expect(result.results).toHaveLength(2)
@@ -49,7 +53,7 @@ describe('Settlement note verification', () => {
 			})),
 		}
 
-		const result = await verifySettlementNotes(settlement, validBid, mintQuery)
+		const result = await verifySettlementNotes(validBid, mintQuery)
 
 		expect(result.allValid).toBe(false)
 		expect(result.results).toHaveLength(2)
@@ -67,7 +71,7 @@ describe('Settlement note verification', () => {
 			})),
 		}
 
-		const result = await verifySettlementNotes(settlement, validBid, mintQuery)
+		const result = await verifySettlementNotes(validBid, mintQuery)
 
 		expect(result.allValid).toBe(false)
 		expect(result.results.every((r) => !r.recipientCorrect)).toBe(true)
@@ -80,7 +84,7 @@ describe('Settlement note verification', () => {
 			}),
 		}
 
-		const result = await verifySettlementNotes(settlement, validBid, mintQuery)
+		const result = await verifySettlementNotes(validBid, mintQuery)
 
 		expect(result.allValid).toBe(false)
 		expect(result.results.every((r) => r.error === 'Mint unreachable')).toBe(true)
@@ -95,10 +99,29 @@ describe('Settlement note verification', () => {
 			derivation_commitment: 'commitment',
 		}
 
-		const result = await verifySettlementNotes(settlement, emptyBid, mintQuery)
+		const result = await verifySettlementNotes(emptyBid, mintQuery)
 
 		expect(result.allValid).toBe(false)
 		expect(result.results).toHaveLength(0)
+	})
+
+	test('queries each mint in parallel for cross-mint bids', async () => {
+		let inFlight = 0
+		let maxInFlight = 0
+		const mintQuery: MintQueryPort = {
+			verifyLockedNote: mock(async () => {
+				inFlight++
+				maxInFlight = Math.max(maxInFlight, inFlight)
+				await new Promise((resolve) => setTimeout(resolve, 10))
+				inFlight--
+				return { fundsValid: true, recipientCorrect: true }
+			}),
+		}
+
+		await verifySettlementNotes(crossMintBid, mintQuery)
+
+		expect(mintQuery.verifyLockedNote).toHaveBeenCalledTimes(2)
+		expect(maxInFlight).toBe(2)
 	})
 })
 
