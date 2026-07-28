@@ -95,6 +95,17 @@ export const v4vKeys = {
 	merchants: () => [...v4vKeys.all, 'merchants'] as const,
 } as const
 
+export const validatorKeys = {
+	all: ['validators'] as const,
+	/** All validator announcements (optionally filtered for a specific mint). */
+	byMint: (mintUrl: string) => [...validatorKeys.all, 'byMint', mintUrl] as const,
+	/** Validators compatible with a given auction type + locking scheme. */
+	compatible: (opts: { mintUrl?: string; auctionType?: string; lockingScheme?: string }) =>
+		[...validatorKeys.all, 'compatible', opts.mintUrl ?? 'any', opts.auctionType ?? 'any', opts.lockingScheme ?? 'any'] as const,
+	/** A single validator by its d-tag identifier. */
+	details: (validatorId: string) => [...validatorKeys.all, 'details', validatorId] as const,
+} as const
+
 export const walletKeys = {
 	all: ['wallet'] as const,
 	// details: (paymentDetailsEvent: string) => [...walletKeys.all, 'details', paymentDetailsEvent] as const,

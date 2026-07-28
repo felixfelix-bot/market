@@ -68,17 +68,16 @@ EventStore queries are synchronous and in-memory. No async, no promises:
 
 ```typescript
 function getUnseenCount(category: string, auctionKey: string): number {
-  const lastSeen = lastSeenTimestamps[category]?.[auctionKey] || 0;
-  return eventStore.getByFilters({
-    kinds: NOTIFICATION_KINDS[category],
-    "#a": [auctionKey],
-    since: lastSeen,
-  }).length;
+	const lastSeen = lastSeenTimestamps[category]?.[auctionKey] || 0
+	return eventStore.getByFilters({
+		kinds: NOTIFICATION_KINDS[category],
+		'#a': [auctionKey],
+		since: lastSeen,
+	}).length
 }
 
 function getTotalUnseen(category: string): number {
-  return Object.keys(lastSeenTimestamps[category] || {})
-    .reduce((sum, key) => sum + getUnseenCount(category, key), 0);
+	return Object.keys(lastSeenTimestamps[category] || {}).reduce((sum, key) => sum + getUnseenCount(category, key), 0)
 }
 ```
 
@@ -89,12 +88,12 @@ downstream is correct. No counter manipulation, no map zeroing, no re-summing:
 
 ```typescript
 function markAsRead(category: string, auctionKey: string) {
-  lastSeenTimestamps[category] = {
-    ...lastSeenTimestamps[category],
-    [auctionKey]: Math.floor(Date.now() / 1000),
-  };
-  localStorage.setItem("lastSeenTimestamps", JSON.stringify(lastSeenTimestamps));
-  // All derived counts immediately reflect the change
+	lastSeenTimestamps[category] = {
+		...lastSeenTimestamps[category],
+		[auctionKey]: Math.floor(Date.now() / 1000),
+	}
+	localStorage.setItem('lastSeenTimestamps', JSON.stringify(lastSeenTimestamps))
+	// All derived counts immediately reflect the change
 }
 ```
 
@@ -104,17 +103,17 @@ EventStore supports observable subscriptions. When new events arrive, derived
 counts update automatically via `applesauce-react`'s `use$` hook:
 
 ```typescript
-import { use$ } from "applesauce-react";
+import { use$ } from 'applesauce-react'
 
 function useUnseenBids(auctionKey: string): number {
-  return use$(
-    eventStore.filters({ kinds: [1023], "#a": [auctionKey] }).pipe(
-      map((events) => {
-        const lastSeen = lastSeenTimestamps.auctionBids[auctionKey] || 0;
-        return events.filter((e) => e.created_at > lastSeen).length;
-      })
-    )
-  );
+	return use$(
+		eventStore.filters({ kinds: [1023], '#a': [auctionKey] }).pipe(
+			map((events) => {
+				const lastSeen = lastSeenTimestamps.auctionBids[auctionKey] || 0
+				return events.filter((e) => e.created_at > lastSeen).length
+			}),
+		),
+	)
 }
 ```
 
@@ -125,10 +124,10 @@ genuinely new network events. This prevents firing notifications for events the
 user already saw before reload:
 
 ```typescript
-import { isFromCache } from "applesauce-core/helpers";
+import { isFromCache } from 'applesauce-core/helpers'
 eventStore.insert$.subscribe((event) => {
-  if (!isFromCache(event)) triggerNotification(event);
-});
+	if (!isFromCache(event)) triggerNotification(event)
+})
 ```
 
 ## Consequences

@@ -26,6 +26,7 @@ Using ADR-XXX (unnumbered) to avoid collision. Maximotodev has an ADR-015 propos
 This ADR includes detailed analysis (root cause breakdowns, pass-rate tables, file references). This context is useful for LLM coding agents implementing the strategy in future PRs — they have the file layout, known issues, and rationale inline rather than rediscovering from the codebase.
 
 @Franchovy @maximotodev — would appreciate your input on:
+
 1. Whether the happy-path video requirement is practical for the team
 2. Whether the 5-phase prioritization matches your view
 3. Where ADR numbering should go (we have a gap: 0001, 0002, then 013, 014)

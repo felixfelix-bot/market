@@ -9,6 +9,7 @@ branch. Proposals live here as self-contained markdown files that can be lifted
 into upstream PRs when ready.
 
 ## Status Legend
+
 - 🔵 **In review** — PR open, team discussion active
 - 🟡 **Ready to surface** — content complete, waiting for the right moment
 - 🔴 **Needs work** — idea captured but not yet fleshed out
@@ -19,19 +20,19 @@ into upstream PRs when ready.
 
 ### In Active Review (PRs open upstream)
 
-| # | Status | Title | Key Question | PR |
-|---|--------|-------|-------------|-----|
-| 1 | 🔵 In review | [Phase enums (state machines)](./phase-enums.md) | Migrate payment state from parallel booleans to discriminated union? | #1178 |
-| 2 | 🔵 In review | [Store layer dependency rules](./store-layer-deps.md) | Allowed import direction: stores→queries or queries→stores? | #1179 |
+| #   | Status       | Title                                                 | Key Question                                                         | PR    |
+| --- | ------------ | ----------------------------------------------------- | -------------------------------------------------------------------- | ----- |
+| 1   | 🔵 In review | [Phase enums (state machines)](./phase-enums.md)      | Migrate payment state from parallel booleans to discriminated union? | #1178 |
+| 2   | 🔵 In review | [Store layer dependency rules](./store-layer-deps.md) | Allowed import direction: stores→queries or queries→stores?          | #1179 |
 
 ### Architecture & Infrastructure
 
-| # | Status | Title | Key Question |
-|---|--------|-------|-------------|
-| 3 | 🟡 Ready | [Client-side event aggregation via applesauce](./aggregator-relay.md) | Use applesauce RelayPool+EventStore instead of server-side aggregator? |
-| 4 | 🟡 Ready | [Relay data validation enforcement](./relay-data-validation.md) | Mandate Zod safeParse on all event.content parsing? |
-| 5 | 🟡 Ready | [Error boundary strategy + production observability](./error-boundary-observability.md) | React Error Boundaries + restore production error reporting? |
-| 6 | 🟡 Ready | [E2E test stabilization strategy](./e2e-test-stabilization.md) | networkidle migration + test-unskip protocol? |
+| #   | Status   | Title                                                                                   | Key Question                                                           |
+| --- | -------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| 3   | 🟡 Ready | [Client-side event aggregation via applesauce](./aggregator-relay.md)                   | Use applesauce RelayPool+EventStore instead of server-side aggregator? |
+| 4   | 🟡 Ready | [Relay data validation enforcement](./relay-data-validation.md)                         | Mandate Zod safeParse on all event.content parsing?                    |
+| 5   | 🟡 Ready | [Error boundary strategy + production observability](./error-boundary-observability.md) | React Error Boundaries + restore production error reporting?           |
+| 6   | 🟡 Ready | [E2E test stabilization strategy](./e2e-test-stabilization.md)                          | networkidle migration + test-unskip protocol?                          |
 
 ### Notification System (3-Phase Sequence)
 
@@ -39,28 +40,28 @@ The notification system has three interrelated problems, each warranting its own
 ADR. They form a phased sequence — Phase 1 is a standalone bridge fix, Phase 2
 requires the applesauce migration, Phase 3 builds on Phase 2.
 
-| Phase | Status | Title | Key Question |
-|-------|--------|-------|-------------|
-| 1 | 🟡 Ready | [Scoped-map notification counting](./notification-counting-scoped-map.md) | Replace global-decrement counters with scoped maps to fix cross-auction contamination? |
-| 2 | 🟡 Ready | [Local event cache architecture](./notification-event-cache-architecture.md) | IndexedDB + negentropy sync (NIP-77) to replace 15 relay subscriptions? |
-| 3 | 🟡 Ready | [Derived read/unread notification state](./notification-derived-state.md) | EventStore as single source of truth — derive counts, persist only timestamps? |
+| Phase | Status   | Title                                                                        | Key Question                                                                           |
+| ----- | -------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| 1     | 🟡 Ready | [Scoped-map notification counting](./notification-counting-scoped-map.md)    | Replace global-decrement counters with scoped maps to fix cross-auction contamination? |
+| 2     | 🟡 Ready | [Local event cache architecture](./notification-event-cache-architecture.md) | IndexedDB + negentropy sync (NIP-77) to replace 15 relay subscriptions?                |
+| 3     | 🟡 Ready | [Derived read/unread notification state](./notification-derived-state.md)    | EventStore as single source of truth — derive counts, persist only timestamps?         |
 
 **Phase 1 ships standalone** (no applesauce dependency). Phase 2 requires the
 NDK→applesauce migration. Phase 3 depends on Phase 2.
 
 ### Security
 
-| # | Status | Title | Key Question |
-|---|--------|-------|-------------|
-| 7 | 🟡 Ready | [WebSocket origin validation](./websocket-origin-validation.md) | ALLOWED_ORIGINS policy to prevent CSWSH? |
-| 8 | 🟡 Ready | [NWC wallet secret encryption at rest](./nwc-wallet-encryption.md) | AES-256-GCM + HKDF key derivation from user's nostr key? |
-| 9 | 🟡 Ready | [Payment flow input validation](./payment-input-validation.md) | Mandatory verifyEvent() before payment state transitions? |
+| #   | Status   | Title                                                              | Key Question                                              |
+| --- | -------- | ------------------------------------------------------------------ | --------------------------------------------------------- |
+| 7   | 🟡 Ready | [WebSocket origin validation](./websocket-origin-validation.md)    | ALLOWED_ORIGINS policy to prevent CSWSH?                  |
+| 8   | 🟡 Ready | [NWC wallet secret encryption at rest](./nwc-wallet-encryption.md) | AES-256-GCM + HKDF key derivation from user's nostr key?  |
+| 9   | 🟡 Ready | [Payment flow input validation](./payment-input-validation.md)     | Mandatory verifyEvent() before payment state transitions? |
 
 ### Meta
 
-| # | Status | Title | Key Question |
-|---|--------|-------|-------------|
-| 10 | 🟡 Ready | [Security remediation strategy](./security-remediation-strategy.md) | Split findings into ADR-gated vs direct-implementation tracks? |
+| #   | Status   | Title                                                               | Key Question                                                   |
+| --- | -------- | ------------------------------------------------------------------- | -------------------------------------------------------------- |
+| 10  | 🟡 Ready | [Security remediation strategy](./security-remediation-strategy.md) | Split findings into ADR-gated vs direct-implementation tracks? |
 
 ---
 
@@ -94,14 +95,14 @@ Bugs and improvement areas found during adversarial analysis of the auction
 validator (PR #1170) and related design discussions. Not blockers for #1170 —
 documented for focused follow-up work.
 
-| # | Severity | Title | Status | Key File |
-|---|----------|-------|--------|----------|
-| 1 | Critical | [Top-bid self-revalidation oscillation](./bug-research-and-improvements/01-top-bid-oscillation.md) | Bug — fix ready (~10 lines) | `lifecycle.ts:414` |
-| 2 | Critical | [Relay-order last-writer-wins](./bug-research-and-improvements/02-relay-order-last-writer-wins.md) | Bug — fix ready (~30 lines) | `state.ts:277,292` |
-| 3 | High | [Validator parity / split-brain attack](./bug-research-and-improvements/validator-parity-split-brain.md) | Needs investigation | Quorum design TBD |
-| 4 | High | [Griefer / Sybil npub rotation attack](./bug-research-and-improvements/griefer-sybil-npub-rotation.md) | Known issue | WOT only defense |
-| 5 | Medium | [Bid bond — e-cash collateral anti-griefing](./bug-research-and-improvements/bid-bond-anti-griefing.md) | Proposed improvement | Needs design |
-| 6 | Medium | [npub rotation cost — Sybil resistance](./bug-research-and-improvements/npub-rotation-cost.md) | Proposed improvement (deferred) | Future track |
+| #   | Severity | Title                                                                                                    | Status                          | Key File           |
+| --- | -------- | -------------------------------------------------------------------------------------------------------- | ------------------------------- | ------------------ |
+| 1   | Critical | [Top-bid self-revalidation oscillation](./bug-research-and-improvements/01-top-bid-oscillation.md)       | Bug — fix ready (~10 lines)     | `lifecycle.ts:414` |
+| 2   | Critical | [Relay-order last-writer-wins](./bug-research-and-improvements/02-relay-order-last-writer-wins.md)       | Bug — fix ready (~30 lines)     | `state.ts:277,292` |
+| 3   | High     | [Validator parity / split-brain attack](./bug-research-and-improvements/validator-parity-split-brain.md) | Needs investigation             | Quorum design TBD  |
+| 4   | High     | [Griefer / Sybil npub rotation attack](./bug-research-and-improvements/griefer-sybil-npub-rotation.md)   | Known issue                     | WOT only defense   |
+| 5   | Medium   | [Bid bond — e-cash collateral anti-griefing](./bug-research-and-improvements/bid-bond-anti-griefing.md)  | Proposed improvement            | Needs design       |
+| 6   | Medium   | [npub rotation cost — Sybil resistance](./bug-research-and-improvements/npub-rotation-cost.md)           | Proposed improvement (deferred) | Future track       |
 
 See [`bug-research-and-improvements/`](./bug-research-and-improvements/README.md) for detailed analysis.
 

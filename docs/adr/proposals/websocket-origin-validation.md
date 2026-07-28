@@ -1,6 +1,7 @@
 # Relay WebSocket Origin Validation Policy
 
 ## Status
+
 Proposal — not yet surfaced to team
 
 ## Problem

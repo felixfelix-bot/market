@@ -22,12 +22,14 @@ Two architectural gaps leave production completely blind.
 ## Privacy approach
 
 Error reports contain ONLY technical diagnostics:
+
 - **Include**: error message, sanitized stack trace, route/URL (path only), app version, timestamp, boundary that caught it
 - **Exclude**: user npub/pubkey, payment details, relay URLs, localStorage, wallet state, any PII
 
 Implementation mechanism (self-hosted endpoint vs Sentry/GlitchTip vs Nostr-based) left open for team discussion.
 
 @Franchovy @maximotodev — input welcome on:
+
 1. Which error reporting mechanism fits the project (self-hosted, Sentry, or Nostr-based)
 2. Whether per-feature boundaries are worth the overhead or per-route is sufficient
 3. Whether `no-floating-promises` is too aggressive for contributors

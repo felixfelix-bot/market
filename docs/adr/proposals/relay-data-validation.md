@@ -26,12 +26,14 @@ This is security-relevant: relays accept events from anyone. Malformed or advers
 ## ADR structure pattern
 
 This ADR follows a two-section pattern:
+
 - **Upper section** (permanent): defines the validation rule and rationale — stays even after all violations are fixed
 - **Lower section** (transient): "Current Violations" table with specific file:line refs — entries removed as PRs fix each one
 
 This prevents ADRs from going stale after migration is complete.
 
 @Franchovy @maximotodev — input welcome on:
+
 1. Whether `safeParse` (graceful degradation) vs `parse` (throw on invalid) is the right default
 2. Whether strict schema (reject unknown fields) or passthrough (validate known fields, allow extras) fits the project better
 3. Whether the ESLint enforcement approach is feasible

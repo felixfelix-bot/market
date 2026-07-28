@@ -2,11 +2,12 @@ Note: Recreated from #1165 (original PR was orphaned due to fork repository recr
 
 ## Motivation
 
-Five store files under \`src/lib/stores/\` import upward into \`@/queries/*\` and \`@/publish/*\`, creating bidirectional coupling and circular dependencies. The most severe case is \`cart.ts\` (1,892 lines) which imports from 6 query modules, 1 publish module, creates a private \`QueryClient\` (causing double-fetching and invisible cache), and has a type-level circular dependency with \`queries/v4v.tsx\`.
+Five store files under \`src/lib/stores/\` import upward into \`@/queries/_\` and \`@/publish/_\`, creating bidirectional coupling and circular dependencies. The most severe case is \`cart.ts\` (1,892 lines) which imports from 6 query modules, 1 publish module, creates a private \`QueryClient\` (causing double-fetching and invisible cache), and has a type-level circular dependency with \`queries/v4v.tsx\`.
 
 There is no ESLint configuration in the project at all, so nothing prevents new violations. The query-to-store direction (~27 files, ~31 import lines) is architecturally correct and unrestricted. The problem is solely the 5 store files importing back upward.
 
 This ADR establishes three rules to make the dependency graph acyclic:
+
 1. Stores must not import from queries or publish
 2. Shared DTOs must live in \`@/lib/types/\` (breaks the type cycle)
 3. No private QueryClient in stores (eliminates double-fetching and invisible cache)
