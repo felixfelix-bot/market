@@ -123,6 +123,105 @@ export function validateAuctionV4vConfig(
 }
 
 // ===========================================================================
+// Validator fee snapshot (anti bait-and-switch)
+// ===========================================================================
+
+/**
+ * A snapshot of a validator's announced fee_min_bps at the time the auction
+ * listing is created. This freezes the fee so validators cannot change their
+ * minimum mid-auction and sellers cannot reduce the allocation below what was
+ * agreed at creation time.
+ *
+ * @see docs/adr/proposals/v4v-dev-splits-auction.md (section 5)
+ */
+export const ValidatorFeeSnapshotSchema = z.object({
+	/** Validator pubkey (hex). */
+	npub: z.string().regex(HEX_PUBKEY, 'npub must be a 64-char hex pubkey'),
+	/** Snapshotted fee minimum in basis points. */
+	feeMinBps: z.number().int().min(1),
+	/** Unix timestamp (seconds) when the fee announcement was observed. */
+	announcedAt: z.number().int().positive(),
+})
+
+export type ValidatorFeeSnapshot = z.infer<typeof ValidatorFeeSnapshotSchema>
+
+/**
+ * Options controlling stricter listing-level validation.
+ */
+export interface AuctionV4vValidationOptions {
+	/**
+	 * When true, the listing must assign at least one validator pubkey
+	 * (i.e., the splits must contain at least one npub that appears in the
+	 * supplied fee snapshot or validator fee map).
+	 */
+	requireAtLeastOneValidator?: boolean
+	/** Fee snapshot captured at auction creation time. */
+	feeSnapshot?: ValidatorFeeSnapshot[]
+}
+
+/**
+ * Validates that every snapshotted validator appears in the splits and is
+ * assigned at least the snapshotted minimum. Missing or under-funded
+ * validators produce error messages.
+ */
+export function validateValidatorFeeSnapshot(splits: V4vSplit[], feeSnapshot: ValidatorFeeSnapshot[]): string[] {
+	const byNpub = new Map(splits.map((s) => [s.npub, s]))
+	const errors: string[] = []
+	for (const snap of feeSnapshot) {
+		const assigned = byNpub.get(snap.npub)
+		if (assigned === undefined) {
+			errors.push(`Validator ${snap.npub.slice(0, 12)}… in fee snapshot is missing from v4v_splits`)
+		} else if (assigned.bps < snap.feeMinBps) {
+			errors.push(`Validator ${snap.npub.slice(0, 12)}… assigned ${assigned.bps} bps but snapshotted minimum is ${snap.feeMinBps} bps`)
+		}
+	}
+	return errors
+}
+
+/**
+ * Returns whether the listing contains at least one validator split.
+ * A "validator" is any npub present in either the fee snapshot or the
+ * current validator fee map.
+ */
+export function hasValidatorSplit(splits: V4vSplit[], validatorFees: Map<string, number>, feeSnapshot?: ValidatorFeeSnapshot[]): boolean {
+	const validatorPubkeys = new Set<string>(validatorFees.keys())
+	if (feeSnapshot) {
+		for (const snap of feeSnapshot) validatorPubkeys.add(snap.npub)
+	}
+	return splits.some((s) => validatorPubkeys.has(s.npub))
+}
+
+/**
+ * Extended validation of an auction listing's V4V configuration.
+ * Checks: sum = 10000, minimums, fee snapshot consistency, and optional
+ * "at least one validator" requirement.
+ */
+export function validateAuctionV4vConfig(
+	content: AuctionListingContent,
+	validatorFees: Map<string, number>,
+	opts: AuctionV4vValidationOptions = {},
+): { valid: boolean; errors: string[] } {
+	const errors: string[] = []
+
+	if (!validateV4vSplitSum(content.v4v_splits)) {
+		const sum = content.v4v_splits.reduce((s: number, x: V4vSplit) => s + x.bps, 0)
+		errors.push(`V4V splits must sum to ${TOTAL_BPS} bps, got ${sum}`)
+	}
+
+	errors.push(...validateValidatorMinimums(content.v4v_splits, validatorFees))
+
+	if (opts.feeSnapshot) {
+		errors.push(...validateValidatorFeeSnapshot(content.v4v_splits, opts.feeSnapshot))
+	}
+
+	if (opts.requireAtLeastOneValidator && !hasValidatorSplit(content.v4v_splits, validatorFees, opts.feeSnapshot)) {
+		errors.push('At least one validator must be assigned to the auction')
+	}
+
+	return { valid: errors.length === 0, errors }
+}
+
+// ===========================================================================
 // Kind 1023 — Multi-Note Bid Commitment
 // ===========================================================================
 
@@ -228,6 +327,8 @@ export interface AuctionListingInput {
 	auctionId: string
 	/** V4V splits content. */
 	content: AuctionListingContent
+	/** Validator fee snapshot captured at creation time (anti bait-and-switch). */
+	feeSnapshot?: ValidatorFeeSnapshot[]
 }
 
 /** Builds the Nostr tag array for a kind 30408 auction listing event. */
@@ -244,6 +345,14 @@ export function buildAuctionListingTags(input: AuctionListingInput): [string, ..
 
 	for (const split of input.content.v4v_splits) {
 		tags.push(['p', split.npub])
+	}
+
+	// Persist the snapshotted fee minimum for each validator so future readers
+	// can verify the anti-bait-and-switch guarantee without re-querying history.
+	if (input.feeSnapshot) {
+		for (const snap of input.feeSnapshot) {
+			tags.push(['fee_snapshot', snap.npub, String(snap.feeMinBps), String(snap.announcedAt)])
+		}
 	}
 
 	return tags

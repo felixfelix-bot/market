@@ -24,6 +24,7 @@ import {
 	type AuctionListingInput,
 	type AuctionBidInput,
 	type AuctionSettlementInput,
+	type ValidatorFeeSnapshot,
 } from '@/lib/schemas/auction-v4v'
 
 // ===========================================================================
@@ -40,7 +41,13 @@ export function createAuctionListingTemplate(input: AuctionListingInput): EventT
 	}
 }
 
-/** Publishes a kind 30408 auction listing event with V4V splits. */
+/**
+ * Publishes a kind 30408 auction listing event with V4V splits.
+ *
+ * The optional `feeSnapshot` in `AuctionListingInput` freezes each validator's
+ * fee_min_bps at creation time in `fee_snapshot` tags, preventing either the
+ * validator or the seller from changing the fee after the auction is live.
+ */
 export async function publishAuctionListing(input: AuctionListingInput): Promise<NostrEvent> {
 	const io = getNostrIo()
 	const template = createAuctionListingTemplate(input)
