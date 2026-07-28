@@ -84,16 +84,56 @@ function makeValidatorEvent(
 describe('filterCompatibleValidators', () => {
 	test('returns all validators when no filter options are given', () => {
 		const v: ValidatorFeeAnnouncement[] = [
-			{ validatorId: 'v1', feeMinBps: 100, mints: [MINT_A], maxDuration: DEFAULT_MAX_DURATION_SECONDS, pubkey: VALIDATOR_PUBKEY_A, createdAt: 1, eventId: VALID_EVENT_ID, kind: VALIDATOR_FEE_ANNOUNCEMENT_KIND },
-			{ validatorId: 'v2', feeMinBps: 200, mints: [MINT_B], maxDuration: DEFAULT_MAX_DURATION_SECONDS, pubkey: VALIDATOR_PUBKEY_B, createdAt: 2, eventId: VALID_EVENT_ID, kind: VALIDATOR_FEE_ANNOUNCEMENT_KIND },
+			{
+				validatorId: 'v1',
+				feeMinBps: 100,
+				mints: [MINT_A],
+				maxDuration: DEFAULT_MAX_DURATION_SECONDS,
+				pubkey: VALIDATOR_PUBKEY_A,
+				createdAt: 1,
+				eventId: VALID_EVENT_ID,
+				kind: VALIDATOR_FEE_ANNOUNCEMENT_KIND,
+			},
+			{
+				validatorId: 'v2',
+				feeMinBps: 200,
+				mints: [MINT_B],
+				maxDuration: DEFAULT_MAX_DURATION_SECONDS,
+				pubkey: VALIDATOR_PUBKEY_B,
+				createdAt: 2,
+				eventId: VALID_EVENT_ID,
+				kind: VALIDATOR_FEE_ANNOUNCEMENT_KIND,
+			},
 		]
 		expect(filterCompatibleValidators(v, {})).toEqual(v)
 	})
 
 	test('filters by mint, auction_type, and locking_scheme', () => {
 		const v: ValidatorFeeAnnouncement[] = [
-			{ validatorId: 'v1', feeMinBps: 100, mints: [MINT_A], auctionType: 'english', lockingScheme: 'P2PK', maxDuration: DEFAULT_MAX_DURATION_SECONDS, pubkey: VALIDATOR_PUBKEY_A, createdAt: 1, eventId: VALID_EVENT_ID, kind: VALIDATOR_FEE_ANNOUNCEMENT_KIND },
-			{ validatorId: 'v2', feeMinBps: 200, mints: [MINT_B], auctionType: 'dutch', lockingScheme: 'P2PK', maxDuration: DEFAULT_MAX_DURATION_SECONDS, pubkey: VALIDATOR_PUBKEY_B, createdAt: 2, eventId: VALID_EVENT_ID, kind: VALIDATOR_FEE_ANNOUNCEMENT_KIND },
+			{
+				validatorId: 'v1',
+				feeMinBps: 100,
+				mints: [MINT_A],
+				auctionType: 'english',
+				lockingScheme: 'P2PK',
+				maxDuration: DEFAULT_MAX_DURATION_SECONDS,
+				pubkey: VALIDATOR_PUBKEY_A,
+				createdAt: 1,
+				eventId: VALID_EVENT_ID,
+				kind: VALIDATOR_FEE_ANNOUNCEMENT_KIND,
+			},
+			{
+				validatorId: 'v2',
+				feeMinBps: 200,
+				mints: [MINT_B],
+				auctionType: 'dutch',
+				lockingScheme: 'P2PK',
+				maxDuration: DEFAULT_MAX_DURATION_SECONDS,
+				pubkey: VALIDATOR_PUBKEY_B,
+				createdAt: 2,
+				eventId: VALID_EVENT_ID,
+				kind: VALIDATOR_FEE_ANNOUNCEMENT_KIND,
+			},
 		]
 		expect(filterCompatibleValidators(v, { mintUrl: MINT_A, auctionType: 'english', lockingScheme: 'P2PK' })).toEqual([v[0]])
 	})
