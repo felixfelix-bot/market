@@ -88,6 +88,20 @@ Suggested next-to-surface order (after current PRs #1178, #1179 resolve):
 10. **Error boundary + observability** — lower urgency
 11. **E2E test stabilization** — lower urgency
 
+### Known Bugs Under Investigation
+
+Bugs found during adversarial analysis of the auction validator (PR #1170).
+Not blockers for #1170 — documented for focused follow-up work.
+
+| # | Severity | Title | Fix Estimate | Key File |
+|---|----------|-------|--------------|----------|
+| 1 | Critical | [Top-bid self-revalidation oscillation](./bugs-to-investigate/01-top-bid-oscillation.md) | ~10 lines | `lifecycle.ts:414` |
+| 2 | Critical | [Relay-order last-writer-wins](./bugs-to-investigate/02-relay-order-last-writer-wins.md) | ~30 lines | `state.ts:277,292` |
+
+See [`bugs-to-investigate/`](./bugs-to-investigate/README.md) for detailed analysis.
+
+---
+
 ## Notes
 
 - This index replaces the previous approach of opening multiple ADR PRs simultaneously
