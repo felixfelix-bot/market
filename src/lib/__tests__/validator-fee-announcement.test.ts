@@ -318,6 +318,36 @@ describe('Kind 30409 — Validator Fee Announcement schema', () => {
 		})
 	})
 
+	describe('WOT/endorsement tags are NOT in schema', () => {
+		test('built tags do not contain wot or endorsement tags', () => {
+			const tags = buildValidatorFeeAnnouncementTags({
+				validatorId: 'v',
+				feeMinBps: 100,
+				mints: [MINT_A],
+			})
+			const tagNames = tags.map((t) => t[0])
+			expect(tagNames).not.toContain('wot')
+			expect(tagNames).not.toContain('endorsement')
+		})
+
+		test('parser ignores wot/endorsement tags and still validates', () => {
+			const result = parseValidatorFeeAnnouncement(
+				makeRawEvent({
+					tags: [
+						['d', 'v'],
+						['fee_min_bps', '100'],
+						['mint', MINT_A],
+						['wot', 'some-pubkey'],
+						['endorsement', 'some-endorsement'],
+					],
+				}),
+			)
+			expect(result).not.toBeNull()
+			expect(result!.validatorId).toBe('v')
+			expect(result!.mints).toEqual([MINT_A])
+		})
+	})
+
 	describe('tag builder', () => {
 		test('builds tags from structured input with all optional fields', () => {
 			const tags = buildValidatorFeeAnnouncementTags({
