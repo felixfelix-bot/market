@@ -17,6 +17,14 @@ work after #1170 merges.
 
 ## Context
 
+### Happy Path — Normal Auction Settlement
+
+![Happy Path](./images/happy-path.png)
+
+### Settlement Decision Tree
+
+![Settlement Decision Tree](./images/decision-tree.png)
+
 Both bugs were identified by adversarial analysis of the validator codebase on
 the `feat/1151-auction-validation` branch (PR #1170 head `215640d3`).
 maximotodev flagged both as "serious pre-existing concerns" in his review of

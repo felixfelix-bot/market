@@ -55,6 +55,14 @@ Neither function checks:
 
 ## Attack Scenarios
 
+### Visual: How relay-order gaming produces contradictory verdicts
+
+![Attack 2 — Relay-Order Last-Writer-Wins](./images/attack2-relay-order.png)
+
+The diagram shows the unconditional overwrite bug, the attack scenario where a
+bidder publishes two conflicting kind-1025 events, and how two validators on
+different relay sets publish opposite verdicts.
+
 ### Scenario 1: Bidder publishes two conflicting kind-1025 path releases
 
 1. Bidder publishes kind-1025 #A — honest, valid derivation path, valid cashu token

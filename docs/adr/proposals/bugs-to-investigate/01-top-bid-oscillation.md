@@ -40,6 +40,24 @@ const minRequired = computeBidFloor({ auction, topBid: currentTopBid, atSeconds:
 When the top bid is being revalidated, `currentTopBid` includes its own amount,
 so the floor becomes `self_amount + increment`, which the bid can never satisfy.
 
+## Context: Happy Path Settlement Flow
+
+![Happy Path — normal auction settlement](./images/happy-path.png)
+
+The diagram above shows how a normal auction settlement works when all parties
+are honest. The oscillation bug occurs during the "valid_bid_placed" phase,
+before auction close.
+
+## Settlement Decision Tree
+
+![Settlement Decision Tree](./images/decision-tree.png)
+
+The oscillation affects the top-left branch: `validateBid()` →
+`valid_bid_placed` vs `bid_invalid`. The self-referential floor check causes
+the bid to flip between these two states on every cycle.
+
+---
+
 ## The Oscillation Cycle
 
 ```
@@ -61,6 +79,14 @@ CYCLE B: Bid B is now "bid_invalid"
 ```
 
 ## Exploitable Impact
+
+### Visual: How the oscillation enables winner theft
+
+![Attack 1 — Top-Bid Self-Revalidation Oscillation](./images/attack1-oscillation.png)
+
+The diagram shows the two oscillation cycles (A: bid fails self-comparison,
+B: bid passes when excluded from top), the timeline of winner theft at auction
+close, and the proposed fix.
 
 ### 1. Spurious verdict churn
 Alternating `valid_bid_placed` / `bid_invalid` events published for the
