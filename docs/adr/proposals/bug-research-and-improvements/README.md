@@ -1,12 +1,12 @@
-# Auction Validator — Known Bugs Under Investigation
+# Auction Bug Research & Improvements
 
-This directory documents bugs found during adversarial analysis of the auction
-validator (PR #1170, branch `feat/1151-auction-validation`).
+This directory documents bugs and improvement areas found during adversarial
+analysis of the auction validator (PR #1170, branch `feat/1151-auction-validation`)
+and related design discussions.
 
-These bugs are **not blockers for PR #1170** — they are pre-existing issues in
-the validator architecture that PR #1170 makes more visible because it adds new
-code paths that exercise them. They should be addressed in focused follow-up
-work after #1170 merges.
+These items are **not blockers for PR #1170** — they are pre-existing issues or
+future improvement tracks that PR #1170 makes more visible. They should be
+addressed in focused follow-up work after #1170 merges.
 
 ## Bugs
 
@@ -14,6 +14,15 @@ work after #1170 merges.
 |---|----------|-------|--------------|----------|
 | 1 | Critical | [Top-bid self-revalidation oscillation](./01-top-bid-oscillation.md) | ~10 lines | `lifecycle.ts:414` |
 | 2 | Critical | [Relay-order last-writer-wins for kind-1025/1024](./02-relay-order-last-writer-wins.md) | ~30 lines | `state.ts:277,292` |
+
+## Improvement Research
+
+| # | Severity | Title | Status |
+|---|----------|-------|--------|
+| 3 | High | [Validator parity / split-brain attack](./validator-parity-split-brain.md) | Needs investigation |
+| 4 | High | [Griefer / Sybil npub rotation attack](./griefer-sybil-npub-rotation.md) | Known issue |
+| 5 | Medium | [Bid bond — e-cash collateral anti-griefing](./bid-bond-anti-griefing.md) | Proposed improvement |
+| 6 | Medium | [npub rotation cost — Sybil resistance](./npub-rotation-cost.md) | Proposed (deferred) |
 
 ## Context
 

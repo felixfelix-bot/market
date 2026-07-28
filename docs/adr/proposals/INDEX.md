@@ -88,17 +88,22 @@ Suggested next-to-surface order (after current PRs #1178, #1179 resolve):
 10. **Error boundary + observability** — lower urgency
 11. **E2E test stabilization** — lower urgency
 
-### Known Bugs Under Investigation
+### Auction Bug Research & Improvements
 
-Bugs found during adversarial analysis of the auction validator (PR #1170).
-Not blockers for #1170 — documented for focused follow-up work.
+Bugs and improvement areas found during adversarial analysis of the auction
+validator (PR #1170) and related design discussions. Not blockers for #1170 —
+documented for focused follow-up work.
 
-| # | Severity | Title | Fix Estimate | Key File |
-|---|----------|-------|--------------|----------|
-| 1 | Critical | [Top-bid self-revalidation oscillation](./bugs-to-investigate/01-top-bid-oscillation.md) | ~10 lines | `lifecycle.ts:414` |
-| 2 | Critical | [Relay-order last-writer-wins](./bugs-to-investigate/02-relay-order-last-writer-wins.md) | ~30 lines | `state.ts:277,292` |
+| # | Severity | Title | Status | Key File |
+|---|----------|-------|--------|----------|
+| 1 | Critical | [Top-bid self-revalidation oscillation](./bug-research-and-improvements/01-top-bid-oscillation.md) | Bug — fix ready (~10 lines) | `lifecycle.ts:414` |
+| 2 | Critical | [Relay-order last-writer-wins](./bug-research-and-improvements/02-relay-order-last-writer-wins.md) | Bug — fix ready (~30 lines) | `state.ts:277,292` |
+| 3 | High | [Validator parity / split-brain attack](./bug-research-and-improvements/validator-parity-split-brain.md) | Needs investigation | Quorum design TBD |
+| 4 | High | [Griefer / Sybil npub rotation attack](./bug-research-and-improvements/griefer-sybil-npub-rotation.md) | Known issue | WOT only defense |
+| 5 | Medium | [Bid bond — e-cash collateral anti-griefing](./bug-research-and-improvements/bid-bond-anti-griefing.md) | Proposed improvement | Needs design |
+| 6 | Medium | [npub rotation cost — Sybil resistance](./bug-research-and-improvements/npub-rotation-cost.md) | Proposed improvement (deferred) | Future track |
 
-See [`bugs-to-investigate/`](./bugs-to-investigate/README.md) for detailed analysis.
+See [`bug-research-and-improvements/`](./bug-research-and-improvements/README.md) for detailed analysis.
 
 ---
 
