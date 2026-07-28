@@ -7,7 +7,7 @@
  *   - Kind 1024:  Settlement Reveal
  *
  * Routes Nostr I/O through `src/lib/nostr/io.ts` per ADR-0002.
- * No `@nostr-dev-kit` imports.
+ * No NDK imports.
  *
  * CRITICAL: Never publishes raw cashu_token or proof data. Only references/
  * commitments appear in event tags/content.

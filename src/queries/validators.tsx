@@ -2,7 +2,7 @@
  * Query hooks for discovering V4V auction validators (kind 30409 events).
  *
  * Fetches validator fee announcements from relays via `src/lib/nostr/io.ts`
- * (per ADR-0002 — no `@nostr-dev-kit` imports in new code), parses them with
+ * (per ADR-0002 — no NDK imports in new code), parses them with
  * the Zod schema, and filters by mint / auction_type / locking_scheme
  * compatibility so the caller only sees validators that can service their
  * auction.

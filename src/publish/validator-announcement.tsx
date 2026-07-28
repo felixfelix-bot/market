@@ -2,7 +2,7 @@
  * Publish function for Kind 30409 — Validator Fee Announcement.
  *
  * Routes Nostr I/O through `src/lib/nostr/io.ts` per ADR-0002.
- * No `@nostr-dev-kit` imports.
+ * No NDK imports.
  *
  * @see docs/adr/proposals/v4v-dev-splits-auction.md (section 4, decision D7)
  */
