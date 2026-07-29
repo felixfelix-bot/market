@@ -18,6 +18,7 @@ import { Route as ProductsIndexRouteImport } from './routes/products.index'
 import { Route as PostsIndexRouteImport } from './routes/posts.index'
 import { Route as NostrIndexRouteImport } from './routes/nostr.index'
 import { Route as CommunityIndexRouteImport } from './routes/community.index'
+import { Route as AuctionsIndexRouteImport } from './routes/auctions.index'
 import { Route as SearchProductsRouteImport } from './routes/search.products'
 import { Route as ProfileProfileIdRouteImport } from './routes/profile.$profileId'
 import { Route as ProductsProductIdRouteImport } from './routes/products.$productId'
@@ -96,6 +97,11 @@ const NostrIndexRoute = NostrIndexRouteImport.update({
 const CommunityIndexRoute = CommunityIndexRouteImport.update({
   id: '/community/',
   path: '/community/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuctionsIndexRoute = AuctionsIndexRouteImport.update({
+  id: '/auctions/',
+  path: '/auctions/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SearchProductsRoute = SearchProductsRouteImport.update({
@@ -314,6 +320,7 @@ export interface FileRoutesByFullPath {
   '/products/$productId': typeof ProductsProductIdRoute
   '/profile/$profileId': typeof ProfileProfileIdRoute
   '/search/products': typeof SearchProductsRoute
+  '/auctions/': typeof AuctionsIndexRoute
   '/community/': typeof CommunityIndexRoute
   '/nostr/': typeof NostrIndexRoute
   '/posts/': typeof PostsIndexRoute
@@ -359,6 +366,7 @@ export interface FileRoutesByTo {
   '/products/$productId': typeof ProductsProductIdRoute
   '/profile/$profileId': typeof ProfileProfileIdRoute
   '/search/products': typeof SearchProductsRoute
+  '/auctions': typeof AuctionsIndexRoute
   '/community': typeof CommunityIndexRoute
   '/nostr': typeof NostrIndexRoute
   '/posts': typeof PostsIndexRoute
@@ -406,6 +414,7 @@ export interface FileRoutesById {
   '/products/$productId': typeof ProductsProductIdRoute
   '/profile/$profileId': typeof ProfileProfileIdRoute
   '/search/products': typeof SearchProductsRoute
+  '/auctions/': typeof AuctionsIndexRoute
   '/community/': typeof CommunityIndexRoute
   '/nostr/': typeof NostrIndexRoute
   '/posts/': typeof PostsIndexRoute
@@ -453,6 +462,7 @@ export interface FileRouteTypes {
     | '/products/$productId'
     | '/profile/$profileId'
     | '/search/products'
+    | '/auctions/'
     | '/community/'
     | '/nostr/'
     | '/posts/'
@@ -498,6 +508,7 @@ export interface FileRouteTypes {
     | '/products/$productId'
     | '/profile/$profileId'
     | '/search/products'
+    | '/auctions'
     | '/community'
     | '/nostr'
     | '/posts'
@@ -544,6 +555,7 @@ export interface FileRouteTypes {
     | '/products/$productId'
     | '/profile/$profileId'
     | '/search/products'
+    | '/auctions/'
     | '/community/'
     | '/nostr/'
     | '/posts/'
@@ -591,6 +603,7 @@ export interface RootRouteChildren {
   ProductsProductIdRoute: typeof ProductsProductIdRoute
   ProfileProfileIdRoute: typeof ProfileProfileIdRoute
   SearchProductsRoute: typeof SearchProductsRoute
+  AuctionsIndexRoute: typeof AuctionsIndexRoute
   CommunityIndexRoute: typeof CommunityIndexRoute
   NostrIndexRoute: typeof NostrIndexRoute
   PostsIndexRoute: typeof PostsIndexRoute
@@ -660,6 +673,13 @@ declare module '@tanstack/react-router' {
       path: '/community'
       fullPath: '/community/'
       preLoaderRoute: typeof CommunityIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auctions/': {
+      id: '/auctions/'
+      path: '/auctions'
+      fullPath: '/auctions/'
+      preLoaderRoute: typeof AuctionsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/search/products': {
@@ -1053,6 +1073,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProductsProductIdRoute: ProductsProductIdRoute,
   ProfileProfileIdRoute: ProfileProfileIdRoute,
   SearchProductsRoute: SearchProductsRoute,
+  AuctionsIndexRoute: AuctionsIndexRoute,
   CommunityIndexRoute: CommunityIndexRoute,
   NostrIndexRoute: NostrIndexRoute,
   PostsIndexRoute: PostsIndexRoute,
