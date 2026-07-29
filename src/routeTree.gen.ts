@@ -23,6 +23,7 @@ import { Route as ProfileProfileIdRouteImport } from './routes/profile.$profileI
 import { Route as ProductsProductIdRouteImport } from './routes/products.$productId'
 import { Route as PostsPostIdRouteImport } from './routes/posts.$postId'
 import { Route as CollectionCollectionIdRouteImport } from './routes/collection.$collectionId'
+import { Route as AuctionsAuctionIdRouteImport } from './routes/auctions.$auctionId'
 import { Route as DashboardLayoutDashboardIndexRouteImport } from './routes/_dashboard-layout/dashboard/index'
 import { Route as DashboardLayoutDashboardAboutRouteImport } from './routes/_dashboard-layout/dashboard/about'
 import { Route as DashboardLayoutDashboardSalesSalesRouteImport } from './routes/_dashboard-layout/dashboard/sales/sales'
@@ -120,6 +121,11 @@ const PostsPostIdRoute = PostsPostIdRouteImport.update({
 const CollectionCollectionIdRoute = CollectionCollectionIdRouteImport.update({
   id: '/collection/$collectionId',
   path: '/collection/$collectionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuctionsAuctionIdRoute = AuctionsAuctionIdRouteImport.update({
+  id: '/auctions/$auctionId',
+  path: '/auctions/$auctionId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardLayoutDashboardIndexRoute =
@@ -302,6 +308,7 @@ export interface FileRoutesByFullPath {
   '/$vanityName': typeof VanityNameRoute
   '/checkout': typeof CheckoutRoute
   '/setup': typeof SetupRoute
+  '/auctions/$auctionId': typeof AuctionsAuctionIdRoute
   '/collection/$collectionId': typeof CollectionCollectionIdRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/products/$productId': typeof ProductsProductIdRoute
@@ -346,6 +353,7 @@ export interface FileRoutesByTo {
   '/$vanityName': typeof VanityNameRoute
   '/checkout': typeof CheckoutRoute
   '/setup': typeof SetupRoute
+  '/auctions/$auctionId': typeof AuctionsAuctionIdRoute
   '/collection/$collectionId': typeof CollectionCollectionIdRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/products/$productId': typeof ProductsProductIdRoute
@@ -392,6 +400,7 @@ export interface FileRoutesById {
   '/_dashboard-layout': typeof DashboardLayoutRouteWithChildren
   '/checkout': typeof CheckoutRoute
   '/setup': typeof SetupRoute
+  '/auctions/$auctionId': typeof AuctionsAuctionIdRoute
   '/collection/$collectionId': typeof CollectionCollectionIdRoute
   '/posts/$postId': typeof PostsPostIdRoute
   '/products/$productId': typeof ProductsProductIdRoute
@@ -438,6 +447,7 @@ export interface FileRouteTypes {
     | '/$vanityName'
     | '/checkout'
     | '/setup'
+    | '/auctions/$auctionId'
     | '/collection/$collectionId'
     | '/posts/$postId'
     | '/products/$productId'
@@ -482,6 +492,7 @@ export interface FileRouteTypes {
     | '/$vanityName'
     | '/checkout'
     | '/setup'
+    | '/auctions/$auctionId'
     | '/collection/$collectionId'
     | '/posts/$postId'
     | '/products/$productId'
@@ -527,6 +538,7 @@ export interface FileRouteTypes {
     | '/_dashboard-layout'
     | '/checkout'
     | '/setup'
+    | '/auctions/$auctionId'
     | '/collection/$collectionId'
     | '/posts/$postId'
     | '/products/$productId'
@@ -573,6 +585,7 @@ export interface RootRouteChildren {
   DashboardLayoutRoute: typeof DashboardLayoutRouteWithChildren
   CheckoutRoute: typeof CheckoutRoute
   SetupRoute: typeof SetupRoute
+  AuctionsAuctionIdRoute: typeof AuctionsAuctionIdRoute
   CollectionCollectionIdRoute: typeof CollectionCollectionIdRoute
   PostsPostIdRoute: typeof PostsPostIdRoute
   ProductsProductIdRoute: typeof ProductsProductIdRoute
@@ -682,6 +695,13 @@ declare module '@tanstack/react-router' {
       path: '/collection/$collectionId'
       fullPath: '/collection/$collectionId'
       preLoaderRoute: typeof CollectionCollectionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auctions/$auctionId': {
+      id: '/auctions/$auctionId'
+      path: '/auctions/$auctionId'
+      fullPath: '/auctions/$auctionId'
+      preLoaderRoute: typeof AuctionsAuctionIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_dashboard-layout/dashboard/': {
@@ -1027,6 +1047,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardLayoutRoute: DashboardLayoutRouteWithChildren,
   CheckoutRoute: CheckoutRoute,
   SetupRoute: SetupRoute,
+  AuctionsAuctionIdRoute: AuctionsAuctionIdRoute,
   CollectionCollectionIdRoute: CollectionCollectionIdRoute,
   PostsPostIdRoute: PostsPostIdRoute,
   ProductsProductIdRoute: ProductsProductIdRoute,
