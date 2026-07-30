@@ -138,6 +138,20 @@ jobs:
           path: test-results/
           retention-days: 7
 
+      - name: Notify Buzz (#ci)
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        env:
+          CI_BUZZ_RELAY_URL: ${{ secrets.CI_BUZZ_RELAY_URL }}
+          CI_BUZZ_PRIVATE_KEY: ${{ secrets.CI_BUZZ_PRIVATE_KEY }}
+        run: |
+          chmod +x scripts/buzz-notify.sh
+          ./scripts/buzz-notify.sh \
+            --status ${{ steps.test.outcome || (success() && 'pass' || 'fail') }} \
+            --pr ${{ github.event.pull_request.number || '' }} \
+            --job "E2E Pricing Tests" \
+            --detail "${{ github.sha }}"
+
   e2e-full:
     # Keep the broader inherited-flaky suite off the pricing PR path.
     # It remains available for scheduled/manual comparison runs while the
@@ -271,3 +285,17 @@ jobs:
           name: test-results-full
           path: test-results/
           retention-days: 7
+
+      - name: Notify Buzz (#ci)
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        env:
+          CI_BUZZ_RELAY_URL: ${{ secrets.CI_BUZZ_RELAY_URL }}
+          CI_BUZZ_PRIVATE_KEY: ${{ secrets.CI_BUZZ_PRIVATE_KEY }}
+        run: |
+          chmod +x scripts/buzz-notify.sh
+          ./scripts/buzz-notify.sh \
+            --status ${{ success() && 'pass' || 'fail' }} \
+            --pr ${{ github.event.pull_request.number || '' }} \
+            --job "E2E Full Suite" \
+            --detail "${{ github.sha }}"

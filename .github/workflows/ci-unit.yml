@@ -110,3 +110,17 @@ jobs:
           echo ""
           echo "=== Currency server probe logs ==="
           cat /tmp/currency-probe.log 2>/dev/null || echo "(no currency probe log)"
+
+      - name: Notify Buzz (#ci)
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        env:
+          CI_BUZZ_RELAY_URL: ${{ secrets.CI_BUZZ_RELAY_URL }}
+          CI_BUZZ_PRIVATE_KEY: ${{ secrets.CI_BUZZ_PRIVATE_KEY }}
+        run: |
+          chmod +x scripts/buzz-notify.sh
+          ./scripts/buzz-notify.sh \
+            --status ${{ success() && 'pass' || 'fail' }} \
+            --pr ${{ github.event.pull_request.number || '' }} \
+            --job "Unit + Integration Tests" \
+            --detail "${{ github.sha }}"
