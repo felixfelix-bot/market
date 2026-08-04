@@ -175,6 +175,28 @@ jobs:
           path: test-results/
           retention-days: 7
 
+      # ── Layer 2b: GitHub-artifacts-only E2E report (no nsite) ───────────────
+      # Parses Playwright JSON results and posts an idempotent PR comment with
+      # pass/fail/flaky summary, per-test table, collapsible failure details, and
+      # links to the trace/video/screenshot artifacts (downloadable from the
+      # workflow run). Separate marker from the nsite dashboard comment.
+      # Runs even when tests fail (results.json is always written in CI).
+      - name: Post E2E results report comment
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        continue-on-error: true # comment is a nice-to-have; don't fail the job
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RESULTS_JSON: test-results/results.json
+          COMMIT_SHA: ${{ github.sha }}
+          BRANCH: ${{ github.ref_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ARTIFACT_NAMES: playwright-visual-proof-pricing,test-results-pricing
+          ARTIFACT_RETENTION: '14'
+          E2E_JOB_OUTCOME: ${{ steps.e2e-test.outcome }}
+        run: bun scripts/e2e-report-comment.ts
+
       # ── Layer 2c: render + publish the nsite dashboard ──────────────────────
       # Runs even when tests fail so reviewers can see what broke.
       - name: Render E2E dashboard
