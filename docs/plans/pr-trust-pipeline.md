@@ -80,9 +80,18 @@ file covered only by integration tests would show as uncovered — mitigated by
 the `coverageExitCode` note in the report. Phase 1B (function-level) may refine
 this.
 
-### Phase 1B — Codecov Diff-Aware Gate (IMPLEMENTED)
+### Phase 1B — Codecov Diff-Aware Gate (SUPERSEDED / DROPPED)
 
-**Status:** Implemented on `feat/pr-trust-pipeline`. Replaces the DIY gate as
+> **SUPERSEDED (2026-08-05, commit `8d02c25`).** Codecov was removed from this
+> repo because it requires GitHub-App OAuth and forge-dependent PR comments,
+> which is incompatible with the ngit/nostr git roadmap. `codecov.yml` and
+> `.github/workflows/coverage.yml` were deleted in `8d02c25`. The DIY gate from
+> Phase 1A (`scripts/check-coverage.ts` + `.github/workflows/coverage-gate.yml`)
+> is reinstated as the sole diff-aware coverage gate. **The required coverage
+> status check for branch protection is `coverage-gate`, not `codecov/patch`.**
+> The text below is retained for history only.
+
+**Status (historical):** Implemented on `feat/pr-trust-pipeline`. Replaces the DIY gate as
 the PR-facing source of truth for diff coverage; Phase 1A's script stays as a
 local pre-push soft gate. Shipped:
 
@@ -248,6 +257,87 @@ Use existing `plebeian-market-e2e-infra` Ansible playbooks.
 - Full isolation, ~125ms boot, auto-destroy
 - eCash payment integration
 - **Status:** Design phase. After 3A is validated.
+
+---
+
+## Layer H — Human-Consumption Gate (anti-AI-vs-AI-loop)
+
+**Problem:** Layers 1–3 produce trust artifacts (coverage report, Playwright
+trace/video, E2E results comment, live preview) but nothing forces a human to
+actually consume them. Without an explicit human-acknowledgment gate, the
+pipeline perpetuates the AI-vs-AI review loop it was built to fix: an AI opens
+the PR, an AI reviews it, artifacts are generated and never opened.
+
+**Goal:** A human must explicitly acknowledge they consumed the trust artifacts
+before a PR may merge.
+
+### Mechanism
+
+1. **PR template checklist — `.github/pull_request_template.md`.**
+   Every new PR opens with an unchecked human-consumption checklist that the
+   author/reviewer must tick:
+   - I reviewed the Playwright trace/video evidence (`trace.zip` via
+     https://trace.playwright.dev, or the `.webm`/`.png` artifacts).
+   - I used the live preview when one was deployed (or noted none was available).
+   - I reviewed the coverage report (`coverage-gate` passed / published artifact).
+   - I reviewed the E2E results report comment.
+     The checklist also requires a reviewer disclosure: "This PR was not approved
+     solely by an automated/AI reviewer."
+2. **Branch protection on `master`** (GitHub metadata, set by an admin):
+   - Require pull-request review approval.
+   - Require conversation resolution (an open/unresolved conversation blocks merge).
+   - Required status checks: `coverage-gate` and `e2e-pricing`.
+3. **Documentation.** This section plus the PR template are the in-repo gate.
+
+### Status
+
+- **In-repo gate (this task):** `.github/pull_request_template.md` + this section
+  ship on `feat/pr-trust-pipeline`. These are reviewable, version-controlled,
+  and self-documenting.
+- **Branch protection (metadata step, needs a human/admin):** not yet applied.
+  See "Open branch-protection decision" below.
+
+### Open branch-protection decision (human/admin gate)
+
+The original Layer H spec listed `codecov/patch` as a required status check and
+`master` + `auctions` as protected branches. Both are stale against the current
+repo state:
+
+- **Codecov was dropped** (commit `8d02c25`, see Phase 1B). The required coverage
+  check must be `coverage-gate` (the DIY LCOV gate), not `codecov/patch`.
+- **No `auctions` branch exists** on `felixfelix-bot/market` (only `master` and
+  `feat/pr-trust-pipeline`). `auctions`-branch protection belongs on the
+  Plebeian auction repos, not here.
+- **`master` is currently unprotected** (the spec's "review approval already
+  enforced" does not hold). The `coverage-gate` workflow does **not** yet exist
+  on `master` (it ships with this feature branch), so requiring it on `master`
+  should happen **after** `feat/pr-trust-pipeline` merges.
+
+Recommended command for an admin to run **after** the feature branch merges to
+`master` (do not run before merge — it would deadlock on checks absent from
+`master`):
+
+```bash
+gh api -X PUT repos/felixfelix-bot/market/branches/master/protection \
+  -H "Accept: application/vnd.github+json" --input - <<'EOF'
+{
+  "required_status_checks": { "strict": false, "contexts": ["coverage-gate", "e2e-pricing"] },
+  "enforce_admins": false,
+  "required_pull_request_reviews": {
+    "dismiss_stale_reviews": true,
+    "require_code_owner_reviews": false,
+    "required_approving_review_count": 1
+  },
+  "restrictions": null,
+  "required_conversation_resolution": true,
+  "allow_force_pushes": false,
+  "allow_deletions": false
+}
+EOF
+```
+
+This metadata change is intentionally a human/admin action: it locks merge rules
+for the main branch and is not version-controlled.
 
 ---
 
