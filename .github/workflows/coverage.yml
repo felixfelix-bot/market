@@ -70,5 +70,5 @@ jobs:
           ./scripts/buzz-notify.sh \
             --status ${{ job.status == 'success' && 'pass' || 'fail' }} \
             --pr ${{ github.event.pull_request.number || '' }} \
-            --job "Coverage (Codecov)" \
+            --job "Coverage" \
             --detail "${{ github.sha }}"
