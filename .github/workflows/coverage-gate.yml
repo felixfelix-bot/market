@@ -57,7 +57,7 @@ jobs:
         run: |
           chmod +x scripts/buzz-notify.sh
           ./scripts/buzz-notify.sh \
-            --status ${{ success() && 'pass' || 'fail' }} \
+            --status ${{ job.status == 'success' && 'pass' || 'fail' }} \
             --pr ${{ github.event.pull_request.number || '' }} \
             --job "Coverage Gate" \
             --detail "${{ github.sha }}"
