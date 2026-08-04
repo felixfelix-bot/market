@@ -732,4 +732,41 @@ describe('realRunners', () => {
 			}
 		}
 	})
+
+	it('runCoverage reuses COVERAGE_LCOV_FILE instead of spawning bun', async () => {
+		const { mkdtemp, rm, writeFile } = await import('node:fs/promises')
+		const { tmpdir } = await import('node:os')
+		const { join } = await import('node:path')
+		const dir = await mkdtemp(join(tmpdir(), 'cgate-reuse-'))
+		const lcovPath = join(dir, 'lcov.info')
+		// Minimal but valid LCOV record for a synthetic source file.
+		const sentinel = 'TN:reuse\nSF:fake.ts\nDA:1,1\nLF:1\nLH:1\nend_of_record\n'
+		await writeFile(lcovPath, sentinel)
+		process.env.COVERAGE_LCOV_FILE = lcovPath
+		try {
+			const runners = realRunners()
+			const cov = await runners.runCoverage()
+			// Reused verbatim — no bun subprocess ran.
+			expect(cov.stdout).toBe(sentinel)
+			expect(cov.exitCode).toBe(0)
+		} finally {
+			delete process.env.COVERAGE_LCOV_FILE
+			await rm(dir, { recursive: true, force: true })
+		}
+	})
+
+	it('runCoverage throws a clear error when COVERAGE_LCOV_FILE is unreadable', async () => {
+		process.env.COVERAGE_LCOV_FILE = `${import.meta.dir}/.does-not-exist-${Date.now()}.info`
+		try {
+			const runners = realRunners()
+			await expect(runners.runCoverage()).rejects.toThrow(/COVERAGE_LCOV_FILE is set but unreadable/)
+		} finally {
+			delete process.env.COVERAGE_LCOV_FILE
+		}
+	})
+
+	it('runDiff throws on an unresolvable base ref', async () => {
+		const runners = realRunners()
+		await expect(runners.runDiff('refs/heads/__cgate_nonexistent__')).rejects.toThrow(/git diff failed/)
+	})
 })

@@ -17,6 +17,12 @@
  *   COVERAGE_TEST_PATHSPEC  space-separated dirs/globs passed to `bun test`
  *                           (default: "src contextvm" — product code only)
  *   COVERAGE_BUN            path to the bun binary (default: "bun")
+ *   COVERAGE_LCOV_FILE      path to a pre-computed lcov.info to reuse instead
+ *                           of spawning `bun test --coverage` (default: unset).
+ *                           When set, the file is read directly and
+ *                           COVERAGE_TEST_PATHSPEC/COVERAGE_BUN are ignored.
+ *                           Lets CI run coverage once for both the gate and an
+ *                           HTML report (see .github/workflows/coverage-gate.yml).
  *
  * Design: every parser is a pure function (unit-tested in
  * check-coverage.test.ts). Subprocess execution is isolated behind a
@@ -345,6 +351,20 @@ export function realRunners(): CoverageRunners {
 
 	return {
 		async runCoverage() {
+			// Reuse a pre-computed LCOV file when the caller already ran
+			// `bun test --coverage` (e.g. CI generates coverage once for both
+			// the gate and an HTML report). Skips spawning a second bun
+			// process; the file MUST already exist and be valid LCOV.
+			const reuseFile = process.env.COVERAGE_LCOV_FILE
+			if (reuseFile) {
+				try {
+					return { stdout: await Bun.file(reuseFile).text(), exitCode: 0 }
+				} catch {
+					throw new Error(
+						`COVERAGE_LCOV_FILE is set but unreadable: ${reuseFile} — run \`bun test --coverage\` first, or unset it to spawn coverage here.`,
+					)
+				}
+			}
 			// LCOV reporter: precise per-line hit counts to a file. The text
 			// table's "Uncovered Line #s" column is unreliable (observed empty
 			// for some files despite <100% line coverage).
