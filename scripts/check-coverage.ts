@@ -174,7 +174,7 @@ export function parseGitDiff(diff: string): Map<string, number[]> {
 	const hunkRe = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/
 
 	for (const line of diff.split('\n')) {
-		if (line.startsWith('+++')) {
+		if (line.startsWith('+++ ')) {
 			const content = line.slice(4).trim().split(/\s+/)[0] ?? ''
 			if (!content || content === '/dev/null') {
 				currentFile = null // deleted file
@@ -183,7 +183,7 @@ export function parseGitDiff(diff: string): Map<string, number[]> {
 			}
 			continue
 		}
-		if (line.startsWith('---')) continue // old-file header; path comes from +++
+		if (line.startsWith('--- ')) continue // old-file header; path comes from +++
 		const hunk = line.match(hunkRe)
 		if (hunk) {
 			newLine = parseInt(hunk[1], 10)

@@ -351,6 +351,24 @@ describe('parseGitDiff', () => {
 		const diff = ['diff --git a/src/x.ts b/src/x.ts', '--- a/src/x.ts', '+++ b/src/x.ts', '@@ -3 +3 @@', '+changed three'].join('\n')
 		expect(parseGitDiff(diff).get('src/x.ts')).toEqual([3])
 	})
+
+	it('counts added lines whose own content begins with ++ (not a file header)', () => {
+		// An added line like "++counter;" is emitted by git as "+++counter;".
+		// It must NOT be swallowed as a "+++ b/path" file header — otherwise the
+		// modified line is silently dropped, producing a false-negative in a
+		// merge-blocking gate. git always emits a trailing space after +++/---.
+		const diff = [
+			'diff --git a/src/x.ts b/src/x.ts',
+			'--- a/src/x.ts',
+			'+++ b/src/x.ts',
+			'@@ -1,2 +1,3 @@',
+			' unchanged',
+			'+let counter = 0',
+			'+++counter;',
+		].join('\n')
+		const m = parseGitDiff(diff)
+		expect(m.get('src/x.ts')).toEqual([2, 3])
+	})
 })
 
 // ---------------------------------------------------------------------------
@@ -537,6 +555,25 @@ describe('checkCoverage', () => {
 		expect(result.exitCode).toBe(0)
 		expect(result.violations).toEqual([])
 	})
+
+	it('exits 2 (fail-closed) when coverage produced zero instrumented files', async () => {
+		// Safety net: if the coverage run yields no SF:/file data at all (compile
+		// error, zero tests matched), the gate MUST refuse to pass silently.
+		const result = await checkCoverage({
+			runCoverage: async () => ({ stdout: '', exitCode: 0 }),
+			runDiff: async () =>
+				[
+					'diff --git a/src/lib/orphan.ts b/src/lib/orphan.ts',
+					'--- a/src/lib/orphan.ts',
+					'+++ b/src/lib/orphan.ts',
+					'@@ -1 +1 @@',
+					'+changed',
+				].join('\n'),
+		})
+		expect(result.exitCode).toBe(2)
+		expect(result.violations).toEqual([])
+		expect(result.modifiedFiles).toEqual(['src/lib/orphan.ts'])
+	})
 })
 
 // ---------------------------------------------------------------------------
@@ -591,6 +628,17 @@ describe('formatReport', () => {
 			exitCode: 0,
 		})
 		expect(out).toContain('coverage test run exited 1')
+	})
+
+	it('reports coverage-data-unavailable on exit code 2', () => {
+		const out = formatReport({
+			violations: [],
+			modifiedFiles: ['src/a.ts'],
+			coverageExitCode: 0,
+			exitCode: 2,
+		})
+		expect(out).toContain('src/a.ts')
+		expect(out).toContain('cannot verify')
 	})
 })
 
