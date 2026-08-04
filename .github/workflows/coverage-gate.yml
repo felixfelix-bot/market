@@ -1,8 +1,18 @@
 name: Coverage Gate
 
-# Diff-aware coverage gate: ensures every line added/modified on a PR is
-# exercised by the unit test suite. Pre-existing untested code is NOT blocked.
-# Powered by scripts/check-coverage.ts (LCOV + git diff cross-reference).
+# Unified self-hosted coverage pipeline (no third-party SaaS / OAuth app):
+#
+#   1. Run the unit suite ONCE with LCOV coverage.
+#   2. DIY diff-aware gate (scripts/check-coverage.ts) — the HARD merge gate.
+#      Reuses the LCOV from step 1 via COVERAGE_LCOV_FILE (no second test run).
+#   3. Render a browsable HTML report from the LCOV (genhtml / lcov).
+#   4. Publish the HTML report to Blossom via nsite (same mechanism as the E2E
+#      dashboard), yielding a public URL reviewers can click.
+#   5. Post an idempotent PR comment + Buzz (#ci) notification carrying the URL.
+#
+# The gate (step 2) is the only step that can fail the job (block merge). The
+# report / publish / comment / Buzz steps are best-effort (continue-on-error) so
+# a transient Blossom or relay outage never blocks a PR.
 
 on:
   pull_request:
@@ -11,6 +21,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write # idempotent coverage-report PR comment
 
 jobs:
   coverage-gate:
@@ -33,12 +44,10 @@ jobs:
       - name: Generate routes
         run: bun run generate-routes
 
-      # Run the gate against the PR's base branch. Coverage comes from the unit
-      # test suite only (integration tests need a relay + currency server and are
-      # excluded, mirroring `test:unit`). Only modified .ts/.tsx lines are gated.
-      - name: Coverage gate (diff-aware, hard)
-        env:
-          COVERAGE_BASE_REF: origin/${{ github.base_ref || 'master' }}
+      # ── 1. Generate LCOV coverage (unit suite — mirrors `test:unit`) ────────
+      # Integration tests need a relay + currency server and are excluded.
+      - name: Generate LCOV coverage
+        id: cov
         run: |
           set -euo pipefail
           UNIT_TESTS="$(
@@ -46,8 +55,93 @@ jobs:
               -type f -name '*.test.ts' ! -name '*.integration.test.ts' \
               | sort | tr '\n' ' '
           )"
-          COVERAGE_TEST_PATHSPEC="$UNIT_TESTS" bun run check-coverage
+          bun test --coverage --coverage-reporter=lcov --coverage-dir=coverage $UNIT_TESTS
 
+      # ── 2. DIY diff-aware gate (HARD) ──────────────────────────────────────
+      # Reuses the LCOV from step 1 (COVERAGE_LCOV_FILE) so the suite runs once.
+      # Only modified .ts/.tsx lines are gated; pre-existing untested code is
+      # never blocked. This step's failure is the only one that blocks merge.
+      - name: Coverage gate (diff-aware, hard)
+        id: gate
+        if: ${{ steps.cov.outcome == 'success' }}
+        env:
+          COVERAGE_BASE_REF: origin/${{ github.base_ref || 'master' }}
+          COVERAGE_LCOV_FILE: coverage/lcov.info
+        run: bun run check-coverage
+
+      # ── 3. Render a browsable HTML report from the LCOV ────────────────────
+      # Everything below is best-effort: a report/publish failure must NEVER
+      # block a merge, so each step continues on error.
+      - name: Install lcov (genhtml)
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends lcov
+
+      - name: Generate HTML coverage report
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: |
+          genhtml coverage/lcov.info \
+            --output-directory=coverage/html \
+            --no-branch-coverage \
+            --ignore-errors=source \
+            --title="Plebeian Market coverage — ${{ github.sha }}"
+
+      # ── 4. Publish the HTML report to Blossom (nsite) ──────────────────────
+      # Mirrors the E2E dashboard publish. Deploys with an EPHEMERAL key so it
+      # works even without CI_ANNOUNCE_NSEC; that secret only signs the
+      # discoverability announcement. Outputs nsite-url.
+      - name: Publish coverage report to nsite
+        id: publish-nsite
+        if: ${{ !cancelled() && hashFiles('coverage/html/index.html') != '' }}
+        continue-on-error: true
+        uses: c03rad0r/plebeian-testing-nsite-actions/.github/actions/publish-nsite@main
+        with:
+          dashboard-dir: coverage/html
+          announce-nsec: ${{ secrets.CI_ANNOUNCE_NSEC }}
+          branch: ${{ github.ref_name }}
+          commit: ${{ github.sha }}
+          # pr-number intentionally omitted: the action's built-in comment says
+          # "E2E test dashboard". We post a coverage-specific comment below.
+
+      # ── 5a. Idempotent PR comment with the report URL ──────────────────────
+      # Re-runs UPDATE the same comment (found via the marker tag) instead of
+      # posting duplicates.
+      - name: Comment coverage report on PR
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && steps.publish-nsite.outputs.nsite-url != '' }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          URL="${{ steps.publish-nsite.outputs.nsite-url }}"
+          GATE_STATUS="${{ steps.gate.outcome }}"
+          PR="${{ github.event.pull_request.number }}"
+          MARKER="<!-- pr-coverage-report -->"
+          case "$GATE_STATUS" in
+            success) EMOJI="✅" ;;
+            failure) EMOJI="🔴" ;;
+            *) EMOJI="🟡" ;;
+          esac
+          BODY=$(cat <<EOF
+          $MARKER
+          $EMOJI **Diff-aware coverage report**: $URL
+
+          - Gate: \`$GATE_STATUS\`
+          - Commit: \`${{ github.sha }}\`
+          - Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EOF
+          )
+          CID=$(gh api "repos/${{ github.repository }}/issues/$PR/comments" \
+            --jq ".[] | select(.body | startswith(\"$MARKER\")) | .id" 2>/dev/null | head -1)
+          if [ -n "$CID" ]; then
+            gh api -X PATCH "repos/${{ github.repository }}/issues/comments/$CID" -f body="$BODY" \
+              || gh pr comment "$PR" --body "$BODY"
+          else
+            gh pr comment "$PR" --body "$BODY"
+          fi
+
+      # ── 5b. Buzz (#ci) notification carrying the report URL ────────────────
       - name: Notify Buzz (#ci)
         if: ${{ !cancelled() }}
         continue-on-error: true
@@ -60,4 +154,5 @@ jobs:
             --status ${{ job.status == 'success' && 'pass' || 'fail' }} \
             --pr ${{ github.event.pull_request.number || '' }} \
             --job "Coverage Gate" \
-            --detail "${{ github.sha }}"
+            --detail "${{ github.sha }}" \
+            --url "${{ steps.publish-nsite.outputs.nsite-url }}"
