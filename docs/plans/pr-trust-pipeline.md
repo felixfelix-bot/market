@@ -126,7 +126,63 @@ deploys via the ephemeral key — only the signed announcement is skipped.)
 - **What:** AST-level diff analysis for function-level coverage enforcement
 - **Tool:** TypeScript compiler API (`ts-morph`) to parse changed files, identify which functions/methods were modified, and map them to test coverage
 - **Advantage:** "This function was changed but no test calls it" (more precise than line-level)
-- **Status:** Design phase. Implement after 1A is validated and merged.
+- **Status:** Design phase. Implement after 1A is validated and merged. Largely
+  superseded in signal quality by Phase 1D mutation testing (below), which catches
+  the "test calls the function but asserts nothing" case that function-level
+  coverage still misses.
+
+### Phase 1D — Mutation Testing (Stryker, diff-scoped) (IMPLEMENTED)
+
+**Status:** Implemented on `feat/pr-trust-pipeline`. WARNING-ONLY — a low
+mutation score never blocks merge. Stryker mutates the production code changed in
+the PR and checks whether the unit suite catches each mutation. This is the only
+coverage metric that resists the **"touch a function without asserting"** gaming
+attack: a test that merely calls a function (100% line/branch/AST coverage) yields
+0% mutation score if no assertion fails when the code is mutated.
+
+**Why mutation testing, not just more AST coverage:** line-level (Phase 1A) and
+function-level (Phase 1C) coverage are both gameable — a test that calls a
+function but asserts nothing gets full coverage. Stryker flips the question from
+"was this line executed?" to "would a change here be caught?", which is strictly
+stronger evidence of test quality.
+
+**What's in `.github/workflows/mutation.yml`:**
+
+1. **Scope** — `scripts/stryker-changed-files.ts` runs `git diff --name-only` vs
+   the base ref and filters to mutable `.ts`/`.tsx` source files (drops tests,
+   `.d.ts`, `e2e/`, generated, `node_modules/`). If nothing mutable changed, the
+   job exits 0 immediately.
+2. **Mutate** — a runtime config (`stryker.run.json`) is generated from the
+   committed base `stryker.config.json` + the dynamic `mutate` array, then
+   `stryker run` mutates only the changed files.
+3. **Score** — Stryker's `mutation.json` report is parsed into an aggregate score
+   (killed / survived / no-coverage / timeout), excluding `RuntimeError` and
+   `CompileError` from the denominator (matching Stryker's own formula).
+4. **Comment** — `scripts/mutation-comment.ts` renders an idempotent PR comment
+   (marker `<!-- pr-mutation-report -->`) carrying the score, mutated-file list,
+   and a ⚠️ warning when below the 50% break floor. Re-runs update the same
+   comment.
+
+**Thresholds:** `{ high: 80, low: 60, break: 50 }`. Below `break` (50%) the
+comment shows a 🔴 warning. The gate is **never** a hard block today — promotion
+to a required status check is a deliberate later step once the baseline is green.
+
+**Config notes:**
+
+- `coverageAnalysis: "off"` — there is no native Stryker runner for `bun test`, so
+  the built-in `command` runner wraps the full unit suite (inferred pass/fail from
+  the exit code). The command runner reports no per-test coverage, so `perTest` is
+  unavailable; mutation testing still works, just slower (full suite per mutant).
+- The `mutate` array is **not** in `stryker.config.json` — it is injected
+  dynamically per-PR by the scope script. Run via `bun run mutation:diff`, not
+  `stryker run` directly.
+- Stryker requires a **green baseline** (all unit tests pass on unmutated code)
+  before it can mutation-test. If any pre-existing test fails, Stryker exits early
+  without writing a report; the warning-only design surfaces this as a "no
+  mutants" comment rather than blocking.
+
+**Local run:** `bun run mutation:diff` (uses `origin/master` as the base ref;
+override with `MUTATION_BASE_REF`). Render-only: `bun run mutation:comment`.
 
 ---
 
