@@ -10,6 +10,7 @@
 ## Problem Statement
 
 AI compresses implementation from weeks to hours. But the review loop still takes days because:
+
 1. No coverage enforcement — reviewers can't trust that code is tested
 2. No visual proof — reviewers can't see what the feature does without checking out the branch
 3. No live preview — reviewers can't click through without local setup
@@ -32,6 +33,7 @@ AI compresses implementation from weeks to hours. But the review loop still take
 - **Scope:** Only files changed in the diff. Only lines modified (added/changed). Pre-existing untested code is NOT blocked.
 
 **Files to create:**
+
 1. `scripts/check-coverage.ts` — Bun script that:
    - Runs `git diff origin/master...HEAD --name-only` to get changed files
    - Filters to `.ts/.tsx` files in `src/` (not tests, not config, not e2e)
@@ -45,6 +47,7 @@ AI compresses implementation from weeks to hours. But the review loop still take
 3. `.github/workflows/coverage-gate.yml` — CI action that runs the same check
 
 **Validation criteria:**
+
 - Hook blocks push when a new function has no test
 - Hook passes when all modified code is tested
 - Hook does NOT block on pre-existing untested code
@@ -94,9 +97,37 @@ Build on `c03rad0r/plebeian-testing-nsite-actions` — already 90% done.
    - Other specs keep existing `retain-on-failure` behavior
 
 **Validation criteria:**
+
 - Video plays in the nsite dashboard
 - PR comment contains clickable link to dashboard
 - Dashboard shows pass/fail status, screenshots, AND video for each test
+
+### Layer 2c — Wiring Status (complete)
+
+**What landed on `feat/pr-trust-pipeline`:**
+
+1. **Playwright JSON reporter** (`e2e/playwright.config.ts`) — CI now emits a JSON
+   report to `test-results/results.json` alongside the `github` reporter. This is
+   the structured input the `render-dashboard` action needs (per-test statuses,
+   attachments, durations).
+2. **`render-dashboard` + `publish-nsite` wired into `e2e-pricing`**
+   (`.github/workflows/e2e.yml`) — after the test run and artifact upload, the
+   dashboard is rendered from `test-results/` and published to nsite via Blossom
+   using the `CI_ANNOUNCE_NSEC` secret. Both steps run with `if: !cancelled()` so
+   a failing suite still produces a dashboard showing the failure.
+3. **Idempotent PR comment** (`scripts/e2e-pr-comment.ts`) — a pure
+   `formatComment()` formatter (15 unit tests) plus a `main()` that finds an
+   existing comment by a hidden marker tag and **updates** it rather than posting
+   a duplicate. The `publish-nsite` action's built-in one-line comment is
+   suppressed (no `pr-number` passed) so the richer comment is the single source.
+4. **Buzz notify fix** — the pricing job's Buzz step referenced a non-existent
+   `steps.test.outcome`; corrected to `steps.e2e-test.outcome`.
+
+**Remaining for full Layer 2 (separate tasks):**
+
+- Task 2A (Playwright `video: 'on'` / `screenshot: 'on'`) — not yet on this branch.
+- Task 2B/2D (`render-dashboard` `<video>` support + nsite DNS hardening) —
+  tracked on `c03rad0r/plebeian-testing-nsite-actions`.
 
 ---
 
@@ -109,6 +140,7 @@ Build on `c03rad0r/plebeian-testing-nsite-actions` — already 90% done.
 Use existing `plebeian-market-e2e-infra` Ansible playbooks.
 
 **Architecture:**
+
 - GitHub Action triggers on PR push
 - Action SSHes into test VPS, runs `deploy-pr` Ansible playbook
 - Playbook creates Docker containers: market app + relay on per-PR ports
@@ -118,11 +150,13 @@ Use existing `plebeian-market-e2e-infra` Ansible playbooks.
 - Separate teardown job runs after 30min TTL (or on PR close/merge)
 
 **Files to create:**
+
 1. `.github/workflows/preview-deploy.yml` — triggers on PR, deploys, posts URL
 2. `.github/actions/teardown-preview/` — composite action for cleanup
 3. Wire to existing `plebeian-market-e2e-infra/ansible/playbooks/deploy-pr.yml`
 
 **Infrastructure (pending from Felix):**
+
 - Fresh VPS on Sovereign Hybrid Compute (Felix provisioning)
 - npub-gated access for security
 - Domain: `test-market.orangesync.tech` (or new domain for Sovereign VPS)
@@ -138,17 +172,17 @@ Use existing `plebeian-market-e2e-infra` Ansible playbooks.
 
 ## Implementation Order
 
-| Priority | Task | Depends on | Estimated effort |
-|----------|------|-----------|-----------------|
-| P0 | 1A: Bun coverage hook + CI | Nothing | 1 kanban task |
-| P0 | 2A: Video in playwright config | Nothing | 1 kanban task |
-| P0 | 2B: Extend render-dashboard for video | 2A | 1 kanban task |
-| P0 | 2C: Wire e2e.yml for dashboard publish | 2B, CI_ANNOUNCE_NSEC | 1 kanban task |
-| P0 | 2D: Fix nsite DNS bug | 2B | 1 kanban task |
-| P1 | 3A: Preview deploy GitHub Action | VPS from Felix | 2 kanban tasks |
-| P1 | 3A: Preview teardown automation | 3A deploy working | 1 kanban task |
-| P2 | 1B: Custom diff-aware coverage | 1A validated | 2 kanban tasks |
-| P3 | 3B: Firecracker VMs | 3A validated, eCash | Design phase |
+| Priority | Task                                   | Depends on           | Estimated effort |
+| -------- | -------------------------------------- | -------------------- | ---------------- |
+| P0       | 1A: Bun coverage hook + CI             | Nothing              | 1 kanban task    |
+| P0       | 2A: Video in playwright config         | Nothing              | 1 kanban task    |
+| P0       | 2B: Extend render-dashboard for video  | 2A                   | 1 kanban task    |
+| P0       | 2C: Wire e2e.yml for dashboard publish | 2B, CI_ANNOUNCE_NSEC | 1 kanban task    |
+| P0       | 2D: Fix nsite DNS bug                  | 2B                   | 1 kanban task    |
+| P1       | 3A: Preview deploy GitHub Action       | VPS from Felix       | 2 kanban tasks   |
+| P1       | 3A: Preview teardown automation        | 3A deploy working    | 1 kanban task    |
+| P2       | 1B: Custom diff-aware coverage         | 1A validated         | 2 kanban tasks   |
+| P3       | 3B: Firecracker VMs                    | 3A validated, eCash  | Design phase     |
 
 ---
 
@@ -167,28 +201,28 @@ Every task in this plan must pass:
 
 ## Worker Profile Assignments
 
-| Task | Worker profile | Model | Rationale |
-|------|---------------|-------|-----------|
-| Coverage hook script (1A) | worker-balloon | glm-5.2 | Code writing, TS/Bun |
-| Playwright config change (2A) | worker-balloon | glm-5.2 | Config edit |
-| render-dashboard video support (2B) | worker-balloon | glm-5.2 | Python + HTML |
-| nsite DNS fix (2D) | worker-balloon | glm-5.2 | Shell script fix |
-| e2e.yml wiring (2C) | worker-balloon | glm-5.2 | YAML workflow |
-| Preview deploy Action (3A) | worker-balloon | glm-5.2 | YAML + Ansible |
-| Custom diff coverage (1B) | worker-balloon | glm-5.2 | TS compiler API |
+| Task                                | Worker profile | Model   | Rationale            |
+| ----------------------------------- | -------------- | ------- | -------------------- |
+| Coverage hook script (1A)           | worker-balloon | glm-5.2 | Code writing, TS/Bun |
+| Playwright config change (2A)       | worker-balloon | glm-5.2 | Config edit          |
+| render-dashboard video support (2B) | worker-balloon | glm-5.2 | Python + HTML        |
+| nsite DNS fix (2D)                  | worker-balloon | glm-5.2 | Shell script fix     |
+| e2e.yml wiring (2C)                 | worker-balloon | glm-5.2 | YAML workflow        |
+| Preview deploy Action (3A)          | worker-balloon | glm-5.2 | YAML + Ansible       |
+| Custom diff coverage (1B)           | worker-balloon | glm-5.2 | TS compiler API      |
 
 ---
 
 ## Secrets / Config Needed (from Felix)
 
-| Item | Status | Purpose |
-|------|--------|---------|
-| Sovereign Hybrid Compute VPS | PENDING — Felix provisioning in 30min | Preview deploy target |
-| CI_ANNOUNCE_NSEC | PENDING — Felix setting up | nsite dashboard publish |
-| Sovereign npub key | GENERATED — nsec1c3vtt0s... (see below) | VPS auth/access |
-| Cloudflare API token | EXISTING — in tollgate-infrastructure-kit .env | DNS for subdomains |
-| Blossom server | EXISTING — blossom.orangesync.tech | Video/upload hosting |
-| Test VPS SSH key | PENDING — need from Felix | GitHub Action → VPS |
+| Item                         | Status                                         | Purpose                 |
+| ---------------------------- | ---------------------------------------------- | ----------------------- |
+| Sovereign Hybrid Compute VPS | PENDING — Felix provisioning in 30min          | Preview deploy target   |
+| CI_ANNOUNCE_NSEC             | PENDING — Felix setting up                     | nsite dashboard publish |
+| Sovereign npub key           | GENERATED — nsec1c3vtt0s... (see below)        | VPS auth/access         |
+| Cloudflare API token         | EXISTING — in tollgate-infrastructure-kit .env | DNS for subdomains      |
+| Blossom server               | EXISTING — blossom.orangesync.tech             | Video/upload hosting    |
+| Test VPS SSH key             | PENDING — need from Felix                      | GitHub Action → VPS     |
 
 ### Generated Sovereign Hybrid Compute Bot Key
 
@@ -200,12 +234,12 @@ npub: `npub1nt0gkyl2vah03z9sg07n62fd7cp6q97qhk3mhrmrnxk4xvjqs07q62qfgv`
 
 ## Repository Strategy
 
-| Repo | Role | Changes |
-|------|------|---------|
-| `felixfelix-bot/market` (branch: `feat/pr-trust-pipeline`) | Main work branch | Coverage hook, e2e.yml changes, preview-deploy workflow |
-| `c03rad0r/plebeian-testing-nsite-actions` | Dashboard publishing | Video support, DNS fix |
-| `plebeian-market-e2e-infra` | Ansible deploy playbooks | Already built, just needs GitHub Actions wiring |
-| `tollgate-infrastructure-kit` | VPS infra reference | Read-only — reference for Ansible patterns |
+| Repo                                                       | Role                     | Changes                                                 |
+| ---------------------------------------------------------- | ------------------------ | ------------------------------------------------------- |
+| `felixfelix-bot/market` (branch: `feat/pr-trust-pipeline`) | Main work branch         | Coverage hook, e2e.yml changes, preview-deploy workflow |
+| `c03rad0r/plebeian-testing-nsite-actions`                  | Dashboard publishing     | Video support, DNS fix                                  |
+| `plebeian-market-e2e-infra`                                | Ansible deploy playbooks | Already built, just needs GitHub Actions wiring         |
+| `tollgate-infrastructure-kit`                              | VPS infra reference      | Read-only — reference for Ansible patterns              |
 
 **Workflow:** All changes go to `feat/pr-trust-pipeline` on felixfelix-bot/market. Test CI on the fork. Once validated, PR upstream to PlebeianApp/market.
 
