@@ -1,0 +1,63 @@
+name: Coverage Gate
+
+# Diff-aware coverage gate: ensures every line added/modified on a PR is
+# exercised by the unit test suite. Pre-existing untested code is NOT blocked.
+# Powered by scripts/check-coverage.ts (LCOV + git diff cross-reference).
+
+on:
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  coverage-gate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (full history for accurate diff)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate routes
+        run: bun run generate-routes
+
+      # Run the gate against the PR's base branch. Coverage comes from the unit
+      # test suite only (integration tests need a relay + currency server and are
+      # excluded, mirroring `test:unit`). Only modified .ts/.tsx lines are gated.
+      - name: Coverage gate (diff-aware, hard)
+        env:
+          COVERAGE_BASE_REF: origin/${{ github.base_ref || 'master' }}
+        run: |
+          set -euo pipefail
+          UNIT_TESTS="$(
+            find contextvm src/queries/__tests__ src/lib/__tests__ scripts \
+              -type f -name '*.test.ts' ! -name '*.integration.test.ts' \
+              | sort | tr '\n' ' '
+          )"
+          COVERAGE_TEST_PATHSPEC="$UNIT_TESTS" bun run check-coverage
+
+      - name: Notify Buzz (#ci)
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        env:
+          CI_BUZZ_RELAY_URL: ${{ secrets.CI_BUZZ_RELAY_URL }}
+          CI_BUZZ_PRIVATE_KEY: ${{ secrets.CI_BUZZ_PRIVATE_KEY }}
+        run: |
+          chmod +x scripts/buzz-notify.sh
+          ./scripts/buzz-notify.sh \
+            --status ${{ success() && 'pass' || 'fail' }} \
+            --pr ${{ github.event.pull_request.number || '' }} \
+            --job "Coverage Gate" \
+            --detail "${{ github.sha }}"
