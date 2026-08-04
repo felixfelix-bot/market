@@ -11,7 +11,10 @@ export default defineConfig({
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 2 : 0,
 	workers: 1,
-	reporter: process.env.CI ? 'github' : 'list',
+	// In CI, emit the 'github' reporter for log annotations AND a 'json' report
+	// (written to test-results/results.json) so the render-dashboard action can
+	// build the nsite dashboard with per-test statuses, screenshots, and counts.
+	reporter: process.env.CI ? [['github'], ['json', { outputFile: 'test-results/results.json' }]] : 'list',
 	testMatch: /.*\.spec\.ts$/,
 
 	use: {
