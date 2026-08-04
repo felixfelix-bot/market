@@ -134,6 +134,39 @@ jobs:
           echo "=== Dev server logs ==="
           cat /tmp/devserver.log 2>/dev/null || echo "(no dev server log)"
 
+      - name: Normalize video FPS to ~12 (WebM, 720p)
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: |
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            echo "ffmpeg not installed; skipping FPS normalization (WebM stays at browser-capture rate)."
+            exit 0
+          fi
+          # Video is already WebM at 720p (Desktop Chrome viewport 1280x720).
+          # Re-encode to 12 FPS to cap artifact size (target: 10-15 FPS).
+          shopt -s nullglob globstar
+          for f in test-results/**/*.webm; do
+            tmp="${f%.webm}.12fps.webm"
+            if ffmpeg -y -i "$f" -r 12 "$tmp" >/dev/null 2>&1; then
+              mv "$tmp" "$f"
+            else
+              rm -f "$tmp"
+              echo "ffmpeg failed for $f; keeping original"
+            fi
+          done
+
+      - name: Upload Playwright trace + video + screenshots (visual proof)
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-visual-proof-pricing
+          path: |
+            test-results/**/trace.zip
+            test-results/**/*.webm
+            test-results/**/*.png
+          retention-days: 14
+          if-no-files-found: ignore
+
       - name: Upload pricing test results
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
@@ -325,6 +358,37 @@ jobs:
           echo ""
           echo "=== Dev server logs ==="
           cat /tmp/devserver.log 2>/dev/null || echo "(no dev server log)"
+
+      - name: Normalize video FPS to ~12 (WebM, 720p)
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: |
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            echo "ffmpeg not installed; skipping FPS normalization (WebM stays at browser-capture rate)."
+            exit 0
+          fi
+          shopt -s nullglob globstar
+          for f in test-results/**/*.webm; do
+            tmp="${f%.webm}.12fps.webm"
+            if ffmpeg -y -i "$f" -r 12 "$tmp" >/dev/null 2>&1; then
+              mv "$tmp" "$f"
+            else
+              rm -f "$tmp"
+              echo "ffmpeg failed for $f; keeping original"
+            fi
+          done
+
+      - name: Upload Playwright trace + video + screenshots (visual proof)
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-visual-proof-full
+          path: |
+            test-results/**/trace.zip
+            test-results/**/*.webm
+            test-results/**/*.png
+          retention-days: 14
+          if-no-files-found: ignore
 
       - name: Upload full test results
         uses: actions/upload-artifact@v4

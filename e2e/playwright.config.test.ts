@@ -57,6 +57,13 @@ describe('playwright.config @happy-path video routing', () => {
 		expect(config.retries).toBe(process.env.CI ? 2 : 0)
 	})
 
+	test('CI records a trace on every run; locally keeps on-first-retry (Layer 2a)', () => {
+		// CI sets trace 'on' so the interactive trace viewer (DOM scrub, network,
+		// console) is uploaded as a workflow artifact for offline debugging.
+		// Locally the cheaper on-first-retry mode is retained.
+		expect(config.use?.trace).toBe(process.env.CI ? 'on' : 'on-first-retry')
+	})
+
 	test('every project still targets chromium only (no new browsers introduced)', () => {
 		for (const p of config.projects ?? []) {
 			const deviceName = (p.use as { browserName?: string })?.browserName

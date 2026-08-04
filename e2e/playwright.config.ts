@@ -2,8 +2,20 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig, devices } from '@playwright/test'
 import { TEST_APP_PRIVATE_KEY, RELAY_URL, BASE_URL, TEST_PORT } from './test-config'
+import { getRecordingScopeSync } from './lib/diff-specs'
 
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+
+// Resolve which specs get a FULL recording (video + screenshots) for this run.
+// In CI this is diff-aware: the @happy-path baseline UNION the specs whose code
+// paths intersect the PR diff (see e2e/lib/diff-specs.ts). Locally it collapses
+// to the static @happy-path pattern with no git side effects, keeping
+// `bun test e2e/playwright.config.test.ts` hermetic. Logged once for CI clarity.
+const recordingScope = getRecordingScopeSync()
+if (process.env.CI) {
+	// eslint-disable-next-line no-console
+	console.log(`[playwright.config] recording scope: ${recordingScope.reason}`)
+}
 
 export default defineConfig({
 	testDir: './tests',
@@ -17,21 +29,22 @@ export default defineConfig({
 	reporter: process.env.CI ? [['github'], ['json', { outputFile: 'test-results/results.json' }]] : 'list',
 	testMatch: /.*\.spec\.ts$/,
 
-	// trace is shared by every project; video + screenshot are decided per
-	// project so @happy-path specs capture a full recording while the bulk
-	// regression suite stays on the cheap retain-on-failure defaults.
+	// trace is shared by every project. CI always records a trace (the
+	// interactive trace viewer — DOM scrub, network, console — is uploaded as a
+	// workflow artifact so reviewers can debug any failure without a checkout).
+	// Locally keep the cheaper on-first-retry behaviour.
 	use: {
 		baseURL: BASE_URL,
-		trace: 'on-first-retry',
+		trace: process.env.CI ? 'on' : 'on-first-retry',
 	},
 
 	projects: [
 		{
-			// Default suite: every spec EXCEPT those tagged @happy-path.
+			// Default suite: every spec NOT in the recording scope.
 			// Keeps the retain-on-failure / only-on-failure capture the trust
 			// pipeline relies on for bulk regression runs.
 			name: 'chromium',
-			grepInvert: /@happy-path/,
+			grepInvert: recordingScope.pattern,
 			use: {
 				...devices['Desktop Chrome'],
 				screenshot: 'only-on-failure',
@@ -39,12 +52,13 @@ export default defineConfig({
 			},
 		},
 		{
-			// Happy-path specs (title contains the @happy-path tag) record a
-			// full video and screenshots on every run, giving reviewers visual
-			// proof of the feature working that the nsite dashboard surfaces in
-			// the PR. See docs/plans/pr-trust-pipeline.md (Layer 2).
+			// Recording suite (@happy-path ∪ diff-affected): records a full video
+			// and screenshots on every run, giving reviewers visual proof of the
+			// feature working that the nsite dashboard surfaces in the PR. Video
+			// records at the Desktop Chrome viewport (1280×720 = 720p) as WebM.
+			// See docs/plans/pr-trust-pipeline.md (Layer 2) and e2e/lib/diff-specs.ts.
 			name: 'chromium-happy-path',
-			grep: /@happy-path/,
+			grep: recordingScope.pattern,
 			use: {
 				...devices['Desktop Chrome'],
 				screenshot: 'on',
