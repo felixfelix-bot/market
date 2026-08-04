@@ -80,7 +80,61 @@ file covered only by integration tests would show as uncovered — mitigated by
 the `coverageExitCode` note in the report. Phase 1B (function-level) may refine
 this.
 
-### Phase 1B — Custom Diff-Aware Coverage (layer on top, after 1A validated)
+### Phase 1B — Codecov Diff-Aware Gate (IMPLEMENTED)
+
+**Status:** Implemented on `feat/pr-trust-pipeline`. Replaces the DIY gate as
+the PR-facing source of truth for diff coverage; Phase 1A's script stays as a
+local pre-push soft gate. Shipped:
+
+- `codecov.yml` — repo-root config.
+- `.github/workflows/coverage.yml` — collects LCOV from `bun test --coverage`
+  and uploads to Codecov.
+
+**How it works:**
+
+1. On every PR/push, `coverage.yml` runs the unit suite with
+   `--coverage-reporter=lcov` (same instrumented output Phase 1A uses).
+2. The `codecov/codecov-action@v5` step uploads `coverage/lcov.info` to Codecov.
+3. Codecov posts a PR comment with per-file diff coverage
+   (`layout: diff, files, tree`).
+4. Two status checks:
+   - **project** — informational floor (`target: auto`, `informational: true`);
+     never blocks, just shows trend.
+   - **patch** — the diff-aware gate (`target: 100%`, `informational: false`):
+     every NEW/MODIFIED line must be covered. This is the "modified-file
+     ratchet" — touching code can only raise coverage, never lower it.
+
+**File scope (per FILE INCLUSION RULES):**
+
+- Include: `src/**/*.{ts,tsx,js}`
+- Exclude (`coverage.ignore`): `e2e/**`, `**/*.test.ts`, `**/*.spec.ts`,
+  `**/*.d.ts`, `src/generated/**`, and `contextvm/**` (non-src product tree,
+  per the src-only rule).
+- NOTE: `contextvm/` changes are therefore NOT gated by Codecov. Phase 1A's DIY
+  gate (still active) does cover contextvm, so contextvm remains gated until
+  `coverage-gate.yml` is retired. To also gate contextvm in Codecov, remove
+  `contextvm/**` from `coverage.ignore`.
+
+**Relationship to Phase 1A (DIY gate):**
+
+- Phase 1A (`scripts/check-coverage.ts` + `coverage-gate.yml`) stays wired as
+  the local pre-push soft gate and the CI hard gate.
+- Phase 1B (Codecov) adds hosted diff-coverage reporting plus a patch status
+  check that can be made a required branch-protection rule.
+- Once the Codecov patch status is configured as required in branch protection
+  and the app is confirmed posting, `coverage-gate.yml` becomes redundant and
+  can be retired (the DIY script stays for local pre-push).
+
+**Manual steps required (human / GitHub admin):**
+
+1. Install the Codecov GitHub App on `felixfelix-bot/market` (and/or
+   `PlebeianApp/market` upstream).
+2. Add a `CODECOV_TOKEN` repo secret if the repo is private (public forks upload
+   tokenlessly).
+3. Make the `patch` status check required in branch-protection rules for
+   `master`/`main`.
+
+### Phase 1C — Custom Diff-Aware Coverage (function-level, after 1A validated)
 
 - **What:** AST-level diff analysis for function-level coverage enforcement
 - **Tool:** TypeScript compiler API (`ts-morph`) to parse changed files, identify which functions/methods were modified, and map them to test coverage

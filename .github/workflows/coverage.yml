@@ -1,0 +1,74 @@
+name: Coverage (Codecov)
+
+# Collects unit-test coverage and uploads it to Codecov for diff-aware PR
+# reporting. The codecov.yml at the repo root configures the patch (diff) status
+# check (the gate) and the informational project status.
+#
+# Requires the Codecov GitHub App to be installed on the repo (see
+# docs/plans/pr-trust-pipeline.md, Layer 1). For public repos the upload is
+# tokenless; for private repos add a `CODECOV_TOKEN` secret and pass it via
+# `token: ${{ secrets.CODECOV_TOKEN }}` in the upload step.
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (full history for accurate patch diff)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate routes
+        run: bun run generate-routes
+
+      # Run the unit suite with LCOV coverage. Mirrors `test:unit` (contextvm +
+      # src unit tests; integration tests need a relay + currency server and are
+      # excluded). codecov.yml ignores non-src trees, so only src/ coverage is
+      # reported despite contextvm being exercised here.
+      - name: Run unit tests with LCOV coverage
+        run: |
+          bun test --coverage --coverage-reporter=lcov --coverage-dir=coverage \
+            $(find contextvm src/queries/__tests__ src/lib/__tests__ \
+              -type f -name '*.test.ts' ! -name '*.integration.test.ts' | sort)
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false # the gate is the patch status check, not the upload
+          verbose: true
+
+      - name: Notify Buzz (#ci)
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        env:
+          CI_BUZZ_RELAY_URL: ${{ secrets.CI_BUZZ_RELAY_URL }}
+          CI_BUZZ_PRIVATE_KEY: ${{ secrets.CI_BUZZ_PRIVATE_KEY }}
+        run: |
+          chmod +x scripts/buzz-notify.sh
+          ./scripts/buzz-notify.sh \
+            --status ${{ success() && 'pass' || 'fail' }} \
+            --pr ${{ github.event.pull_request.number || '' }} \
+            --job "Coverage (Codecov)" \
+            --detail "${{ github.sha }}"
