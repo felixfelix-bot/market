@@ -17,17 +17,39 @@ export default defineConfig({
 	reporter: process.env.CI ? [['github'], ['json', { outputFile: 'test-results/results.json' }]] : 'list',
 	testMatch: /.*\.spec\.ts$/,
 
+	// trace is shared by every project; video + screenshot are decided per
+	// project so @happy-path specs capture a full recording while the bulk
+	// regression suite stays on the cheap retain-on-failure defaults.
 	use: {
 		baseURL: BASE_URL,
 		trace: 'on-first-retry',
-		screenshot: 'only-on-failure',
-		video: 'retain-on-failure',
 	},
 
 	projects: [
 		{
+			// Default suite: every spec EXCEPT those tagged @happy-path.
+			// Keeps the retain-on-failure / only-on-failure capture the trust
+			// pipeline relies on for bulk regression runs.
 			name: 'chromium',
-			use: { ...devices['Desktop Chrome'] },
+			grepInvert: /@happy-path/,
+			use: {
+				...devices['Desktop Chrome'],
+				screenshot: 'only-on-failure',
+				video: 'retain-on-failure',
+			},
+		},
+		{
+			// Happy-path specs (title contains the @happy-path tag) record a
+			// full video and screenshots on every run, giving reviewers visual
+			// proof of the feature working that the nsite dashboard surfaces in
+			// the PR. See docs/plans/pr-trust-pipeline.md (Layer 2).
+			name: 'chromium-happy-path',
+			grep: /@happy-path/,
+			use: {
+				...devices['Desktop Chrome'],
+				screenshot: 'on',
+				video: 'on',
+			},
 		},
 	],
 

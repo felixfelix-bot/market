@@ -184,7 +184,7 @@ test.use({ scenario: 'base' })
 test.describe('Product Page - View Only (Unauthenticated)', () => {
 	// --- SocialInteractions Tests ---
 
-	test('should display correct product details', async ({ unauthenticatedPage }) => {
+	test('should display correct product details @happy-path', async ({ unauthenticatedPage }) => {
 		if (!currentProductId) throw new Error('Product not seeded')
 
 		await unauthenticatedPage.goto(`/products/${currentProductId}`)
