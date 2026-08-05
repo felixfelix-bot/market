@@ -91,6 +91,33 @@ jobs:
       # Mirrors the E2E dashboard publish. Deploys with an EPHEMERAL key so it
       # works even without CI_ANNOUNCE_NSEC; that secret only signs the
       # discoverability announcement. Outputs nsite-url.
+      #
+      # The publish-nsite action's publish.sh needs `nak` for ephemeral keypair
+      # generation. The coverage job does NOT need nak for anything else, so we
+      # install it here (best-effort — continue-on-error) right before publish.
+      # Without nak, key generation falls back to raw hex which nak key public
+      # cannot parse, yielding "Could not derive public key from ephemeral nsec".
+      - name: Setup Go
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        uses: actions/setup-go@v5
+        with:
+          go-version: '>=1.22'
+
+      - name: Install nak
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: |
+          # Pinned to b6568388 — see e2e.yml for the upstream go.mod regression
+          # rationale (fiatjaf/nostr replace directive breaks CI builds).
+          git clone https://github.com/fiatjaf/nak.git /tmp/nak
+          cd /tmp/nak
+          git checkout b65683886b58382890888fbdda90e5c2129df488
+          GOBIN="$(go env GOPATH)/bin"
+          mkdir -p "$GOBIN"
+          go build -o "$GOBIN/nak" .
+          echo "nak installed at: $(which nak)"
+
       - name: Publish coverage report to nsite
         id: publish-nsite
         if: ${{ !cancelled() && hashFiles('coverage/html/index.html') != '' }}
