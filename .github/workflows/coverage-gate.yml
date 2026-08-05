@@ -52,6 +52,8 @@ jobs:
         run: |
           set -euo pipefail
           UNIT_TESTS="$(
+            # NOTE: This mirrors `test:unit` in package.json plus `scripts/`.
+            # If test:unit scope changes, update both to prevent coverage drift.
             find contextvm src/queries/__tests__ src/lib/__tests__ scripts \
               -type f -name '*.test.ts' ! -name '*.integration.test.ts' \
               | sort | tr '\n' ' '
