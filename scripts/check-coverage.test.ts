@@ -396,6 +396,12 @@ describe('isCheckableFile', () => {
 		expect(isCheckableFile('node_modules/foo/bar.ts')).toBe(false)
 	})
 
+	it('excludes scripts (CI/build tooling)', () => {
+		expect(isCheckableFile('scripts/check-coverage.ts')).toBe(false)
+		expect(isCheckableFile('scripts/buzz-notify.sh')).toBe(false)
+		expect(isCheckableFile('scripts/__tests__/foo.test.ts')).toBe(false)
+	})
+
 	it('excludes non-ts files', () => {
 		expect(isCheckableFile('README.md')).toBe(false)
 		expect(isCheckableFile('scripts/foo.sh')).toBe(false)

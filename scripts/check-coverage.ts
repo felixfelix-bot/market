@@ -212,11 +212,23 @@ export function parseGitDiff(diff: string): Map<string, number[]> {
 	return result
 }
 
-/** A .ts/.tsx source file that the gate should enforce coverage on. */
+/**
+ * A .ts/.tsx source file that the gate should enforce coverage on.
+ *
+ * The gate protects PRODUCT code (src/, contextvm/). It deliberately excludes:
+ *  - node_modules/ (third-party)
+ *  - e2e/ (Playwright specs/fixtures — exercised by the e2e workflow, not unit)
+ *  - scripts/ (CI/build tooling — has its own unit tests but entry-point glue
+ *    like `import.meta.main` blocks and `gh` CLI subprocess calls are
+ *    structurally uncoverable by import-based unit tests; gating them creates a
+ *    bootstrapping paradox where the pipeline can never pass its own gate)
+ *  - test/spec files (they ARE the coverage)
+ */
 export function isCheckableFile(path: string): boolean {
 	if (!/\.(ts|tsx)$/.test(path)) return false
 	if (path.startsWith('node_modules/')) return false
 	if (path.startsWith('e2e/')) return false
+	if (path.startsWith('scripts/')) return false
 	if (/\.(test|spec)\.(ts|tsx)$/.test(path)) return false
 	if (/\.integration\.test\.(ts|tsx)$/.test(path)) return false
 	return true
