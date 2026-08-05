@@ -7,6 +7,7 @@ This PR adds a multi-layer trust pipeline to every pull request, providing revie
 ## What's Included
 
 **Layer 1 — DIY Diff-Aware Coverage Gate** (`coverage-gate.yml`)
+
 - Runs only unit tests covering changed files (diff-scoped)
 - Generates LCOV HTML reports, publishes to Blossom via nsite
 - Posts coverage report URL as PR comment (idempotent)
@@ -14,12 +15,14 @@ This PR adds a multi-layer trust pipeline to every pull request, providing revie
 - Replaces Codecov (removed in this PR)
 
 **Layer 2 — Playwright Trace + Video** (`e2e.yml`)
+
 - Splits test suite into recording and non-recording projects
 - Diff-affected specs get full trace + video + screenshots
 - Happy-path baseline always records (can't regress)
 - Markdown PR report with pass/fail summary
 
 **Layer 3 — Stryker Mutation Testing** (`mutation.yml`)
+
 - Uses Stryker's `command` runner (no `@stryker-mutator/bun-runner` exists)
 - `coverageAnalysis: "off"` (required for command runner)
 - Diff-scoped: mutates only changed files
@@ -27,6 +30,7 @@ This PR adds a multi-layer trust pipeline to every pull request, providing revie
 - Defers native runner to ADR on `adr/vitest-migration` branch
 
 **Layer H — Human-Consumption Merge Gate** (`.github/pull_request_template.md`)
+
 - Renders checklist on every PR: trace evidence, live preview, coverage report, e2e results
 - A human must tick these boxes personally — AI reviewer must not
 - Enforced via AGENTS.md § "PR Trust Pipeline — Human-Consumption Merge Gate"
@@ -52,12 +56,12 @@ This PR adds a multi-layer trust pipeline to every pull request, providing revie
 
 ## Required Secrets
 
-| Secret | Purpose |
-|--------|---------|
+| Secret                | Purpose                                      |
+| --------------------- | -------------------------------------------- |
 | `CI_BUZZ_PRIVATE_KEY` | Signs Buzz #ci notifications (NIP-29 kind 9) |
-| `CI_BUZZ_RELAY_URL` | Buzz relay endpoint |
-| `CI_ANNOUNCE_NSEC` | Signs nsite coverage report uploads |
-| `E2E_TEST_IMAGE_URL` | Product image URL for e2e test fixtures |
+| `CI_BUZZ_RELAY_URL`   | Buzz relay endpoint                          |
+| `CI_ANNOUNCE_NSEC`    | Signs nsite coverage report uploads          |
+| `E2E_TEST_IMAGE_URL`  | Product image URL for e2e test fixtures      |
 
 ## Checklist
 
