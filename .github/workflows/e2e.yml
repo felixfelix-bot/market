@@ -253,6 +253,7 @@ jobs:
       - name: Publish dashboard to nsite
         id: publish-nsite
         if: ${{ !cancelled() && steps.render-dashboard.outcome == 'success' }}
+        continue-on-error: true # nsite publish is best-effort — never block on Blossom/relay infra
         uses: c03rad0r/plebeian-testing-nsite-actions/.github/actions/publish-nsite@dce2d40977d07ba00ff21273b4b5042ef0103b43
         with:
           dashboard-dir: e2e-dashboard
