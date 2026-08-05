@@ -435,7 +435,7 @@ Every task in this plan must pass:
 | Item                         | Status                                         | Purpose                 |
 | ---------------------------- | ---------------------------------------------- | ----------------------- |
 | Sovereign Hybrid Compute VPS | PENDING — Felix provisioning in 30min          | Preview deploy target   |
-| CI_ANNOUNCE_NSEC             | PENDING — Felix setting up                     | nsite dashboard publish |
+| CI_ANNOUNCE_NSEC             | SET (fork secret)                              | nsite dashboard publish |
 | Sovereign npub key           | GENERATED — nsec1c3vtt0s... (see below)        | VPS auth/access         |
 | Cloudflare API token         | EXISTING — in tollgate-infrastructure-kit .env | DNS for subdomains      |
 | Blossom server               | EXISTING — blossom.orangesync.tech             | Video/upload hosting    |
