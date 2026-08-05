@@ -121,6 +121,18 @@ pre-existing untested code is never blocked.
 **No manual steps required.** (If `CI_ANNOUNCE_NSEC` is unset, the report still
 deploys via the ephemeral key — only the signed announcement is skipped.)
 
+**Step B2 — Parallel multi-server Blossom redundancy (IMPLEMENTED):** The
+`publish-nsite` action's `publish.sh` now passes all 5 Blossom servers as a
+single comma-separated `--servers` list to one `nsyte deploy` call, instead of
+looping through servers sequentially (one `nsyte deploy` per server). nsyte
+already uploads to all servers concurrently within a single deploy (per-server
+concurrency workers, shared scan/compare/publish cycle). The old sequential loop
+was the root cause of the 5–10 minute publish timeouts on large genhtml reports
+(t_26317db1) — each of the 5 iterations re-scanned the entire directory,
+re-compared all files, and re-published nostr events independently. The
+min-success gate (default 2 of 5 servers) is preserved by parsing nsyte's
+"Blossom Server Summary" output for per-server success counts.
+
 ### Phase 1C — Custom Diff-Aware Coverage (function-level, after 1A validated)
 
 - **What:** AST-level diff analysis for function-level coverage enforcement
