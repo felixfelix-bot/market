@@ -266,7 +266,7 @@ jobs:
           # min-success=2 means localhost + any one external is sufficient.
           # Fixes the "Only 1 blossom servers received all files" flake caused
           # by intermittent public Blossom server outages.
-          blossom-servers: 'http://localhost:10547 http://localhost:10548'
+          blossom-servers: 'http://localhost:10547 http://localhost:10548 https://blossom2.orangesync.tech https://blossom1.orangesync.tech https://nostr.download'
           blossom-min-success: '2'
           # pr-number intentionally omitted: the action posts a basic one-line
           # comment of its own. We post a richer, idempotent (update-not-
