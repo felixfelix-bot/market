@@ -26,6 +26,7 @@ permissions:
 jobs:
   coverage-gate:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - name: Checkout (full history for accurate diff)
@@ -135,11 +136,10 @@ jobs:
         id: publish-nsite
         if: ${{ !cancelled() && hashFiles('coverage/html/index.html') != '' }}
         continue-on-error: true
-        # nsyte uploads hundreds of genhtml files; give it real room to succeed
-        # (5→10→20 min progression). continue-on-error keeps a hang non-fatal.
-        # The PR comment below falls back to the GH artifact when this still
-        # times out, so the report is always linked. (t_26317db1)
-        timeout-minutes: 20
+        # nsyte uploads hundreds of genhtml files; give it maximum room.
+        # continue-on-error keeps a hang non-fatal. The PR comment below falls
+        # back to the GH artifact when this still times out. (t_26317db1)
+        timeout-minutes: 30
         uses: c03rad0r/plebeian-testing-nsite-actions/.github/actions/publish-nsite@main
         with:
           dashboard-dir: coverage/html

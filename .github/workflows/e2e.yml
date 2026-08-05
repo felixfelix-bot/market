@@ -18,7 +18,7 @@ jobs:
   e2e-pricing:
     if: github.event_name == 'push' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: read
       pull-requests: write # post idempotent E2E dashboard comment
