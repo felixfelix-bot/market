@@ -24,9 +24,17 @@ export default defineConfig({
 	retries: process.env.CI ? 2 : 0,
 	workers: 1,
 	// In CI, emit the 'github' reporter for log annotations AND a 'json' report
-	// (written to test-results/results.json) so the render-dashboard action can
-	// build the nsite dashboard with per-test statuses, screenshots, and counts.
-	reporter: process.env.CI ? [['github'], ['json', { outputFile: 'test-results/results.json' }]] : 'list',
+	// so the render-dashboard action can build the nsite dashboard with per-test
+	// statuses, screenshots, and counts.
+	//
+	// Playwright resolves the JSON reporter `outputFile` RELATIVE TO THE CONFIG
+	// DIR (e2e/), unlike `outputDir` (traces/videos) which is CWD-relative — so a
+	// bare 'test-results/results.json' would land in e2e/test-results/ while every
+	// downstream consumer (e2e.yml RESULTS_JSON, render-dashboard results-dir, and
+	// the test-results-* artifact upload) reads the WORKSPACE-root test-results/.
+	// Use an absolute path via PROJECT_ROOT so the report lands where consumers
+	// expect it. Fixes the "0 passed" PR-comment defect (t_26317db1).
+	reporter: process.env.CI ? [['github'], ['json', { outputFile: path.join(PROJECT_ROOT, 'test-results', 'results.json') }]] : 'list',
 	testMatch: /.*\.spec\.ts$/,
 
 	// trace is shared by every project. CI always records a trace (the
