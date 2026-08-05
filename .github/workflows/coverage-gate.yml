@@ -142,11 +142,20 @@ jobs:
           # publish step has a hermetic Blossom endpoint that never depends on
           # flaky external public servers. See pr-trust-pipeline.md § Step B1.
           nohup nak serve --hostname 0.0.0.0 --blossom > /tmp/blossom.log 2>&1 &
-          echo "Waiting for local Blossom on port 10547..."
+          echo "Waiting for Blossom #1 on port 10547..."
           for _ in $(seq 1 10); do
             if (echo > /dev/tcp/localhost/10547) 2>/dev/null; then
-              echo "Local Blossom server is ready"
-              exit 0
+              echo "Blossom #1 is ready"
+              break
+            fi
+            sleep 1
+          done
+          nohup nak serve --port 10548 --hostname 0.0.0.0 --blossom > /tmp/blossom2.log 2>&1 &
+          echo "Waiting for Blossom #2 on port 10548..."
+          for _ in $(seq 1 10); do
+            if (echo > /dev/tcp/localhost/10548) 2>/dev/null; then
+              echo "Blossom #2 is ready"
+              break
             fi
             sleep 1
           done
@@ -169,10 +178,11 @@ jobs:
           branch: ${{ github.ref_name }}
           commit: ${{ github.sha }}
           # Hermetic Blossom: the local `nak serve --blossom` (port 10547,
-          # started above) is always reachable, so the publish never depends on
-          # flaky external public servers. The two orangesync VPS mirrors add
-          # redundancy; min-success=2 means localhost + any one VPS suffices.
-          blossom-servers: 'http://localhost:10547 https://blossom1.orangesync.tech https://blossom2.orangesync.tech'
+          # started above) is always reachable. Two externals from different
+          # operators (orangesync self-hosted + 24242.io public) add cross-
+          # network redundancy. min-success=2 (action default) means localhost
+          # + any one external is sufficient.
+          blossom-servers: 'http://localhost:10547 http://localhost:10548 https://blossom1.orangesync.tech https://blossom2.orangesync.tech https://24242.io https://cdn.satellite.earth https://blossom.primal.net'
           # pr-number intentionally omitted: the action's built-in comment says
           # "E2E test dashboard". We post a coverage-specific comment below.
 

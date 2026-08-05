@@ -85,20 +85,31 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: bunx playwright install-deps chromium
 
-      - name: Start relay
+      - name: Start relay + dual Blossom servers
         run: |
           nohup nak serve --hostname 0.0.0.0 --blossom > /tmp/relay.log 2>&1 &
           echo "Waiting for relay on port 10547..."
           for _ in $(seq 1 10); do
             if (echo > /dev/tcp/localhost/10547) 2>/dev/null; then
-              echo "Relay is ready"
-              exit 0
+              echo "Relay + Blossom #1 is ready"
+              break
             fi
             sleep 1
           done
-          echo "::error::Relay failed to start. Logs:"
-          cat /tmp/relay.log
-          exit 1
+          nohup nak serve --port 10548 --hostname 0.0.0.0 --blossom > /tmp/blossom2.log 2>&1 &
+          echo "Waiting for Blossom #2 on port 10548..."
+          for _ in $(seq 1 10); do
+            if (echo > /dev/tcp/localhost/10548) 2>/dev/null; then
+              echo "Blossom #2 is ready"
+              break
+            fi
+            sleep 1
+          done
+          if ! (echo > /dev/tcp/localhost/10547) 2>/dev/null; then
+            echo "::error::Relay failed to start. Logs:"
+            cat /tmp/relay.log
+            exit 1
+          fi
 
       - name: Seed hermetic test image to local Blossom server
         env:
@@ -248,12 +259,15 @@ jobs:
           announce-nsec: ${{ secrets.CI_ANNOUNCE_NSEC }}
           branch: ${{ github.ref_name }}
           commit: ${{ github.sha }}
-          # Hermetic Blossom: the local `nak serve --blossom` (port 10547,
-          # started in the "Start relay" step) is always reachable, so the
-          # publish never depends on flaky external public servers. The two
-          # orangesync VPS mirrors provide redundancy; min-success=2 means
-          # localhost + any one VPS is sufficient.
-          blossom-servers: 'http://localhost:10547 https://blossom1.orangesync.tech https://blossom2.orangesync.tech'
+          # Hermetic Blossom: the nak relay started above already runs with
+          # --blossom on localhost:10547, giving us a guaranteed-local first
+          # server. Two externals from different operators (orangesync self-
+          # hosted + 24242.io public) provide cross-network redundancy.
+          # min-success=2 means localhost + any one external is sufficient.
+          # Fixes the "Only 1 blossom servers received all files" flake caused
+          # by intermittent public Blossom server outages.
+          blossom-servers: 'http://localhost:10547 http://localhost:10548 https://blossom1.orangesync.tech https://blossom2.orangesync.tech https://24242.io https://cdn.satellite.earth https://blossom.primal.net'
+          blossom-min-success: "2"
           # pr-number intentionally omitted: the action posts a basic one-line
           # comment of its own. We post a richer, idempotent (update-not-
           # duplicate) comment in the next step instead.
@@ -359,20 +373,31 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: bunx playwright install-deps chromium
 
-      - name: Start relay
+      - name: Start relay + dual Blossom servers
         run: |
           nohup nak serve --hostname 0.0.0.0 --blossom > /tmp/relay.log 2>&1 &
           echo "Waiting for relay on port 10547..."
           for _ in $(seq 1 10); do
             if (echo > /dev/tcp/localhost/10547) 2>/dev/null; then
-              echo "Relay is ready"
-              exit 0
+              echo "Relay + Blossom #1 is ready"
+              break
             fi
             sleep 1
           done
-          echo "::error::Relay failed to start. Logs:"
-          cat /tmp/relay.log
-          exit 1
+          nohup nak serve --port 10548 --hostname 0.0.0.0 --blossom > /tmp/blossom2.log 2>&1 &
+          echo "Waiting for Blossom #2 on port 10548..."
+          for _ in $(seq 1 10); do
+            if (echo > /dev/tcp/localhost/10548) 2>/dev/null; then
+              echo "Blossom #2 is ready"
+              break
+            fi
+            sleep 1
+          done
+          if ! (echo > /dev/tcp/localhost/10547) 2>/dev/null; then
+            echo "::error::Relay failed to start. Logs:"
+            cat /tmp/relay.log
+            exit 1
+          fi
 
       - name: Seed hermetic test image to local Blossom server
         env:
