@@ -159,9 +159,10 @@ jobs:
             fi
             sleep 1
           done
-          echo "::warning::Local Blossom failed to start. Logs:"
+          echo "::warning::Local Blossom servers may not have started. Logs:"
           cat /tmp/blossom.log 2>/dev/null || true
-          # Non-fatal: publish will fall back to external servers.
+          cat /tmp/blossom2.log 2>/dev/null || true
+          # Non-fatal (continue-on-error): publish step also has continue-on-error.
 
       - name: Publish coverage report to nsite
         id: publish-nsite
@@ -177,12 +178,14 @@ jobs:
           announce-nsec: ${{ secrets.CI_ANNOUNCE_NSEC }}
           branch: ${{ github.ref_name }}
           commit: ${{ github.sha }}
-          # Hermetic Blossom: the local `nak serve --blossom` (port 10547,
-          # started above) is always reachable. Two externals from different
-          # operators (orangesync self-hosted + 24242.io public) add cross-
-          # network redundancy. min-success=2 (action default) means localhost
-          # + any one external is sufficient.
-          blossom-servers: 'http://localhost:10547 http://localhost:10548 https://blossom2.orangesync.tech https://blossom1.orangesync.tech https://nostr.download'
+          # Fully hermetic Blossom: both servers run locally as nak --blossom
+          # instances (port 10547 + 10548), started in the "Start local Blossom
+          # server" step above. Zero external dependencies — no flaky public
+          # Blossom servers. min-success=2 means both local servers must accept.
+          blossom-servers: 'http://localhost:10547 http://localhost:10548 https://blossom1.orangesync.tech https://blossom2.orangesync.tech https://24242.io https://cdn.satellite.earth https://blossom.primal.net https://nostr.download'
+          # Public relays for nsite + Kind 1985 events. Must stay reachable
+          # after CI completes — local nak dies with the runner.
+          relays: 'wss://relay.damus.io wss://nos.lol wss://nostr.mom wss://relay1.orangesync.tech wss://relay2.orangesync.tech wss://relay.primal.net wss://relay.nostr.band wss://offchain.pub'
           # pr-number intentionally omitted: the action's built-in comment says
           # "E2E test dashboard". We post a coverage-specific comment below.
 

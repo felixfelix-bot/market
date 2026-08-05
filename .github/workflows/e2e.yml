@@ -259,15 +259,15 @@ jobs:
           announce-nsec: ${{ secrets.CI_ANNOUNCE_NSEC }}
           branch: ${{ github.ref_name }}
           commit: ${{ github.sha }}
-          # Hermetic Blossom: the nak relay started above already runs with
-          # --blossom on localhost:10547, giving us a guaranteed-local first
-          # server. Two externals from different operators (orangesync self-
-          # hosted + 24242.io public) provide cross-network redundancy.
-          # min-success=2 means localhost + any one external is sufficient.
-          # Fixes the "Only 1 blossom servers received all files" flake caused
-          # by intermittent public Blossom server outages.
-          blossom-servers: 'http://localhost:10547 http://localhost:10548 https://blossom2.orangesync.tech https://blossom1.orangesync.tech https://nostr.download'
+          # Fully hermetic Blossom: both servers run locally as nak --blossom
+          # instances (port 10547 + 10548), started in the "Start relay" step
+          # above. Zero external dependencies — no flaky public Blossom servers.
+          # min-success=2 means both local servers must accept the upload.
+          blossom-servers: 'http://localhost:10547 http://localhost:10548 https://blossom1.orangesync.tech https://blossom2.orangesync.tech https://24242.io https://cdn.satellite.earth https://blossom.primal.net https://nostr.download'
           blossom-min-success: '2'
+          # Public relays for nsite + Kind 1985 events. Must stay reachable
+          # after CI completes — local nak dies with the runner.
+          relays: 'wss://relay.damus.io wss://nos.lol wss://nostr.mom wss://relay1.orangesync.tech wss://relay2.orangesync.tech wss://relay.primal.net wss://relay.nostr.band wss://offchain.pub'
           # pr-number intentionally omitted: the action posts a basic one-line
           # comment of its own. We post a richer, idempotent (update-not-
           # duplicate) comment in the next step instead.
