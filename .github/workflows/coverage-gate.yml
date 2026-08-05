@@ -87,6 +87,19 @@ jobs:
             --ignore-errors=source \
             --title="Plebeian Market coverage — ${{ github.sha }}"
 
+      # ── 3b. Upload coverage HTML as a GH artifact (always-downloadable) ─────
+      # The Blossom (nsite) publish below is best-effort and can be slow for the
+      # full genhtml report (hundreds of files). This GH artifact is the reliable
+      # download path — reviewers can unzip and open index.html locally.
+      - name: Upload coverage HTML artifact
+        if: ${{ !cancelled() && hashFiles('coverage/html/index.html') != '' }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: coverage/html/
+          retention-days: 14
+
       # ── 4. Publish the HTML report to Blossom (nsite) ──────────────────────
       # Mirrors the E2E dashboard publish. Deploys with an EPHEMERAL key so it
       # works even without CI_ANNOUNCE_NSEC; that secret only signs the
@@ -122,6 +135,7 @@ jobs:
         id: publish-nsite
         if: ${{ !cancelled() && hashFiles('coverage/html/index.html') != '' }}
         continue-on-error: true
+        timeout-minutes: 5 # nsyte uploads hundreds of genhtml files; cap so it can't hang the job
         uses: c03rad0r/plebeian-testing-nsite-actions/.github/actions/publish-nsite@main
         with:
           dashboard-dir: coverage/html
