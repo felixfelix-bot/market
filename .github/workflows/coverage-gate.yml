@@ -182,7 +182,7 @@ jobs:
           # instances (port 10547 + 10548), started in the "Start local Blossom
           # server" step above. Zero external dependencies — no flaky public
           # Blossom servers. min-success=2 means both local servers must accept.
-          blossom-servers: 'http://localhost:10547 http://localhost:10548 https://blossom1.orangesync.tech https://blossom2.orangesync.tech https://24242.io https://cdn.satellite.earth https://blossom.primal.net https://nostr.download'
+          blossom-servers: 'http://localhost:10547 http://localhost:10548'
           # Public relays for nsite + Kind 1985 events. Must stay reachable
           # after CI completes — local nak dies with the runner.
           relays: 'wss://relay.damus.io wss://nos.lol wss://nostr.mom wss://relay1.orangesync.tech wss://relay2.orangesync.tech wss://relay.primal.net wss://relay.nostr.band wss://offchain.pub'
