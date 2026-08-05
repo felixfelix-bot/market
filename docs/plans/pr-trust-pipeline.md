@@ -28,7 +28,7 @@ AI compresses implementation from weeks to hours. But the review loop still take
 
 **Status:** Implemented on `feat/pr-trust-pipeline`. Shipped:
 
-- `scripts/check-coverage.ts` — the gate. Pure, unit-tested parsers (58 tests,
+- `scripts/check-coverage.ts` — the gate. Pure, unit-tested parsers (65 tests,
   ≥94% self-coverage) plus subprocess runners isolated behind a `CoverageRunners`
   interface.
 - `scripts/check-coverage.test.ts` — TDD test suite for the gate.
@@ -510,6 +510,7 @@ B2 that exercises the real `uploadFileToBlossom` upload path (which the current
 tests do not — they type a URL, they don't upload a file).
 
 **Files changed:**
+
 - `e2e/fixtures/test-image.png` (NEW) — 600×600 RGBA PNG fixture (2.8 KB).
 - `e2e/test-config.ts` — `TEST_IMAGE_URL` export (env-overridable).
 - `e2e/seed-relay.ts` — picture/banner use `TEST_IMAGE_URL`.

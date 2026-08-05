@@ -50,6 +50,11 @@ if [ -z "$RELAY" ] || [ -z "$KEY" ]; then
     exit 0
 fi
 
+# Pass the key to nak via the NOSTR_SECRET_KEY env var (nak reads this
+# natively) instead of the --sec CLI flag, so the private key never appears in
+# process listings (ps / /proc/<pid>/cmdline). See `nak event --help`.
+export NOSTR_SECRET_KEY="$KEY"
+
 # Build emoji + prefix from status
 case "$STATUS" in
     pass|success|passed) EMOJI="✅" ;;
@@ -97,8 +102,7 @@ EVENTS_URL="${RELAY}/events"
 # ── 1. Build & sign the kind 9 channel message (NIP-29) ─────────────────────
 # Buzz group chat: kind 9, single ["h", channel-uuid] tag.
 MSG_EVENT=$("$NAK_BIN" event -q -k 9 -c "$MSG" \
-    -t "h=$CI_CHANNEL" \
-    --sec "$KEY" 2>/dev/null) || {
+    -t "h=$CI_CHANNEL" 2>/dev/null) || {
     echo "buzz-notify: failed to build message event — ${MSG_EVENT:-nak error}" >&2
     exit 0
 }
@@ -112,8 +116,7 @@ AUTH_EVENT=$("$NAK_BIN" event -q -k 27235 -c "" \
     -t "u=$EVENTS_URL" \
     -t "method=POST" \
     -t "nonce=$NONCE" \
-    -t "payload=$PAYLOAD_HASH" \
-    --sec "$KEY" 2>/dev/null) || {
+    -t "payload=$PAYLOAD_HASH" 2>/dev/null) || {
     echo "buzz-notify: failed to build NIP-98 auth event — ${AUTH_EVENT:-nak error}" >&2
     exit 0
 }
