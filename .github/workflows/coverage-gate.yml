@@ -182,7 +182,7 @@ jobs:
           # operators (orangesync self-hosted + 24242.io public) add cross-
           # network redundancy. min-success=2 (action default) means localhost
           # + any one external is sufficient.
-          blossom-servers: 'http://localhost:10547 http://localhost:10548 https://blossom1.orangesync.tech https://blossom2.orangesync.tech https://24242.io https://cdn.satellite.earth https://blossom.primal.net'
+          blossom-servers: 'http://localhost:10547 http://localhost:10548'
           # pr-number intentionally omitted: the action's built-in comment says
           # "E2E test dashboard". We post a coverage-specific comment below.
 
