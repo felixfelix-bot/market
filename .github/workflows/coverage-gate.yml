@@ -140,7 +140,7 @@ jobs:
         # continue-on-error keeps a hang non-fatal. The PR comment below falls
         # back to the GH artifact when this still times out. (t_26317db1)
         timeout-minutes: 30
-        uses: c03rad0r/plebeian-testing-nsite-actions/.github/actions/publish-nsite@main
+        uses: c03rad0r/plebeian-testing-nsite-actions/.github/actions/publish-nsite@dce2d40977d07ba00ff21273b4b5042ef0103b43
         with:
           dashboard-dir: coverage/html
           announce-nsec: ${{ secrets.CI_ANNOUNCE_NSEC }}

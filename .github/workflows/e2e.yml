@@ -22,6 +22,8 @@ jobs:
     permissions:
       contents: read
       pull-requests: write # post idempotent E2E dashboard comment
+    env:
+      E2E_TEST_IMAGE_URL: ${{ secrets.E2E_TEST_IMAGE_URL }}
 
     steps:
       - name: Checkout code
@@ -228,7 +230,7 @@ jobs:
       - name: Render E2E dashboard
         id: render-dashboard
         if: ${{ !cancelled() }}
-        uses: c03rad0r/plebeian-testing-nsite-actions/.github/actions/render-dashboard@main
+        uses: c03rad0r/plebeian-testing-nsite-actions/.github/actions/render-dashboard@dce2d40977d07ba00ff21273b4b5042ef0103b43
         with:
           results-dir: test-results
           output-dir: e2e-dashboard
@@ -240,7 +242,7 @@ jobs:
       - name: Publish dashboard to nsite
         id: publish-nsite
         if: ${{ !cancelled() && steps.render-dashboard.outcome == 'success' }}
-        uses: c03rad0r/plebeian-testing-nsite-actions/.github/actions/publish-nsite@main
+        uses: c03rad0r/plebeian-testing-nsite-actions/.github/actions/publish-nsite@dce2d40977d07ba00ff21273b4b5042ef0103b43
         with:
           dashboard-dir: e2e-dashboard
           announce-nsec: ${{ secrets.CI_ANNOUNCE_NSEC }}
@@ -287,6 +289,8 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    env:
+      E2E_TEST_IMAGE_URL: ${{ secrets.E2E_TEST_IMAGE_URL }}
 
     steps:
       - name: Checkout code
