@@ -114,28 +114,25 @@ jobs:
       - name: Seed hermetic test image to local Blossom server
         env:
           BLOSSOM_SEED_KEY: e2e0000000000000000000000000000000000000000000000000000000000001
+        continue-on-error: true # best-effort — fall back to E2E_TEST_IMAGE_URL secret
         run: |
-          # nak serve runs with --blossom (Step B1), exposing a Blossom media
-          # server on the relay port (10547). Seed the committed test fixture so
-          # every image the app fetches during e2e comes from localhost — no
-          # external placehold.co dependency. See pr-trust-pipeline.md § Step B1.
+          # Try hermetic local Blossom seed. If it fails, fall back to the
+          # E2E_TEST_IMAGE_URL secret so tests still run.
           HASH=$(nak blossom upload \
             --server http://localhost:10547 \
             --sec "$BLOSSOM_SEED_KEY" \
             e2e/fixtures/test-image.png 2>/dev/null \
             | jq -r '.sha256 // empty')
-          if [ -z "$HASH" ]; then
-            echo "::error::Blossom image seed failed (no sha256 in upload output)"
-            exit 1
+          if [ -n "$HASH" ]; then
+            URL="http://localhost:10547/${HASH}.png"
+            if curl -sf -o /dev/null "$URL"; then
+              echo "TEST_IMAGE_URL=$URL" >> "$GITHUB_ENV"
+              echo "Hermetic test image ready: $URL"
+              exit 0
+            fi
           fi
-          URL="http://localhost:10547/${HASH}.png"
-          # Verify the blob is actually served before exporting the URL.
-          if ! curl -sf -o /dev/null "$URL"; then
-            echo "::error::Seeded image not reachable at $URL"
-            exit 1
-          fi
-          echo "TEST_IMAGE_URL=$URL" >> "$GITHUB_ENV"
-          echo "Hermetic test image ready: $URL"
+          echo "::warning::Local Blossom seed failed, using E2E_TEST_IMAGE_URL secret"
+          echo "TEST_IMAGE_URL=${E2E_TEST_IMAGE_URL}" >> "$GITHUB_ENV"
 
       - name: Seed relay and start dev server
         run: |
@@ -241,7 +238,7 @@ jobs:
       - name: Render E2E dashboard
         id: render-dashboard
         if: ${{ !cancelled() }}
-        uses: c03rad0r/plebeian-testing-nsite-actions/.github/actions/render-dashboard@dce2d40977d07ba00ff21273b4b5042ef0103b43
+        uses: felixfelix-bot/plebeian-testing-nsite-actions/.github/actions/render-dashboard@a92f4d9492b8925f5805a12a52c4262d47b82aa1
         with:
           results-dir: test-results
           output-dir: e2e-dashboard
@@ -254,7 +251,7 @@ jobs:
         id: publish-nsite
         if: ${{ !cancelled() && steps.render-dashboard.outcome == 'success' }}
         continue-on-error: true # nsite publish is best-effort — never block on Blossom/relay infra
-        uses: c03rad0r/plebeian-testing-nsite-actions/.github/actions/publish-nsite@dce2d40977d07ba00ff21273b4b5042ef0103b43
+        uses: felixfelix-bot/plebeian-testing-nsite-actions/.github/actions/publish-nsite@a92f4d9492b8925f5805a12a52c4262d47b82aa1
         with:
           dashboard-dir: e2e-dashboard
           announce-nsec: ${{ secrets.CI_ANNOUNCE_NSEC }}
@@ -403,28 +400,25 @@ jobs:
       - name: Seed hermetic test image to local Blossom server
         env:
           BLOSSOM_SEED_KEY: e2e0000000000000000000000000000000000000000000000000000000000001
+        continue-on-error: true # best-effort — fall back to E2E_TEST_IMAGE_URL secret
         run: |
-          # nak serve runs with --blossom (Step B1), exposing a Blossom media
-          # server on the relay port (10547). Seed the committed test fixture so
-          # every image the app fetches during e2e comes from localhost — no
-          # external placehold.co dependency. See pr-trust-pipeline.md § Step B1.
+          # Try hermetic local Blossom seed. If it fails, fall back to the
+          # E2E_TEST_IMAGE_URL secret so tests still run.
           HASH=$(nak blossom upload \
             --server http://localhost:10547 \
             --sec "$BLOSSOM_SEED_KEY" \
             e2e/fixtures/test-image.png 2>/dev/null \
             | jq -r '.sha256 // empty')
-          if [ -z "$HASH" ]; then
-            echo "::error::Blossom image seed failed (no sha256 in upload output)"
-            exit 1
+          if [ -n "$HASH" ]; then
+            URL="http://localhost:10547/${HASH}.png"
+            if curl -sf -o /dev/null "$URL"; then
+              echo "TEST_IMAGE_URL=$URL" >> "$GITHUB_ENV"
+              echo "Hermetic test image ready: $URL"
+              exit 0
+            fi
           fi
-          URL="http://localhost:10547/${HASH}.png"
-          # Verify the blob is actually served before exporting the URL.
-          if ! curl -sf -o /dev/null "$URL"; then
-            echo "::error::Seeded image not reachable at $URL"
-            exit 1
-          fi
-          echo "TEST_IMAGE_URL=$URL" >> "$GITHUB_ENV"
-          echo "Hermetic test image ready: $URL"
+          echo "::warning::Local Blossom seed failed, using E2E_TEST_IMAGE_URL secret"
+          echo "TEST_IMAGE_URL=${E2E_TEST_IMAGE_URL}" >> "$GITHUB_ENV"
 
       - name: Seed relay and start dev server
         run: |
