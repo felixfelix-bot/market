@@ -31,6 +31,13 @@ jobs:
     if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Preview Deploy is a follow-up enhancement (Layer G), not a trust-pipeline
+    # blocker. The PR Trust Pipeline merge gate (Layer H) does not require this
+    # check. continue-on-error keeps preview-deploy flakiness (VPS provisioning,
+    # DNS propagation, SSH key rotation) from blocking PR merge while we iterate
+    # on the VPS side. Individual step failures still surface in the run log and
+    # the PR comment reports the live URL (or warming-up status) when it works.
+    continue-on-error: true
     permissions:
       contents: read
       pull-requests: write # post / update the idempotent preview-URL comment
@@ -79,7 +86,7 @@ jobs:
         with:
           host: ${{ secrets.PREVIEW_VPS_HOST }}
           username: ${{ secrets.PREVIEW_VPS_USER }}
-          key: ${{ secrets.PREVIEW_DEPLOY_SSH_KEY }}
+          key: ${{ secrets.PREVIEW_VPS_SSH_KEY }}
           script: |
             mkdir -p "$HOME/previews/pr-${{ github.event.pull_request.number }}"
 
@@ -88,7 +95,7 @@ jobs:
         with:
           host: ${{ secrets.PREVIEW_VPS_HOST }}
           username: ${{ secrets.PREVIEW_VPS_USER }}
-          key: ${{ secrets.PREVIEW_DEPLOY_SSH_KEY }}
+          key: ${{ secrets.PREVIEW_VPS_SSH_KEY }}
           source: 'deploy-package/*'
           target: '/home/${{ secrets.PREVIEW_VPS_USER }}/previews/pr-${{ github.event.pull_request.number }}/deploy-package'
           strip_components: 1
@@ -98,7 +105,7 @@ jobs:
         with:
           host: ${{ secrets.PREVIEW_VPS_HOST }}
           username: ${{ secrets.PREVIEW_VPS_USER }}
-          key: ${{ secrets.PREVIEW_DEPLOY_SSH_KEY }}
+          key: ${{ secrets.PREVIEW_VPS_SSH_KEY }}
           script: |
             set -euo pipefail
             PR_NUMBER="${{ github.event.pull_request.number }}"
@@ -255,7 +262,7 @@ jobs:
         with:
           host: ${{ secrets.PREVIEW_VPS_HOST }}
           username: ${{ secrets.PREVIEW_VPS_USER }}
-          key: ${{ secrets.PREVIEW_DEPLOY_SSH_KEY }}
+          key: ${{ secrets.PREVIEW_VPS_SSH_KEY }}
           script: |
             set -uo pipefail
             PR_NUMBER="${{ github.event.pull_request.number }}"
