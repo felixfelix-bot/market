@@ -475,3 +475,45 @@ Per Felix's instruction: do NOT test on c03rad0r/market. All work goes to felixf
 3. Production VPS — confirm none currently running (Felix says fresh start)
 4. Domain for preview subdomains — use existing test-market.orangesync.tech or new domain on Sovereign VPS?
 5. Happy-path spec naming convention — `@happy-path` tag in title, or separate spec files?
+
+---
+
+## Phase B — Hermetic Media
+
+### Step B1: Local Blossom server in CI — hermetic test images (IMPLEMENTED)
+
+**Problem:** E2E tests referenced external `https://placehold.co/...` image URLs
+(product images, collection fixtures, app-settings picture/banner). If
+placehold.co is rate-limited, slow, or down, image-dependent tests fail for
+reasons unrelated to the code under test — breaking the hermetic-guarantee goal
+of the trust pipeline.
+
+**Solution:** `nak serve` (the local relay already running in CI) is started with
+`--blossom`, exposing a Blossom media server on the same port (10547) at zero
+additional dependency cost (nak is already built + installed in the workflow).
+A committed 600×600 PNG fixture (`e2e/fixtures/test-image.png`) is seeded to it
+via `nak blossom upload` (NIP-98 auth with the existing test key) before tests
+run, and the resulting `http://localhost:10547/<sha256>.png` URL is exported as
+`TEST_IMAGE_URL` via `$GITHUB_ENV`.
+
+All six external image references now resolve through one config point —
+`TEST_IMAGE_URL` in `e2e/test-config.ts` (CI: local Blossom URL; local:
+placehold.co fallback) — consumed by `seed-relay.ts` (picture/banner),
+`products.spec.ts`, `v4v-product-creation.spec.ts`, and
+`community.progressive-loading.spec.ts`.
+
+**Why a real Blossom server (not a static file server):** the title calls for a
+Blossom server, and nak provides one for free — one flag on the already-running
+relay, no Docker, no new dependency. It is also faithful to production (Blossom
+is the app's actual media protocol) and leaves the door open for a future Step
+B2 that exercises the real `uploadFileToBlossom` upload path (which the current
+tests do not — they type a URL, they don't upload a file).
+
+**Files changed:**
+- `e2e/fixtures/test-image.png` (NEW) — 600×600 RGBA PNG fixture (2.8 KB).
+- `e2e/test-config.ts` — `TEST_IMAGE_URL` export (env-overridable).
+- `e2e/seed-relay.ts` — picture/banner use `TEST_IMAGE_URL`.
+- `e2e/tests/products.spec.ts`, `e2e/tests/v4v-product-creation.spec.ts`,
+  `e2e/tests/community.progressive-loading.spec.ts` — use `TEST_IMAGE_URL`.
+- `.github/workflows/e2e.yml` — `nak serve --blossom` + seed step (both jobs).
+- `e2e/ARCHITECTURE.md` — docs updated to reference `TEST_IMAGE_URL`.

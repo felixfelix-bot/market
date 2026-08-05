@@ -85,7 +85,7 @@ jobs:
 
       - name: Start relay
         run: |
-          nohup nak serve --hostname 0.0.0.0 > /tmp/relay.log 2>&1 &
+          nohup nak serve --hostname 0.0.0.0 --blossom > /tmp/relay.log 2>&1 &
           echo "Waiting for relay on port 10547..."
           for _ in $(seq 1 10); do
             if (echo > /dev/tcp/localhost/10547) 2>/dev/null; then
@@ -97,6 +97,32 @@ jobs:
           echo "::error::Relay failed to start. Logs:"
           cat /tmp/relay.log
           exit 1
+
+      - name: Seed hermetic test image to local Blossom server
+        env:
+          BLOSSOM_SEED_KEY: e2e0000000000000000000000000000000000000000000000000000000000001
+        run: |
+          # nak serve runs with --blossom (Step B1), exposing a Blossom media
+          # server on the relay port (10547). Seed the committed test fixture so
+          # every image the app fetches during e2e comes from localhost — no
+          # external placehold.co dependency. See pr-trust-pipeline.md § Step B1.
+          HASH=$(nak blossom upload \
+            --server http://localhost:10547 \
+            --sec "$BLOSSOM_SEED_KEY" \
+            e2e/fixtures/test-image.png 2>/dev/null \
+            | jq -r '.sha256 // empty')
+          if [ -z "$HASH" ]; then
+            echo "::error::Blossom image seed failed (no sha256 in upload output)"
+            exit 1
+          fi
+          URL="http://localhost:10547/${HASH}.png"
+          # Verify the blob is actually served before exporting the URL.
+          if ! curl -sf -o /dev/null "$URL"; then
+            echo "::error::Seeded image not reachable at $URL"
+            exit 1
+          fi
+          echo "TEST_IMAGE_URL=$URL" >> "$GITHUB_ENV"
+          echo "Hermetic test image ready: $URL"
 
       - name: Seed relay and start dev server
         run: |
@@ -325,7 +351,7 @@ jobs:
 
       - name: Start relay
         run: |
-          nohup nak serve --hostname 0.0.0.0 > /tmp/relay.log 2>&1 &
+          nohup nak serve --hostname 0.0.0.0 --blossom > /tmp/relay.log 2>&1 &
           echo "Waiting for relay on port 10547..."
           for _ in $(seq 1 10); do
             if (echo > /dev/tcp/localhost/10547) 2>/dev/null; then
@@ -337,6 +363,32 @@ jobs:
           echo "::error::Relay failed to start. Logs:"
           cat /tmp/relay.log
           exit 1
+
+      - name: Seed hermetic test image to local Blossom server
+        env:
+          BLOSSOM_SEED_KEY: e2e0000000000000000000000000000000000000000000000000000000000001
+        run: |
+          # nak serve runs with --blossom (Step B1), exposing a Blossom media
+          # server on the relay port (10547). Seed the committed test fixture so
+          # every image the app fetches during e2e comes from localhost — no
+          # external placehold.co dependency. See pr-trust-pipeline.md § Step B1.
+          HASH=$(nak blossom upload \
+            --server http://localhost:10547 \
+            --sec "$BLOSSOM_SEED_KEY" \
+            e2e/fixtures/test-image.png 2>/dev/null \
+            | jq -r '.sha256 // empty')
+          if [ -z "$HASH" ]; then
+            echo "::error::Blossom image seed failed (no sha256 in upload output)"
+            exit 1
+          fi
+          URL="http://localhost:10547/${HASH}.png"
+          # Verify the blob is actually served before exporting the URL.
+          if ! curl -sf -o /dev/null "$URL"; then
+            echo "::error::Seeded image not reachable at $URL"
+            exit 1
+          fi
+          echo "TEST_IMAGE_URL=$URL" >> "$GITHUB_ENV"
+          echo "Hermetic test image ready: $URL"
 
       - name: Seed relay and start dev server
         run: |
