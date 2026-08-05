@@ -250,6 +250,7 @@ jobs:
       - name: Publish dashboard to nsite
         id: publish-nsite
         if: ${{ !cancelled() && steps.render-dashboard.outcome == 'success' }}
+        timeout-minutes: 5 # prevent 20+ minute hangs on flaky Blossom/relay infra
         continue-on-error: true # nsite publish is best-effort — never block on Blossom/relay infra
         uses: felixfelix-bot/plebeian-testing-nsite-actions/.github/actions/publish-nsite@a92f4d9492b8925f5805a12a52c4262d47b82aa1
         with:
