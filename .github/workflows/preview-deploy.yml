@@ -79,7 +79,7 @@ jobs:
         with:
           host: ${{ secrets.PREVIEW_VPS_HOST }}
           username: ${{ secrets.PREVIEW_VPS_USER }}
-          key: ${{ secrets.PREVIEW_VPS_SSH_KEY }}
+          key: ${{ secrets.PREVIEW_DEPLOY_SSH_KEY }}
           script: |
             mkdir -p "$HOME/previews/pr-${{ github.event.pull_request.number }}"
 
@@ -88,7 +88,7 @@ jobs:
         with:
           host: ${{ secrets.PREVIEW_VPS_HOST }}
           username: ${{ secrets.PREVIEW_VPS_USER }}
-          key: ${{ secrets.PREVIEW_VPS_SSH_KEY }}
+          key: ${{ secrets.PREVIEW_DEPLOY_SSH_KEY }}
           source: 'deploy-package/*'
           target: '/home/${{ secrets.PREVIEW_VPS_USER }}/previews/pr-${{ github.event.pull_request.number }}/deploy-package'
           strip_components: 1
@@ -98,7 +98,7 @@ jobs:
         with:
           host: ${{ secrets.PREVIEW_VPS_HOST }}
           username: ${{ secrets.PREVIEW_VPS_USER }}
-          key: ${{ secrets.PREVIEW_VPS_SSH_KEY }}
+          key: ${{ secrets.PREVIEW_DEPLOY_SSH_KEY }}
           script: |
             set -euo pipefail
             PR_NUMBER="${{ github.event.pull_request.number }}"
@@ -255,7 +255,7 @@ jobs:
         with:
           host: ${{ secrets.PREVIEW_VPS_HOST }}
           username: ${{ secrets.PREVIEW_VPS_USER }}
-          key: ${{ secrets.PREVIEW_VPS_SSH_KEY }}
+          key: ${{ secrets.PREVIEW_DEPLOY_SSH_KEY }}
           script: |
             set -uo pipefail
             PR_NUMBER="${{ github.event.pull_request.number }}"
