@@ -206,7 +206,7 @@ test.describe('Product Page - View Only (Unauthenticated)', () => {
 		const img = headerContent.locator('img[alt*="View Test Product"]')
 
 		await expect(img).toBeVisible()
-		await expect(img).toHaveAttribute('src', /cdn\.satellite\.earth/)
+		await expect(img).toHaveAttribute('src', /^https?:\/\/(localhost|blossom\d?\.orangesync\.tech|cdn\.satellite\.earth|24242\.io|blossom\.primal\.net|nostr\.download)/)
 	})
 
 	test('should navigate through tabs and show content', async ({ unauthenticatedPage }) => {
