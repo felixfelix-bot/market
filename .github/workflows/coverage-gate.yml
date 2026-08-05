@@ -171,7 +171,7 @@ jobs:
         # nsyte uploads hundreds of genhtml files; give it maximum room.
         # continue-on-error keeps a hang non-fatal. The PR comment below falls
         # back to the GH artifact when this still times out. (t_26317db1)
-        timeout-minutes: 30
+        timeout-minutes: 5
         uses: felixfelix-bot/plebeian-testing-nsite-actions/.github/actions/publish-nsite@a92f4d9492b8925f5805a12a52c4262d47b82aa1
         with:
           dashboard-dir: coverage/html
