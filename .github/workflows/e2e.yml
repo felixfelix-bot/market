@@ -248,6 +248,12 @@ jobs:
           announce-nsec: ${{ secrets.CI_ANNOUNCE_NSEC }}
           branch: ${{ github.ref_name }}
           commit: ${{ github.sha }}
+          # Hermetic Blossom: the local `nak serve --blossom` (port 10547,
+          # started in the "Start relay" step) is always reachable, so the
+          # publish never depends on flaky external public servers. The two
+          # orangesync VPS mirrors provide redundancy; min-success=2 means
+          # localhost + any one VPS is sufficient.
+          blossom-servers: 'http://localhost:10547 https://blossom1.orangesync.tech https://blossom2.orangesync.tech'
           # pr-number intentionally omitted: the action posts a basic one-line
           # comment of its own. We post a richer, idempotent (update-not-
           # duplicate) comment in the next step instead.

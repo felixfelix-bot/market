@@ -134,6 +134,26 @@ jobs:
           go build -o "$GOBIN/nak" .
           echo "nak installed at: $(which nak)"
 
+      - name: Start local Blossom server
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: |
+          # Mirror e2e.yml: run `nak serve --blossom` locally so the nsite
+          # publish step has a hermetic Blossom endpoint that never depends on
+          # flaky external public servers. See pr-trust-pipeline.md § Step B1.
+          nohup nak serve --hostname 0.0.0.0 --blossom > /tmp/blossom.log 2>&1 &
+          echo "Waiting for local Blossom on port 10547..."
+          for _ in $(seq 1 10); do
+            if (echo > /dev/tcp/localhost/10547) 2>/dev/null; then
+              echo "Local Blossom server is ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::warning::Local Blossom failed to start. Logs:"
+          cat /tmp/blossom.log 2>/dev/null || true
+          # Non-fatal: publish will fall back to external servers.
+
       - name: Publish coverage report to nsite
         id: publish-nsite
         if: ${{ !cancelled() && hashFiles('coverage/html/index.html') != '' }}
@@ -148,6 +168,11 @@ jobs:
           announce-nsec: ${{ secrets.CI_ANNOUNCE_NSEC }}
           branch: ${{ github.ref_name }}
           commit: ${{ github.sha }}
+          # Hermetic Blossom: the local `nak serve --blossom` (port 10547,
+          # started above) is always reachable, so the publish never depends on
+          # flaky external public servers. The two orangesync VPS mirrors add
+          # redundancy; min-success=2 means localhost + any one VPS suffices.
+          blossom-servers: 'http://localhost:10547 https://blossom1.orangesync.tech https://blossom2.orangesync.tech'
           # pr-number intentionally omitted: the action's built-in comment says
           # "E2E test dashboard". We post a coverage-specific comment below.
 
