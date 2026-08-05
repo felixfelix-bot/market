@@ -135,7 +135,11 @@ jobs:
         id: publish-nsite
         if: ${{ !cancelled() && hashFiles('coverage/html/index.html') != '' }}
         continue-on-error: true
-        timeout-minutes: 5 # nsyte uploads hundreds of genhtml files; cap so it can't hang the job
+        # nsyte uploads hundreds of genhtml files; give it real room to succeed
+        # (the prior 5-min cap was hit at ~303s) while continue-on-error keeps a
+        # hang non-fatal. The PR comment below falls back to the GH artifact when
+        # this still times out, so the report is always linked. (t_26317db1)
+        timeout-minutes: 10
         uses: c03rad0r/plebeian-testing-nsite-actions/.github/actions/publish-nsite@main
         with:
           dashboard-dir: coverage/html
@@ -147,18 +151,29 @@ jobs:
 
       # ── 5a. Idempotent PR comment with the report URL ──────────────────────
       # Re-runs UPDATE the same comment (found via the marker tag) instead of
-      # posting duplicates.
+      # posting duplicates. Posts whenever the coverage HTML was generated — even
+      # when the nsite publish timed out — by falling back to the always-uploaded
+      # `coverage-html` GitHub artifact. (t_26317db1)
       - name: Comment coverage report on PR
-        if: ${{ !cancelled() && github.event_name == 'pull_request' && steps.publish-nsite.outputs.nsite-url != '' }}
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && hashFiles('coverage/html/index.html') != '' }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
-          URL="${{ steps.publish-nsite.outputs.nsite-url }}"
+          NSITE_URL="${{ steps.publish-nsite.outputs.nsite-url }}"
           GATE_STATUS="${{ steps.gate.outcome }}"
           PR="${{ github.event.pull_request.number }}"
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           MARKER="<!-- pr-coverage-report -->"
+          # Prefer the nsite (Blossom) URL when the publish succeeded; otherwise
+          # link the always-uploaded `coverage-html` artifact so the report is
+          # still reachable (download → unzip → open index.html).
+          if [ -n "$NSITE_URL" ]; then
+            REPORT_LINE="🌐 Browsable report (nsite): $NSITE_URL"
+          else
+            REPORT_LINE="📦 Browsable report (GH artifact \`coverage-html\` — download, unzip, open \`index.html\`): $RUN_URL"
+          fi
           case "$GATE_STATUS" in
             success) EMOJI="✅" ;;
             failure) EMOJI="🔴" ;;
@@ -166,11 +181,12 @@ jobs:
           esac
           BODY=$(cat <<EOF
           $MARKER
-          $EMOJI **Diff-aware coverage report**: $URL
+          $EMOJI **Diff-aware coverage report**
+          $REPORT_LINE
 
           - Gate: \`$GATE_STATUS\`
           - Commit: \`${{ github.sha }}\`
-          - Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          - Run: $RUN_URL
           EOF
           )
           CID=$(gh api "repos/${{ github.repository }}/issues/$PR/comments" \
