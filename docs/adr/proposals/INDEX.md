@@ -62,6 +62,18 @@ NDK→applesauce migration. Phase 3 depends on Phase 2.
 |---|--------|-------|-------------|
 | 10 | 🟡 Ready | [Security remediation strategy](./security-remediation-strategy.md) | Split findings into ADR-gated vs direct-implementation tracks? |
 
+### Testing & CI Tooling
+
+Proposals for the automated trust pipeline, unit-test framework, and e2e test
+scaling. Consolidated here from the `adr/vitest-migration` and
+`docs/adr-e2e-parallelization` (formerly PR #1217) branches.
+
+| # | Status | Title | Key Question |
+|---|--------|-------|-------------|
+| 11 | 🟡 Ready | [PR trust pipeline — deferred components](./pr-trust-pipeline-deferred.md) | Which trust-pipeline layers (coverage gates, mutation testing, evidence publishing) belong upstream vs fork-only? |
+| 12 | 🟡 Ready | [Migrate unit tests from bun:test to Vitest](./vitest-mutation-testing-migration.md) | Adopt Vitest to enable diff-aware coverage + mutation testing in the trust pipeline? |
+| 13 | 🟡 Ready | [E2E test parallelization strategy](./e2e-test-parallelization.md) | Playwright sharding vs matrix workers to cut e2e wall-clock time? (was PR #1217, closed in favor of this collection) |
+
 ---
 
 ## Surfacing Protocol
