@@ -52,6 +52,7 @@ Rely on Applesauce's RelayPool + EventStore + nostr-idb for all relay
 management. No server-side aggregator infrastructure.
 
 **Pros:**
+
 - Zero server infrastructure to maintain
 - Client-side caching means repeated reads don't re-hit dead relays
 - RelayPool can timeout dead relays quickly and prefer healthy ones
@@ -59,6 +60,7 @@ management. No server-side aggregator infrastructure.
 - Aligns with the Applesauce migration direction
 
 **Cons:**
+
 - Cold start still requires hitting upstream relays (slow first visit)
 - No centralized consistency guarantee
 - Mobile clients with no persistent cache still pay full fan-out cost
@@ -69,11 +71,13 @@ Deploy a Khatru relay that mirrors market-relevant events. Clients prepend
 it as primary read relay in production.
 
 **Pros:**
+
 - Single fast relay for all clients (low latency)
 - Server-side consistency and deduplication
 - Clients don't need to manage N relay connections for market data
 
 **Cons:**
+
 - New infrastructure to operate and monitor
 - Single point of failure if not redundant
 - Aggregator must stay in sync (scraper lag, missing events)
@@ -85,11 +89,13 @@ A lightweight bootstrap relay that helps cold starts, then clients transition
 to Applesauce-managed relay reads for ongoing data.
 
 **Pros:**
+
 - Fast cold start without full aggregator complexity
 - Applesauce handles ongoing reads with caching
 - Bootstrap relay can be read-only, low-maintenance
 
 **Cons:**
+
 - Still requires some server infrastructure
 - Transition logic adds complexity
 - Bootstrap relay must be kept current
@@ -105,7 +111,7 @@ to Applesauce-managed relay reads for ongoing data.
 4. If a server-side component is needed, should it be a full aggregator or
    just a bootstrap relay?
 5. Can we ask hzrd149 (Applesauce author) for guidance on whether RelayPool
-   + EventStore is designed to handle dead-relay fan-out in production?
+   - EventStore is designed to handle dead-relay fan-out in production?
 
 ## Recommendation
 

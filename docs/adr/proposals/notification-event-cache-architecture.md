@@ -49,10 +49,10 @@ The notification monitor reads exclusively from `EventStore`. Zero relay
 latency. All reads are synchronous.
 
 ```typescript
-import { EventStore } from "applesauce-core";
-const eventStore = new EventStore();
+import { EventStore } from 'applesauce-core'
+const eventStore = new EventStore()
 // Synchronous — instant
-const events = eventStore.getByFilters({ kinds: [1023], "#a": [auctionKey] });
+const events = eventStore.getByFilters({ kinds: [1023], '#a': [auctionKey] })
 ```
 
 ### Layer 2 — nostr-idb (IndexedDB, persistent)
@@ -61,10 +61,10 @@ Events persist in IndexedDB across page reloads. On load, EventStore is
 repopulated from cache instantly, before any relay query fires.
 
 ```typescript
-import { NostrIDB } from "nostr-idb";
-const nostrIDB = new NostrIDB({ cacheIndexes: 1000, maxEvents: 10000 });
-await nostrIDB.start();
-const cacheRequest = (filters) => nostrIDB.filters(filters);
+import { NostrIDB } from 'nostr-idb'
+const nostrIDB = new NostrIDB({ cacheIndexes: 1000, maxEvents: 10000 })
+await nostrIDB.start()
+const cacheRequest = (filters) => nostrIDB.filters(filters)
 ```
 
 ### Layer 3 — RelayPool.sync (negentropy, diff-only)
@@ -74,14 +74,16 @@ relay. Only the diff is transferred — not full events. This replaces 15
 filter-specific subscriptions with a single reconciliation pass.
 
 ```typescript
-import { RelayPool } from "applesauce-relay";
-const pool = new RelayPool();
-pool.sync(
-  ["wss://relay.nostr.band", "wss://nos.lol"],
-  eventStore,
-  { kinds: [30000, 1023, 1024, 1025], authors: [sellerPubkey] },
-  "down"  // download direction only
-).subscribe((event) => eventStore.add(event));
+import { RelayPool } from 'applesauce-relay'
+const pool = new RelayPool()
+pool
+	.sync(
+		['wss://relay.nostr.band', 'wss://nos.lol'],
+		eventStore,
+		{ kinds: [30000, 1023, 1024, 1025], authors: [sellerPubkey] },
+		'down', // download direction only
+	)
+	.subscribe((event) => eventStore.add(event))
 ```
 
 ### Layer 4 — Event loader (orchestration)
@@ -90,16 +92,16 @@ pool.sync(
 relays are auto-persisted to IndexedDB (non-blocking).
 
 ```typescript
-import { createEventLoaderForStore } from "applesauce-loaders/loaders";
-import { persistEventsToCache } from "applesauce-core/helpers";
+import { createEventLoaderForStore } from 'applesauce-loaders/loaders'
+import { persistEventsToCache } from 'applesauce-core/helpers'
 
 createEventLoaderForStore(eventStore, pool, {
-  cacheRequest,
-  lookupRelays: ["wss://purplepag.es/", "wss://index.hzrd149.com/"],
-});
+	cacheRequest,
+	lookupRelays: ['wss://purplepag.es/', 'wss://index.hzrd149.com/'],
+})
 persistEventsToCache(eventStore, async (events) => {
-  await Promise.allSettled(events.map((e) => nostrIDB.add(e)));
-});
+	await Promise.allSettled(events.map((e) => nostrIDB.add(e)))
+})
 ```
 
 ### Page-load flow
@@ -117,11 +119,9 @@ Cache only notification-relevant kinds to keep storage bounded:
 
 ```typescript
 persistEventsToCache(eventStore, async (events) => {
-  const important = events.filter((e) =>
-    [0, 3, 30000, 1023, 1024, 1025, 30408, 30311].includes(e.kind)
-  );
-  if (important.length > 0) await nostrIDB.addEvents(important);
-});
+	const important = events.filter((e) => [0, 3, 30000, 1023, 1024, 1025, 30408, 30311].includes(e.kind))
+	if (important.length > 0) await nostrIDB.addEvents(important)
+})
 ```
 
 ## Consequences

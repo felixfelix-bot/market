@@ -20,12 +20,12 @@ can never pass, causing the verdict to oscillate between `valid_bid_placed` and
 
 ```ts
 export const currentTopValidBidAmount = (auctionState: ValidatorAuctionState): number => {
-    let top = 0
-    for (const bidState of Array.from(auctionState.bids.values())) {
-        if (bidState.currentClaim !== 'valid_bid_placed') continue
-        if (bidState.bid.amount > top) top = bidState.bid.amount
-    }
-    return top
+	let top = 0
+	for (const bidState of Array.from(auctionState.bids.values())) {
+		if (bidState.currentClaim !== 'valid_bid_placed') continue
+		if (bidState.bid.amount > top) top = bidState.bid.amount
+	}
+	return top
 }
 ```
 
@@ -89,11 +89,13 @@ B: bid passes when excluded from top), the timeline of winner theft at auction
 close, and the proposed fix.
 
 ### 1. Spurious verdict churn
+
 Alternating `valid_bid_placed` / `bid_invalid` events published for the
 legitimate top bid. This pollutes relays with contradictory verdicts and
 confuses clients.
 
 ### 2. Winner theft at auction close (critical)
+
 `pickWinningBid()` only considers bids with `currentClaim === 'valid_bid_placed'`.
 `assignCloseRoles()` runs once (gated on `closeHandled`) when `now > maxEndAt`.
 
@@ -129,21 +131,19 @@ Add an `excludeBidId` parameter to `currentTopValidBidAmount()` and pass the bid
 being validated at all call sites:
 
 ```ts
-export const currentTopValidBidAmount = (
-    auctionState: ValidatorAuctionState,
-    excludeBidId?: string,
-): number => {
-    let top = 0
-    for (const bidState of Array.from(auctionState.bids.values())) {
-        if (bidState.bid.id === excludeBidId) continue   // <-- the fix
-        if (bidState.currentClaim !== 'valid_bid_placed') continue
-        if (bidState.bid.amount > top) top = bidState.bid.amount
-    }
-    return top
+export const currentTopValidBidAmount = (auctionState: ValidatorAuctionState, excludeBidId?: string): number => {
+	let top = 0
+	for (const bidState of Array.from(auctionState.bids.values())) {
+		if (bidState.bid.id === excludeBidId) continue // <-- the fix
+		if (bidState.currentClaim !== 'valid_bid_placed') continue
+		if (bidState.bid.amount > top) top = bidState.bid.amount
+	}
+	return top
 }
 ```
 
 Call sites that need updating (pass `bidState.bid.id`):
+
 1. `publisher.ts` — `publishIfChanged()`
 2. `subscriber.ts` — `onBidEvent()` / revalidation paths
 3. `nut7Poller.ts` — `tick()` / `refreshBidChain()`
@@ -157,6 +157,7 @@ bid.
 
 No test currently exercises revalidation of the sole top bid. A regression test
 should:
+
 1. Insert a single valid bid (amount=1000, starting_bid=1000, increment=100)
 2. Trigger a revalidation cycle (simulate NUT-7 poll or republish)
 3. Assert the verdict remains `valid_bid_placed` (does not oscillate)

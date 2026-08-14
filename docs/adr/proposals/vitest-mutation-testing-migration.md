@@ -97,6 +97,7 @@ are documented and resolved case-by-case.
 ## Consequences
 
 **Positive:**
+
 - Unblocks the PR Trust Pipeline upstream PR (no Stryker dependency)
 - Clear decision record for future contributors
 - Trigger conditions prevent premature migration
@@ -104,12 +105,14 @@ are documented and resolved case-by-case.
   compatibility (e.g., snapshot testing, better watch mode, in-source testing)
 
 **Negative:**
+
 - Mutation testing gap remains until migration happens
 - Tests could theoretically game coverage without detection (mitigated by
   human review + Playwright evidence)
 - Future migration will touch every test file (mechanical but large diff)
 
 **Neutral:**
+
 - `bun:test` continues to work perfectly for our current needs
 - Bun's LCOV coverage output is already consumed by the DIY gate
 - The migration is deferred, not cancelled — trigger conditions are explicit

@@ -12,17 +12,18 @@
 
 Every task MUST pass all 6 gates before completion:
 
-| Gate | What | Evidence Required |
-|------|------|-------------------|
-| G1: TDD | Write failing test FIRST, watch it fail (RED), then implement (GREEN) | Test output showing RED → GREEN |
-| G2: Tests Pass | `bun run test:unit` — zero failures, no skip/xfail/.only. Coverage ≥ 80% | Pasted test output |
-| G2.5: Cold Review | Fresh subagent reviews git diff with ZERO context. Manager dispatches this. | Reviewer verdict (APPROVED or issues addressed) |
-| G3: Docs Updated | If source changes, at least one .md changes in same commit | Commit shows .md alongside .ts/.tsx |
-| G4: Atomic Commit | One concern per commit, conventional message, `git status` clean | `git log --oneline` output |
-| G5: Pushed | `git push` succeeds, exit code 0 | Push output pasted |
-| G6: Manager Review | Worker sets status to `review`. Manager validates before `done` | Manager sign-off |
+| Gate               | What                                                                        | Evidence Required                               |
+| ------------------ | --------------------------------------------------------------------------- | ----------------------------------------------- |
+| G1: TDD            | Write failing test FIRST, watch it fail (RED), then implement (GREEN)       | Test output showing RED → GREEN                 |
+| G2: Tests Pass     | `bun run test:unit` — zero failures, no skip/xfail/.only. Coverage ≥ 80%    | Pasted test output                              |
+| G2.5: Cold Review  | Fresh subagent reviews git diff with ZERO context. Manager dispatches this. | Reviewer verdict (APPROVED or issues addressed) |
+| G3: Docs Updated   | If source changes, at least one .md changes in same commit                  | Commit shows .md alongside .ts/.tsx             |
+| G4: Atomic Commit  | One concern per commit, conventional message, `git status` clean            | `git log --oneline` output                      |
+| G5: Pushed         | `git push` succeeds, exit code 0                                            | Push output pasted                              |
+| G6: Manager Review | Worker sets status to `review`. Manager validates before `done`             | Manager sign-off                                |
 
 **Anti-patterns that fail gates automatically:**
+
 - Writing implementation before test
 - Using `skip`/`xfail`/`.only` to force green
 - Committing without running test suite
@@ -46,11 +47,13 @@ Every task MUST pass all 6 gates before completion:
 ## Task Breakdown
 
 ### T1: Foundation — Shared Types + Kind 30409 Schema
+
 **Priority:** 0 (blocking all others)
 **Worker:** `worker-plebeian`
 **Depends on:** nothing
 
 **Scope:**
+
 - `src/lib/schemas/auction-kinds.ts` — Kind constants (30408, 30409, 1023, 1024), `TOTAL_BPS=10000`, `DEFAULT_MAX_DURATION_SECONDS=2592000`
 - `src/lib/schemas/validator-fee-announcement.ts` — Zod schema for kind 30409 with:
   - Required tags: `d` (validator id), `fee_min_bps` (min 1), `mint` (string array)
@@ -60,6 +63,7 @@ Every task MUST pass all 6 gates before completion:
 - Add kind 30409 to any existing kind registry/enum in codebase
 
 **Tests (write FIRST, watch fail, then implement):**
+
 - `src/lib/schemas/validator-fee-announcement.test.ts`:
   1. Valid event with all required tags passes
   2. Missing `d` tag fails
@@ -77,11 +81,13 @@ Every task MUST pass all 6 gates before completion:
 ---
 
 ### T2: Kind 30409 — Publish + Query Hook
+
 **Priority:** 1
 **Worker:** `worker-plebeian`
 **Depends on:** T1
 
 **Scope:**
+
 - `src/publish/validator-announcement.tsx` — Publish function for validators to announce fees. Routes through `src/lib/nostr/io.ts`. No NDK imports.
 - `src/queries/validators.tsx` — Query hook `useValidators()` to discover validators:
   - Fetch kind 30409 events from relays
@@ -93,6 +99,7 @@ Every task MUST pass all 6 gates before completion:
 - Read `src/queries/v4v.tsx` and `src/publish/products.tsx` for existing patterns
 
 **Tests:**
+
 - `src/publish/validator-announcement.test.ts`:
   1. Publish function calls io.ts with correct event structure
   2. Event has kind 30409, correct tags
@@ -108,11 +115,13 @@ Every task MUST pass all 6 gates before completion:
 ---
 
 ### T3: Auction V4V Splits (kind 30408 extension)
+
 **Priority:** 1
 **Worker:** `worker-plebeian`
 **Depends on:** T1
 
 **Scope:**
+
 - `src/lib/schemas/auction-v4v.ts` (or modify existing auction schema) — Add `v4v_splits` array:
   - Each split: `{ npub: string, bps: number }`
   - Validation: sum of ALL bps = exactly 10000
@@ -123,6 +132,7 @@ Every task MUST pass all 6 gates before completion:
 - `src/publish/auction-v4v.tsx` (or modify existing) — Publish function for auction listing with V4V splits
 
 **Tests:**
+
 - `src/lib/schemas/auction-v4v.test.ts` (V4V split portion):
   1. Valid splits (sum=10000) pass
   2. Splits summing to 9999 fail
@@ -139,11 +149,13 @@ Every task MUST pass all 6 gates before completion:
 ---
 
 ### T4: Multi-Note Bid (kind 1023 extension)
+
 **Priority:** 2
 **Worker:** `worker-plebeian`
 **Depends on:** T3
 
 **Scope:**
+
 - Modify bid commitment schema to support multiple locked e-cash notes:
   - Each note entry: `{ recipient_npub: string, mint_url: string, locked_note_ref: string }`
   - All notes share same derivation path (secret)
@@ -152,6 +164,7 @@ Every task MUST pass all 6 gates before completion:
 - Extend `src/publish/auction-v4v.tsx` with bid publish function
 
 **Tests:**
+
 - `src/lib/schemas/auction-v4v.test.ts` (bid portion) or `src/lib/schemas/multi-note-bid.test.ts`:
   1. Valid multi-note bid passes (seller + validator + PM)
   2. Cross-mint case: seller note on mint A, validator on mint B passes
@@ -166,11 +179,13 @@ Every task MUST pass all 6 gates before completion:
 ---
 
 ### T5: Settlement Reveal (kind 1024 extension)
+
 **Priority:** 3
 **Worker:** `worker-plebeian`
 **Depends on:** T4
 
 **Scope:**
+
 - Modify settlement event schema to include `derivation_path`
   - SINGLE public Nostr event
   - On reveal, all recipients can verify + redeem their notes
@@ -178,6 +193,7 @@ Every task MUST pass all 6 gates before completion:
 - Extend `src/publish/auction-v4v.tsx` with settlement publish function
 
 **Tests:**
+
 - Settlement schema tests:
   1. Valid settlement with derivation_path passes
   2. Missing derivation_path fails
@@ -189,11 +205,13 @@ Every task MUST pass all 6 gates before completion:
 ---
 
 ### T6: Validator Settlement Verification
+
 **Priority:** 3
 **Worker:** `worker-plebeian`
 **Depends on:** T4, T5
 
 **Scope:**
+
 - `src/lib/auction-settlement.ts` — `verifySettlementNotes()` function:
   1. On kind 1024 event, fetch all notes from winning bid (kind 1023)
   2. For each note: query mint via `MintQueryPort` interface to verify (a) funds still valid, (b) note points to correct recipient pubkey
@@ -201,6 +219,7 @@ Every task MUST pass all 6 gates before completion:
 - Define `MintQueryPort` interface (abstract, no concrete mint client — allows testing)
 
 **Tests:**
+
 - `src/lib/auction-settlement.test.ts` (verification portion):
   1. All notes valid → verification passes
   2. One note spent → verification fails for that note, passes for others
@@ -213,11 +232,13 @@ Every task MUST pass all 6 gates before completion:
 ---
 
 ### T7: Losing Bidder Auto-Refund
+
 **Priority:** 3
 **Worker:** `worker-plebeian`
 **Depends on:** T5
 
 **Scope:**
+
 - `src/lib/auction-settlement.ts` (extend) — `checkLosingBidderRefund()` function:
   - After settlement window expires, losing bidders' notes auto-refundable
   - No secret revealed for losing bids
@@ -226,6 +247,7 @@ Every task MUST pass all 6 gates before completion:
   - Uses payment lifecycle states (NOT a boolean)
 
 **Tests:**
+
 - `src/lib/auction-settlement.test.ts` (refund portion):
   1. Losing bidder before window expiry → state stays `locked`
   2. Losing bidder after window expiry → state transitions to `refundable`
@@ -237,11 +259,13 @@ Every task MUST pass all 6 gates before completion:
 ---
 
 ### T8: Integration — Format Check, Full Test Run, Cold Review, Final Push
+
 **Priority:** 4
 **Worker:** `worker-inspector` (or manager)
 **Depends on:** T1-T7 all in `review` status
 
 **Scope:**
+
 1. `bun install` (fresh in worktree)
 2. `bun run format:check` — fix any issues
 3. `bun run test:unit` — ALL tests pass, zero failures
@@ -253,6 +277,7 @@ Every task MUST pass all 6 gates before completion:
 9. `git push -u origin feat/v4v-dev-splits-implementation`
 
 **Gate evidence required:**
+
 - Full test output pasted
 - Cold review verdict pasted
 - `git log --oneline` showing all commits
@@ -290,6 +315,7 @@ Phase 5: T8 (integration)
 ## Worker Profile: `worker-plebeian`
 
 All implementation tasks (T1-T7) assigned to `worker-plebeian`:
+
 - Knows the Plebeian Market codebase
 - Has `terminal`, `file`, `coding` toolsets
 - Quality-gates skill force-loaded
@@ -299,6 +325,7 @@ Integration task T8 assigned to `worker-inspector` or handled by manager.
 ## Existing Work Reference
 
 A previous uncontrolled dispatch created 6 files in the worktree (untracked):
+
 - `src/lib/schemas/auction-kinds.ts`
 - `src/lib/schemas/validator-fee-announcement.ts`
 - `src/lib/schemas/auction-v4v.ts`

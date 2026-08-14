@@ -31,16 +31,18 @@ Both are percentage splits to a destination npub, defined in the auction event (
 - **V4V donation:** seller's discretion. Can be zero. Recipients and percentages are configurable per-listing.
 
 Example auction V4V config:
+
 ```json
 {
-  "v4v_splits": [
-    {"npub": "<seller-npub>", "bps": 9700},
-    {"npub": "<validator-1-npub>", "bps": 100},
-    {"npub": "<validator-2-npub>", "bps": 100},
-    {"npub": "<plebeian-market-npub>", "bps": 100}
-  ]
+	"v4v_splits": [
+		{ "npub": "<seller-npub>", "bps": 9700 },
+		{ "npub": "<validator-1-npub>", "bps": 100 },
+		{ "npub": "<validator-2-npub>", "bps": 100 },
+		{ "npub": "<plebeian-market-npub>", "bps": 100 }
+	]
 }
 ```
+
 (Total = 10000 bps = 100%. Seller gets 97%, two validators get 1% each, PM gets 1%.)
 
 ### 3. Per-validator notes (no fee pool)
@@ -53,14 +55,14 @@ A parameterized replaceable event (NIP-33, 3xxxx range) that sits next to kind 3
 
 **Fields:**
 
-| Tag | Required | Description |
-|-----|----------|-------------|
-| `d` | Yes | Validator identifier (NIP-33 dedup key) |
-| `fee_min_bps` | Yes | Minimum fee in basis points. 100 = 1%. 1 bps = 0.01%. Minimum non-zero fee is 1 bps. |
-| `mint` | Yes (array) | Supported mint URLs. One tag per mint. |
-| `auction_type` | No | Compatible auction formats (e.g., "english"). Auction must match for validator to accept. |
-| `locking_scheme` | No | Compatible key-locking schemes (e.g., "P2PK"). Auction must match for validator to accept. |
-| `max_duration` | No (default 30 days = 2592000s) | Validator will not validate auctions longer than this. |
+| Tag              | Required                        | Description                                                                                |
+| ---------------- | ------------------------------- | ------------------------------------------------------------------------------------------ |
+| `d`              | Yes                             | Validator identifier (NIP-33 dedup key)                                                    |
+| `fee_min_bps`    | Yes                             | Minimum fee in basis points. 100 = 1%. 1 bps = 0.01%. Minimum non-zero fee is 1 bps.       |
+| `mint`           | Yes (array)                     | Supported mint URLs. One tag per mint.                                                     |
+| `auction_type`   | No                              | Compatible auction formats (e.g., "english"). Auction must match for validator to accept.  |
+| `locking_scheme` | No                              | Compatible key-locking schemes (e.g., "P2PK"). Auction must match for validator to accept. |
+| `max_duration`   | No (default 30 days = 2592000s) | Validator will not validate auctions longer than this.                                     |
 
 **No WOT/endorsement tags** on this kind. WOT is applied to bidders separately (see section 9).
 
@@ -69,6 +71,7 @@ A parameterized replaceable event (NIP-33, 3xxxx range) that sits next to kind 3
 ### 5. Auction event references validators
 
 The auction event (kind 30408) must:
+
 - List assigned validator pubkeys
 - Specify the fee allocated to each validator (snapshotted at auction creation from the validator's kind 30409 announcement)
 - Each validator checks: "did this auction assign MY pubkey a fee that meets my minimum?" If yes → validates. If no → declines.
@@ -116,17 +119,20 @@ WOT applies to BIDDERS, not validators. A ContextVM service checks whether a bid
 ## Consequences
 
 **Positive:**
+
 - Atomic multi-party settlement with one reveal event
 - Clean fee discovery via validator competition (kind 30409)
 - V4V donations are native, not bolted on
 - Flexible cross-mint support
 
 **Negative:**
+
 - Per-recipient mint adds implementation complexity
 - Bid events carry more data (multiple notes, multiple mint references)
 - More mints = more failure points for atomic settlement
 
 **Neutral:**
+
 - Kind 30409 is a new application-specific kind (not a NIP)
 - Validator participation is opt-in per auction
 

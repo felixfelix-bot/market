@@ -10,19 +10,19 @@ addressed in focused follow-up work after #1170 merges.
 
 ## Bugs
 
-| # | Severity | Title | Fix Estimate | Key File |
-|---|----------|-------|--------------|----------|
-| 1 | Critical | [Top-bid self-revalidation oscillation](./01-top-bid-oscillation.md) | ~10 lines | `lifecycle.ts:414` |
-| 2 | Critical | [Relay-order last-writer-wins for kind-1025/1024](./02-relay-order-last-writer-wins.md) | ~30 lines | `state.ts:277,292` |
+| #   | Severity | Title                                                                                   | Fix Estimate | Key File           |
+| --- | -------- | --------------------------------------------------------------------------------------- | ------------ | ------------------ |
+| 1   | Critical | [Top-bid self-revalidation oscillation](./01-top-bid-oscillation.md)                    | ~10 lines    | `lifecycle.ts:414` |
+| 2   | Critical | [Relay-order last-writer-wins for kind-1025/1024](./02-relay-order-last-writer-wins.md) | ~30 lines    | `state.ts:277,292` |
 
 ## Improvement Research
 
-| # | Severity | Title | Status |
-|---|----------|-------|--------|
-| 3 | High | [Validator parity / split-brain attack](./validator-parity-split-brain.md) | Needs investigation |
-| 4 | High | [Griefer / Sybil npub rotation attack](./griefer-sybil-npub-rotation.md) | Known issue |
-| 5 | Medium | [Bid bond — e-cash collateral anti-griefing](./bid-bond-anti-griefing.md) | Proposed improvement |
-| 6 | Medium | [npub rotation cost — Sybil resistance](./npub-rotation-cost.md) | Proposed (deferred) |
+| #   | Severity | Title                                                                      | Status               |
+| --- | -------- | -------------------------------------------------------------------------- | -------------------- |
+| 3   | High     | [Validator parity / split-brain attack](./validator-parity-split-brain.md) | Needs investigation  |
+| 4   | High     | [Griefer / Sybil npub rotation attack](./griefer-sybil-npub-rotation.md)   | Known issue          |
+| 5   | Medium   | [Bid bond — e-cash collateral anti-griefing](./bid-bond-anti-griefing.md)  | Proposed improvement |
+| 6   | Medium   | [npub rotation cost — Sybil resistance](./npub-rotation-cost.md)           | Proposed (deferred)  |
 
 ## Context
 
@@ -41,6 +41,7 @@ maximotodev flagged both as "serious pre-existing concerns" in his review of
 be handled as focused follow-up work.
 
 PR #1170 exacerbates both:
+
 - **Bug 1:** #1170 adds `assignCloseRoles()` which makes the oscillation
   exploitable at auction close (winner determination depends on the oscillation
   cycle). It also adds NUT-7 polling that triggers more revalidation cycles.

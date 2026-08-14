@@ -64,15 +64,18 @@ boundaries. Shows a global fallback with a "reload" button.
 Replace the nuclear console suppression with a tiered approach:
 
 **Keep silenced in production:**
+
 - `console.log` — development-only debug noise
 - `console.debug` — verbose debugging
 - `console.info` — non-critical information
 
 **RESTORE in production:**
+
 - `console.error` — critical. Errors must be visible.
 
 **Add structured error reporting (privacy-preserving):**
 Errors are reported to a backend endpoint (or error tracking service) with:
+
 - Error message and stack trace (sanitized — no user data)
 - Route/URL where the error occurred (path only, no query params)
 - App version / git commit hash
@@ -80,6 +83,7 @@ Errors are reported to a backend endpoint (or error tracking service) with:
 - Error boundary that caught it (route-level vs feature-level)
 
 **Explicitly NOT reported:**
+
 - User pubkey, npub, or any Nostr identity
 - Payment details, invoice numbers, amounts
 - Relay connection details or relay URLs
@@ -104,34 +108,34 @@ from typescript-eslint) to catch these at build time.
 
 ### Missing Error Boundaries
 
-| Location | Severity | Notes |
-|----------|----------|-------|
-| App root (`src/frontend.tsx`) | Critical | No root-level boundary — any uncaught error kills the SPA |
-| All route components | High | No per-route boundaries |
-| Payment flow components | High | `LightningPaymentProcessor` handles external data, no boundary |
-| Relay-consuming components | High | `NostrConnectQR`, `ProfileSearch`, `MigrationForm` — all do raw `JSON.parse` in render |
+| Location                      | Severity | Notes                                                                                  |
+| ----------------------------- | -------- | -------------------------------------------------------------------------------------- |
+| App root (`src/frontend.tsx`) | Critical | No root-level boundary — any uncaught error kills the SPA                              |
+| All route components          | High     | No per-route boundaries                                                                |
+| Payment flow components       | High     | `LightningPaymentProcessor` handles external data, no boundary                         |
+| Relay-consuming components    | High     | `NostrConnectQR`, `ProfileSearch`, `MigrationForm` — all do raw `JSON.parse` in render |
 
 ### Console Suppression
 
-| File | Line | Issue |
-|------|------|-------|
+| File               | Line  | Issue                                                                 |
+| ------------------ | ----- | --------------------------------------------------------------------- |
 | `src/frontend.tsx` | 17-20 | All console methods silenced in production, including `console.error` |
 
 ### Floating Promises (no `.catch()`)
 
-| File | Line | Code |
-|------|------|------|
-| `src/routes/_dashboard-layout/dashboard/products/shipping-options.tsx` | 153, 1157 | `getUser().then(setUser)` |
-| `src/components/migration/MigrationForm.tsx` | 111 | `getUser().then(setNdkUser)` |
-| `src/components/auth/LoginDialog.tsx` | 141 | `.then(() => handleLoginSuccess())` |
-| `src/lib/ctxcn-client.ts` | 177, 200 | `.catch(() => {})` — catches but swallows |
+| File                                                                   | Line      | Code                                      |
+| ---------------------------------------------------------------------- | --------- | ----------------------------------------- |
+| `src/routes/_dashboard-layout/dashboard/products/shipping-options.tsx` | 153, 1157 | `getUser().then(setUser)`                 |
+| `src/components/migration/MigrationForm.tsx`                           | 111       | `getUser().then(setNdkUser)`              |
+| `src/components/auth/LoginDialog.tsx`                                  | 141       | `.then(() => handleLoginSuccess())`       |
+| `src/lib/ctxcn-client.ts`                                              | 177, 200  | `.catch(() => {})` — catches but swallows |
 
 ### Silent Catches
 
-| File | Line | Issue |
-|------|------|-------|
-| `src/components/messages/ChatMessageBubble.tsx` | 105 | `} catch {}` — swallows message parse errors |
-| `src/lib/ctxcn-client.ts` | 177, 200 | Catches relay publish failures silently |
+| File                                            | Line     | Issue                                        |
+| ----------------------------------------------- | -------- | -------------------------------------------- |
+| `src/components/messages/ChatMessageBubble.tsx` | 105      | `} catch {}` — swallows message parse errors |
+| `src/lib/ctxcn-client.ts`                       | 177, 200 | Catches relay publish failures silently      |
 
 ---
 
@@ -155,6 +159,7 @@ from typescript-eslint) to catch these at build time.
 ## Notes
 
 This ADR follows the "persistent rule + transient violations" pattern:
+
 - The Problem and Decision sections define the permanent standard
 - The "Current Violations" section tracks specific codebase issues — entries
   are removed as PRs fix each one. When all are fixed, the section is deleted.

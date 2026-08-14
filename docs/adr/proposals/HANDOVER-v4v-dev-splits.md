@@ -18,6 +18,7 @@ Implement the V4V dev splits mechanism described in the ADR. Create a feature br
 4. Push to `felixfelix-bot/market` remote
 
 **Important:** The main checkout at `~/repos/market` is in a messy state (merge conflicts, rebase in progress). Use a clean worktree:
+
 ```bash
 git worktree add ~/worktrees/market-v4v-impl origin/docs/adr-proposals-index
 cd ~/worktrees/market-v4v-impl
@@ -31,12 +32,14 @@ git checkout -b feat/v4v-dev-splits-implementation
 Create the event schema, publish/query functions, and validation for kind 30409.
 
 **Files to create/modify:**
+
 - `src/lib/schemas/validator-fee-announcement.ts` — Zod schema for kind 30409
 - `src/publish/validator-announcement.tsx` — Publish function for validators to announce their fees
 - `src/queries/validators.tsx` — Query hook to discover validators (fetch kind 30409 events, filter by mint/auction_type/locking_scheme compatibility)
 - Add kind 30409 to any kind registry/enum
 
 **Schema requirements (from ADR section 4):**
+
 ```typescript
 // Required tags:
 d: string              // validator identifier
@@ -54,6 +57,7 @@ max_duration?: number  // seconds, default 2592000 (30 days)
 Extend the auction listing schema to include V4V splits.
 
 **Files to create/modify:**
+
 - Modify the auction listing schema to add `v4v_splits` array
 - Each split: `{ npub: string, bps: number }`
 - Bps must sum to exactly 10000 (100%)
@@ -61,6 +65,7 @@ Extend the auction listing schema to include V4V splits.
 - V4V donation splits (PM, etc.) are optional
 
 **Validation rules:**
+
 - Sum of all bps = 10000
 - Each assigned validator's bps >= that validator's `fee_min_bps` from their latest kind 30409
 - If no validators assigned OR all assigned validators decline → auction is invalid (client should warn)
@@ -70,6 +75,7 @@ Extend the auction listing schema to include V4V splits.
 Extend the bid commitment to carry multiple locked e-cash notes.
 
 **Files to create/modify:**
+
 - Modify bid schema to support multiple notes, one per recipient
 - Each note entry: `{ recipient_npub: string, mint_url: string, locked_note_ref: string }`
 - All notes share the same derivation path (secret)
@@ -82,6 +88,7 @@ Extend the bid commitment to carry multiple locked e-cash notes.
 The settlement event publishes the derivation path that unlocks all notes.
 
 **Files to create/modify:**
+
 - Modify settlement event to include the derivation path
 - The reveal is a SINGLE public Nostr event
 - On reveal, all recipients can verify + redeem their respective notes
@@ -91,6 +98,7 @@ The settlement event publishes the derivation path that unlocks all notes.
 Validators need logic to verify bids at settlement time.
 
 **Logic:**
+
 1. On kind 1024 (settlement) event, fetch all notes referenced in the winning bid (kind 1023)
 2. For each note: query the mint to verify (a) funds are still valid, (b) note points to correct recipient pubkey
 3. Publish validation event confirming/denying the settlement

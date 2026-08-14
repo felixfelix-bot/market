@@ -50,22 +50,22 @@ payment destination semantics (from #472) and wallet UI surface architecture
 
 ## Next Actions Per ADR
 
-| ADR / proposal | Next action |
-|---|---|
-| phase-enums (#1178) / store-layer-deps (#1179) | In review upstream — shepherd PRs to merge; number assigned there |
-| Notification Phase 1 (scoped-map counting) | Surface next after #1178/#1179: focused upstream PR |
-| Security trio + remediation strategy | Surface per INDEX priority order (2–5) |
-| aggregator-relay / relay-data-validation / error-boundary / e2e-test-stabilization | Ready (🟡); surface per priority order 6–11 |
-| v2-merge-deployment-strategy | 📝 Draft — revise stale internal ADR references before any surfacing |
-| auctions-validation-protocol / direct-lightning-bid-funding | Wait for `feat/direct-lightning-bid-funding` PR outcome; that branch stays authoritative (D4) |
-| e2e-test-parallelization | Coordinate with e2e stabilization proposal (#1175 lineage); only one e2e track should surface at a time |
-| vitest-mutation-testing-migration | Pairs with PR Trust Pipeline proposal; surface together |
-| pr-trust-pipeline-deferred | Decide deferred-component disposition, then surface |
-| currency-conversion-fallback | Draft status is "Issue" — needs decision framing before surfacing |
-| explicit-relay-persistence / product-orthogonal-dimensions / semantic-color-tokens / status-communication | Unranked — review for relevance before surfacing |
-| untrusted-content-rendering-and-markdown-descriptions | Ready for maintainer + prior-art author review (credit #475/#684 authors, check re-open intent) |
-| Salvage drafts 1–3 above | Write as new unnumbered proposals here, cite closed PR + branch SHA as prior art |
-| v4v splits doc set (4 files) | Dormant until V4V work resumes; PLAN status is "awaiting Felix approval" |
+| ADR / proposal                                                                                            | Next action                                                                                             |
+| --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| phase-enums (#1178) / store-layer-deps (#1179)                                                            | In review upstream — shepherd PRs to merge; number assigned there                                       |
+| Notification Phase 1 (scoped-map counting)                                                                | Surface next after #1178/#1179: focused upstream PR                                                     |
+| Security trio + remediation strategy                                                                      | Surface per INDEX priority order (2–5)                                                                  |
+| aggregator-relay / relay-data-validation / error-boundary / e2e-test-stabilization                        | Ready (🟡); surface per priority order 6–11                                                             |
+| v2-merge-deployment-strategy                                                                              | 📝 Draft — revise stale internal ADR references before any surfacing                                    |
+| auctions-validation-protocol / direct-lightning-bid-funding                                               | Wait for `feat/direct-lightning-bid-funding` PR outcome; that branch stays authoritative (D4)           |
+| e2e-test-parallelization                                                                                  | Coordinate with e2e stabilization proposal (#1175 lineage); only one e2e track should surface at a time |
+| vitest-mutation-testing-migration                                                                         | Pairs with PR Trust Pipeline proposal; surface together                                                 |
+| pr-trust-pipeline-deferred                                                                                | Decide deferred-component disposition, then surface                                                     |
+| currency-conversion-fallback                                                                              | Draft status is "Issue" — needs decision framing before surfacing                                       |
+| explicit-relay-persistence / product-orthogonal-dimensions / semantic-color-tokens / status-communication | Unranked — review for relevance before surfacing                                                        |
+| untrusted-content-rendering-and-markdown-descriptions                                                     | Ready for maintainer + prior-art author review (credit #475/#684 authors, check re-open intent)         |
+| Salvage drafts 1–3 above                                                                                  | Write as new unnumbered proposals here, cite closed PR + branch SHA as prior art                        |
+| v4v splits doc set (4 files)                                                                              | Dormant until V4V work resumes; PLAN status is "awaiting Felix approval"                                |
 
 ## Ground Rules (from repo AGENTS.md)
 

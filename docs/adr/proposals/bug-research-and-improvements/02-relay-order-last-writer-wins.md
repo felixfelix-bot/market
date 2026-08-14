@@ -21,34 +21,32 @@ publish contradictory verdicts.
 
 ```ts
 export const recordPathRelease = (
-    state: ValidatorState,
-    release: ParsedPathReleaseEvent,
-    observedAt: number,
+	state: ValidatorState,
+	release: ParsedPathReleaseEvent,
+	observedAt: number,
 ): ValidatorAuctionState | null => {
-    for (const auctionState of Array.from(state.auctions.values())) {
-        if (auctionState.bids.has(release.bidEventId)) {
-            auctionState.pathReleases.set(release.bidEventId, release)  // ← OVERWRITE
-            // ...
-            return auctionState
-        }
-    }
+	for (const auctionState of Array.from(state.auctions.values())) {
+		if (auctionState.bids.has(release.bidEventId)) {
+			auctionState.pathReleases.set(release.bidEventId, release) // ← OVERWRITE
+			// ...
+			return auctionState
+		}
+	}
 }
 ```
 
 ### `recordSettlement` (state.ts ~line 292)
 
 ```ts
-export const recordSettlement = (
-    state: ValidatorState,
-    settlement: ParsedSettlementEvent,
-): ValidatorAuctionState | null => {
-    // ...
-    auctionState.settlement = settlement  // ← OVERWRITE
-    // ...
+export const recordSettlement = (state: ValidatorState, settlement: ParsedSettlementEvent): ValidatorAuctionState | null => {
+	// ...
+	auctionState.settlement = settlement // ← OVERWRITE
+	// ...
 }
 ```
 
 Neither function checks:
+
 - Is an event already stored for this target?
 - Is the new event from the authorized party?
 - Should we prefer the earlier event (deterministic tie-break)?
@@ -100,16 +98,19 @@ legitimate release has been displaced from storage.
 ## Impact
 
 ### Verdict manipulation via relay gaming
+
 An attacker who controls relay delivery timing (or relies on natural relay
 latency differences) can cause the validator to store whichever event benefits
 them. This produces wrong verdicts from a correctly-behaving validator.
 
 ### Cross-validator disagreement
+
 Two validators on different relay sets will store different events and publish
 contradictory kind-30440 verdicts. With `auditor_quorum = 1` (the default),
 clients trust whichever verdict they see first — no reconciliation exists.
 
 ### Combined with Bug 1 (oscillation)
+
 A bidder can grief a seller by publishing contradictory path releases,
 triggering verdict oscillation on top of the oscillation from Bug 1.
 
@@ -118,7 +119,7 @@ triggering verdict oscillation on top of the oscillation from Bug 1.
 - #1170's settlement validation (`validateSettlementCompleteness`) depends on
   the stored kind-1025 and kind-1024 being the correct/authoritative versions.
 - #1170 adds `pathReleaseObservedAt` (state.ts) which correctly keeps the
-  *earliest* observation time — but the release *object itself* is still
+  _earliest_ observation time — but the release _object itself_ is still
   last-writer-wins.
 - #1170 adds NUT-7 refresh triggers on kind-1025/kind-1024 arrival, which means
   a malicious overwrite also triggers a NUT-7 re-poll, amplifying the wrong
@@ -132,23 +133,23 @@ Three-part fix, all in `state.ts`:
 
 ```ts
 export const recordPathRelease = (
-    state: ValidatorState,
-    release: ParsedPathReleaseEvent,
-    observedAt: number,
+	state: ValidatorState,
+	release: ParsedPathReleaseEvent,
+	observedAt: number,
 ): ValidatorAuctionState | null => {
-    for (const auctionState of Array.from(state.auctions.values())) {
-        if (auctionState.bids.has(release.bidEventId)) {
-            const existing = auctionState.pathReleases.get(release.bidEventId)
-            if (existing && existing.id <= release.rawEvent.id) {
-                // Keep the existing event — deterministic tie-break
-                // Still update observedAt if this is earlier
-                return auctionState
-            }
-            auctionState.pathReleases.set(release.bidEventId, release)
-            // ...
-            return auctionState
-        }
-    }
+	for (const auctionState of Array.from(state.auctions.values())) {
+		if (auctionState.bids.has(release.bidEventId)) {
+			const existing = auctionState.pathReleases.get(release.bidEventId)
+			if (existing && existing.id <= release.rawEvent.id) {
+				// Keep the existing event — deterministic tie-break
+				// Still update observedAt if this is earlier
+				return auctionState
+			}
+			auctionState.pathReleases.set(release.bidEventId, release)
+			// ...
+			return auctionState
+		}
+	}
 }
 ```
 
@@ -162,8 +163,8 @@ Before storing, verify the signer pubkey matches the authorized party:
 // In recordPathRelease:
 const bidState = auctionState.bids.get(release.bidEventId)
 if (bidState && release.bidderPubkey.toLowerCase() !== bidState.bid.bidderPubkey.toLowerCase()) {
-    // Wrong signer — reject before overwriting
-    return auctionState
+	// Wrong signer — reject before overwriting
+	return auctionState
 }
 ```
 
@@ -198,6 +199,7 @@ protocol-level issue that requires auditor quorum to resolve.
 ## Test Coverage Gap
 
 No test currently exercises:
+
 1. Two valid kind-1025 events for the same bid arriving in different orders
 2. Two valid kind-1024 events for the same auction arriving in different orders
 3. A wrong-key kind-1025 attempting to overwrite a legitimate one

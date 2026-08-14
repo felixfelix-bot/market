@@ -14,7 +14,7 @@ Issue — Number: ADR-xxx (assigned at upstream merge; formerly ADR-TBD on
 Plebeian Market converts prices between sats, BTC, and fiat using **three
 overlapping client layers plus a separate server-side rate aggregator**, with
 no single source of truth. A fallback for a missing ContextVM (CVM) rate
-server *does* exist — `fetchBtcExchangeRates` tries ContextVM first, then Yadio —
+server _does_ exist — `fetchBtcExchangeRates` tries ContextVM first, then Yadio —
 but it is fragile: on CVM failure it degrades to a single HTTP source, the
 pure-math layer returns `NaN` when rates are unavailable, the CVM identity
 resolver throws and can take down the entire `/api/config` endpoint, and the
@@ -45,12 +45,12 @@ The four layers, briefly:
    primitive. Returns **`NaN`** on missing `exchangeRates` or missing rate.
 2. **`queries/external.tsx`** — async, networked. `fetchBtcExchangeRates()`
    = ContextVM first, **Yadio** fallback. `convertCurrencyToSats(currency, amount)`
-   is a *second* conversion path that fetches a fresh rate and delegates to
+   is a _second_ conversion path that fetches a fresh rate and delegates to
    `MempoolService`. React Query hooks wrap both.
 3. **`cvm-identity.ts` + `ctxcn-client.ts`** — the ContextVM Nostr/MCP client.
    `resolveCvmServerPubkey()` resolves the server pubkey from env and **throws**
    if none is configured.
-4. **`contextvm/tools/price-sources.ts`** — the CVM *server* (separate process).
+4. **`contextvm/tools/price-sources.ts`** — the CVM _server_ (separate process).
    Aggregates **four** sources (Yadio, CoinDesk, Binance, CoinGecko) in
    parallel and takes the **median** per currency. Robust — but the browser
    never reuses this aggregation; on CVM failure the client falls back to
@@ -66,10 +66,10 @@ Layer-by-layer findings:
   down" silently means "one source of truth," undocumented.
 - **`NaN` poisoning.** While `useBtcExchangeRates()` is loading or has
   errored, `exchangeRates` is `undefined`; `MempoolService.convertCurrencyToSats(
-  {fromCurrency:'USD', exchangeRates:undefined})` returns `NaN`. In
+{fromCurrency:'USD', exchangeRates:undefined})` returns `NaN`. In
   `tabs.tsx` the ShippingTab computes `productSats = convertCurrencyToSats(...)`
   and `combinedSats = Math.round(productSats + shippingSats)` → `NaN`. The UI
-  guards *display* (`formatSats` → `'—'`), but the derived `productSats` is
+  guards _display_ (`formatSats` → `'—'`), but the derived `productSats` is
   `NaN`, which fails form validation. The pre-centralization inline
   `convertCurrencyToSats` (master) returned `0` here, so this is a behavioral
   regression: three different "no rates" behaviors now coexist — `NaN`
@@ -92,15 +92,15 @@ Layer-by-layer findings:
   contacted, contradicting "local only."
 - **Two parallel conversion paths with no facade.** Path A:
   `useCurrencyConversion(c, amt)` → async `convertCurrencyToSats` → fresh fetch
-  + `MempoolService`. Path B: `useBtcExchangeRates()` + direct
-  `MempoolService.convertCurrencyToSats(...)` (used in `tabs.tsx`, `cart.ts`)
-  using cached rates. These can return different numbers (fresh vs
-  stale-cached). `convertCurrencyToSats` even rebuilds a one-currency
-  `exchangeRates` object `{[currency]: rate}` to pass to `MempoolService`
-  instead of reusing the already-fetched full map.
+  - `MempoolService`. Path B: `useBtcExchangeRates()` + direct
+    `MempoolService.convertCurrencyToSats(...)` (used in `tabs.tsx`, `cart.ts`)
+    using cached rates. These can return different numbers (fresh vs
+    stale-cached). `convertCurrencyToSats` even rebuilds a one-currency
+    `exchangeRates` object `{[currency]: rate}` to pass to `MempoolService`
+    instead of reusing the already-fetched full map.
 - **Magic constant duplicated.** The sats-per-BTC factor appears ~12× across
   5 files: `mempool.ts` (`100_000_000`), `cart.ts` (its own
-  `numSatsInBtc = 100000000` — a *second* definition), `tabs.tsx` (×2),
+  `numSatsInBtc = 100000000` — a _second_ definition), `tabs.tsx` (×2),
   `PriceDisplay.tsx` (×2), `product.ts` (×2). `PriceDisplay.getFiatValue` does
   `satsValue / 100000000` inline instead of `MempoolService.satoshisToBtc`.
   `MempoolService` encapsulates the constant but nothing enforces its use.
@@ -162,6 +162,7 @@ Keep the three client layers and the two-layer client fallback as-is. Fix the
 concrete defects without restructuring.
 
 **Expected structure:**
+
 - `MempoolService.convertCurrencyToSats` / `convertSatsToCurrency` /
   `convertBetweenCurrencies` keep their signatures but return a deterministic
   **`0`** (matching `cart.ts` and the old inline behavior) instead of `NaN`
@@ -188,6 +189,7 @@ Lift the server's aggregation logic into a shared module so the browser
 fallback is as robust as the CVM server, not single-source Yadio.
 
 **Expected structure:**
+
 - New shared module `src/lib/currency/rate-sources.ts` (extracted from / shared
   with `contextvm/tools/price-sources.ts`): `fetchYadioRates`,
   `fetchCoinDeskRates`, `fetchBinanceRates`, `fetchCoinGeckoRates`,
@@ -213,6 +215,7 @@ math, and the "no rates" contract; make ContextVM an optional provider so the
 app boots and converts without it.
 
 **Expected structure:**
+
 - `src/lib/currency/` package:
   - `math.ts` — the single `SATOSHIS_PER_BTC` constant and the pure
     `satsToBtc` / `btcToSats` / `fiatToSats` / `satsToFiat` math (formerly

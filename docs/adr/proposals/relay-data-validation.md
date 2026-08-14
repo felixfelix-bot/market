@@ -45,15 +45,15 @@ const data = JSON.parse(event.content)
 // REQUIRED — degrades gracefully, type-safe:
 const result = AuctionListingSchema.safeParse(JSON.parse(event.content))
 if (!result.success) {
-    // log, skip, or return fallback — never throw
-    return null
+	// log, skip, or return fallback — never throw
+	return null
 }
-const data = result.data  // typed, validated
+const data = result.data // typed, validated
 ```
 
 ### Why `safeParse` not `parse`:
 
-`parse()` throws on invalid input — this crashes the query or render. 
+`parse()` throws on invalid input — this crashes the query or render.
 `safeParse()` returns `{ success, data, error }` — the caller handles
 failure gracefully. The 59 existing `.parse()` calls in the codebase should
 migrate to `safeParse` as they're touched.
@@ -94,21 +94,21 @@ PRs fix each one. When this section is empty, the migration is complete.
 
 ### Query layer (raw `JSON.parse` without schema)
 
-| File | Line | Kind | Notes |
-|------|------|------|-------|
-| `src/queries/authors.tsx` | 17-20 | 0 (metadata) | Parses kind-0 metadata 4× with no try/catch. Malformed content crashes the query. |
-| `src/queries/v4v.tsx` | 79, 93 | app-specific | v4v config parsed without schema |
-| `src/queries/relay-preferences.tsx` | 52 | 10000+ | Relay preferences parsed without schema |
-| `src/queries/zaps.tsx` | 49 | 9735 (zap) | Profile content parsed without schema |
-| `src/queries/payment.tsx` | 144, 812 | payment | Payment data parsed without schema |
+| File                                | Line     | Kind         | Notes                                                                             |
+| ----------------------------------- | -------- | ------------ | --------------------------------------------------------------------------------- |
+| `src/queries/authors.tsx`           | 17-20    | 0 (metadata) | Parses kind-0 metadata 4× with no try/catch. Malformed content crashes the query. |
+| `src/queries/v4v.tsx`               | 79, 93   | app-specific | v4v config parsed without schema                                                  |
+| `src/queries/relay-preferences.tsx` | 52       | 10000+       | Relay preferences parsed without schema                                           |
+| `src/queries/zaps.tsx`              | 49       | 9735 (zap)   | Profile content parsed without schema                                             |
+| `src/queries/payment.tsx`           | 144, 812 | payment      | Payment data parsed without schema                                                |
 
 ### Component layer (raw `JSON.parse` in render path — crashes SPA)
 
-| File | Line | Kind | Notes |
-|------|------|------|-------|
-| `src/components/auth/NostrConnectQR.tsx` | 241 | NIP-46 | JSON.parse in render — any error kills the component |
-| `src/components/migration/MigrationForm.tsx` | 886 | app-specific | JSON.parse in render |
-| `src/components/v4v/ProfileSearch.tsx` | 254 | 0 (metadata) | JSON.parse in render |
+| File                                         | Line | Kind         | Notes                                                |
+| -------------------------------------------- | ---- | ------------ | ---------------------------------------------------- |
+| `src/components/auth/NostrConnectQR.tsx`     | 241  | NIP-46       | JSON.parse in render — any error kills the component |
+| `src/components/migration/MigrationForm.tsx` | 886  | app-specific | JSON.parse in render                                 |
+| `src/components/v4v/ProfileSearch.tsx`       | 254  | 0 (metadata) | JSON.parse in render                                 |
 
 ### Schema coverage gaps
 
@@ -141,6 +141,7 @@ PRs fix each one. When this section is empty, the migration is complete.
 ## Notes
 
 This ADR follows the "persistent rule + transient violations" pattern:
+
 - The Problem and Decision sections above are permanent — they define the rule
   that all future code must follow
 - The "Current Violations" section is transient — entries are removed as PRs

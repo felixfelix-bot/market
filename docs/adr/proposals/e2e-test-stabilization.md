@@ -169,6 +169,7 @@ requesting review. The video must demonstrate the core user flow the PR
 introduces or modifies.
 
 **Purpose:**
+
 - Reviewers see proof the feature works without pulling and building locally
 - Forces the author to verify the feature before consuming reviewer time
 - Video evidence is irrefutable — it cannot be fabricated like a text summary
@@ -177,12 +178,14 @@ introduces or modifies.
 - Playwright records video natively (`--video=on`). Zero extra tooling
 
 **Scope:**
+
 - Applies to: PRs that change runtime behavior (new features, bug fixes,
   UI changes, payment flow modifications, relay handling changes)
 - Exempt: docs-only, config-only, and pure-refactoring PRs with no behavior
   change
 
 **Format:**
+
 - One happy-path smoke test (~30 seconds). Not full test coverage.
 - Question it answers: "Can a user complete the core flow this PR introduces?"
 - Attach as file or link in the PR description

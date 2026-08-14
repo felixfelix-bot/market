@@ -28,15 +28,14 @@ CI runs the suite in two modes:
 
 - **`e2e-pricing`** (push/PR): ~6 pricing-only tests, 30-min timeout.
 - **`e2e-full`** (workflow_dispatch/schedule only): everything except pricing
-  + collections, 120-min timeout.
+  - collections, 120-min timeout.
 
 No sharding exists. The full suite only runs on weekly schedule or manual
 trigger, meaning most PRs exercise a tiny fraction of the e2e coverage.
 
 ### Shared-Infrastructure Dependencies
 
-All tests depend on a **single in-memory Nostr relay** (`nak serve` on port
-10547) and a **single Bun dev server** (port 34567). These are shared across
+All tests depend on a **single in-memory Nostr relay** (`nak serve` on port 10547) and a **single Bun dev server** (port 34567). These are shared across
 the entire suite with no per-worker isolation.
 
 ### Fixed Test Identities
@@ -119,14 +118,14 @@ time targets, or if local development iteration speed becomes a bottleneck.
 
 ### Why CI sharding first (not worker parallelism)
 
-| Factor | CI Sharding | Worker Parallelism |
-|--------|-------------|-------------------|
+| Factor                 | CI Sharding                               | Worker Parallelism                     |
+| ---------------------- | ----------------------------------------- | -------------------------------------- |
 | Infrastructure changes | None (duplicate existing steps per shard) | Per-worker relay + server + identities |
-| Test code changes | None | Fixture refactor, data isolation |
-| Risk of flaky failures | Low (each shard is fully isolated) | Medium (shared relay race conditions) |
-| Speedup | ~3–4× (parallel jobs) | ~2–8× (depends on worker count) |
-| Local dev benefit | None (CI-only) | Yes (faster local runs) |
-| Effort | Low (1–2 days) | Medium-High (1–2 weeks) |
+| Test code changes      | None                                      | Fixture refactor, data isolation       |
+| Risk of flaky failures | Low (each shard is fully isolated)        | Medium (shared relay race conditions)  |
+| Speedup                | ~3–4× (parallel jobs)                     | ~2–8× (depends on worker count)        |
+| Local dev benefit      | None (CI-only)                            | Yes (faster local runs)                |
+| Effort                 | Low (1–2 days)                            | Medium-High (1–2 weeks)                |
 
 CI sharding delivers the most value with the least risk. The full suite
 currently only runs weekly — bringing it to every PR at ~7 min is a massive

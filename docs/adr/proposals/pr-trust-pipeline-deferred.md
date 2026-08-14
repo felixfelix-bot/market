@@ -62,6 +62,7 @@ Defer all components listed above. Ship only preview deployment + nsite
 publishing upstream. Archive the rest for future reference.
 
 Revisit when:
+
 - Team decides on Codecov vs DIY coverage gate
 - `bun:test` → Vitest migration is accepted (unblocks Stryker)
 - E2E diff-aware specs can be proposed as a standalone improvement

@@ -58,14 +58,14 @@ phantom unseen notifications attributed to the wrong auction.
 
 ### Where each pattern is used today
 
-| Category | Pattern | Status |
-|----------|---------|--------|
-| `unseenAuctionBidsByAuction` | Scoped-map-summed | ✅ Correct |
-| `unseenAuctionComments` (live-chat) | Global-decrement | ❌ Flawed |
-| `unseenAuctionEventComments` (NIP-22) | Global-decrement | ❌ Flawed |
-| `unseenProductComments` | Global-decrement | ❌ Flawed |
-| `unseenAuctionLive` | Global-decrement | ❌ Flawed |
-| `unseenAuctionSettlementBegins` | Global-decrement | ❌ Flawed |
+| Category                              | Pattern           | Status     |
+| ------------------------------------- | ----------------- | ---------- |
+| `unseenAuctionBidsByAuction`          | Scoped-map-summed | ✅ Correct |
+| `unseenAuctionComments` (live-chat)   | Global-decrement  | ❌ Flawed  |
+| `unseenAuctionEventComments` (NIP-22) | Global-decrement  | ❌ Flawed  |
+| `unseenProductComments`               | Global-decrement  | ❌ Flawed  |
+| `unseenAuctionLive`                   | Global-decrement  | ❌ Flawed  |
+| `unseenAuctionSettlementBegins`       | Global-decrement  | ❌ Flawed  |
 
 ## Proposed Solution
 
@@ -88,33 +88,33 @@ bids category is the reference implementation.
 
 ```typescript
 // State — per category
-unseenAuctionCommentsByAuction: ScopedUnseenCounts  // Record<string, number>
+unseenAuctionCommentsByAuction: ScopedUnseenCounts // Record<string, number>
 
 // Increment — scope key, update entry, re-sum
 incrementUnseenAuctionComments: (auctionKey?: string) => {
-  notificationStore.setState((state) => {
-    const scopedCounts = { ...state.unseenAuctionCommentsByAuction };
-    if (auctionKey) scopedCounts[auctionKey] = (scopedCounts[auctionKey] || 0) + 1;
-    return {
-      ...state,
-      unseenAuctionCommentsByAuction: scopedCounts,
-      unseenAuctionComments: sumScopedUnseenCounts(scopedCounts),
-    };
-  });
+	notificationStore.setState((state) => {
+		const scopedCounts = { ...state.unseenAuctionCommentsByAuction }
+		if (auctionKey) scopedCounts[auctionKey] = (scopedCounts[auctionKey] || 0) + 1
+		return {
+			...state,
+			unseenAuctionCommentsByAuction: scopedCounts,
+			unseenAuctionComments: sumScopedUnseenCounts(scopedCounts),
+		}
+	})
 }
 
 // Mark seen — zero the entry, re-sum, no clearedCount
 markAuctionCommentsSeen: (auctionKey?: string) => {
-  notificationStore.setState((state) => {
-    const scopedCounts = { ...state.unseenAuctionCommentsByAuction };
-    if (auctionKey) scopedCounts[auctionKey] = 0;
-    else Object.keys(scopedCounts).forEach((k) => (scopedCounts[k] = 0));
-    return {
-      ...state,
-      unseenAuctionCommentsByAuction: scopedCounts,
-      unseenAuctionComments: sumScopedUnseenCounts(scopedCounts),
-    };
-  });
+	notificationStore.setState((state) => {
+		const scopedCounts = { ...state.unseenAuctionCommentsByAuction }
+		if (auctionKey) scopedCounts[auctionKey] = 0
+		else Object.keys(scopedCounts).forEach((k) => (scopedCounts[k] = 0))
+		return {
+			...state,
+			unseenAuctionCommentsByAuction: scopedCounts,
+			unseenAuctionComments: sumScopedUnseenCounts(scopedCounts),
+		}
+	})
 }
 ```
 
