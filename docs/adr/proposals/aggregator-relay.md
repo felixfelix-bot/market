@@ -1,111 +1,133 @@
-# ADR Proposal: Client-Side Event Aggregation via Applesauce (Replaces Server-Side Aggregator Relay)
+# Relay Aggregation Strategy
+
+## Status
+
+Proposed — Number: ADR-xxx (assigned at upstream merge; formerly ADR-XXX on
+`docs/pending-adrs-index`)
+
+## Date
+
+2026-07-25
 
 ## Context
 
-PR #1115 proposed a **server-side aggregator relay** — a Khatru Go relay + Python scraper + app-side wiring — to consolidate Nostr events from multiple relays into a single caching endpoint. The goal was to reduce client-side relay connections, cache events centrally, and provide a unified view of the Nostr network.
+The Plebeian Market client queries multiple Nostr relays for market events
+(auctions, bids, products, settlements, messages). Many relays are dead or
+slow, causing:
 
-**PR #1115 has been closed.** This document proposes an alternative architecture using applesauce's native client-side capabilities.
+1. **Fan-out latency** — the client waits for N relay timeouts before showing data
+2. **Inconsistent state** — different relays have different event sets, leading to stale or missing data
+3. **Resource cost** — mobile clients maintain many WebSocket connections to unreliable relays
 
-## Problem Statement
+Issue #1046 documents the dead-relay fan-out problem.
 
-The Plebeian Market client needs to:
-1. Query events from multiple Nostr relays
-2. Cache events locally to reduce redundant relay queries
-3. Present a unified, deduplicated view of events to the UI
-4. Handle intermittent relay connectivity gracefully
+A server-side caching aggregator relay was prototyped in closed PR #1115:
+a Khatru relay that mirrors market-relevant events from upstream relays into
+one fast relay. The client would prepend `MARKET_AGGREGATOR_RELAY` as its
+primary read relay in production.
 
-## What Applesauce Already Provides (Client-Side)
+However, the project is migrating from NDK to Applesauce, which provides
+client-side primitives that may address the same problem:
 
-The applesauce SDK (`applesauce-core`, `applesauce-relay`, `applesauce-loaders`) already solves all four problems natively, without a server-side relay:
+- **RelayPool** — manages multiple relay connections, handles reconnection and
+  dead-relay detection
+- **EventStore** — in-memory + persisted event cache with deduplication
+- **nostr-idb** — IndexedDB-backed persistence for browser clients
+- **negentropy sync** — efficient set reconciliation protocol
 
-### 1. Multi-Relay Management — `RelayPool`
-```ts
-import { RelayPool } from "applesauce-relay";
+## Decision Drivers
 
-const pool = new RelayPool();
-// Manages connections to multiple relays
-// Methods: subscription(), request(), publish(), count()
-```
-`RelayPool` opens subscriptions across multiple relays simultaneously, aggregating results client-side.
+- Cold-start latency (first visit, empty cache)
+- Ongoing read latency (subsequent visits)
+- Relay reliability and consistency guarantees
+- Operational cost of running server-side infrastructure
+- Applesauce migration timeline and capabilities
+- Multi-device / multi-session state coherence
 
-### 2. Local Caching — IndexedDB via `nostr-idb`
-```ts
-import { NostrIDB } from "nostr-idb";
+## Options
 
-const nostrIDB = new NostrIDB();
-await nostrIDB.start(); // starts background processes
+### Option 1: Client-side only (Applesauce)
 
-// In-memory index caching for fast repeated queries
-// Automatic batching for optimal write performance
-```
-Events persist in IndexedDB, surviving page reloads. Indexes are cached in memory for sub-millisecond lookups.
+Rely on Applesauce's RelayPool + EventStore + nostr-idb for all relay
+management. No server-side aggregator infrastructure.
 
-### 3. Unified Event Store — `EventStore`
-```ts
-import { EventStore } from "applesauce-core";
+**Pros:**
+- Zero server infrastructure to maintain
+- Client-side caching means repeated reads don't re-hit dead relays
+- RelayPool can timeout dead relays quickly and prefer healthy ones
+- negentropy sync keeps local cache efficient
+- Aligns with the Applesauce migration direction
 
-const eventStore = new EventStore();
-// Reactive, in-memory store
-// Deduplicates events by ID automatically
-// UI components subscribe reactively
-```
+**Cons:**
+- Cold start still requires hitting upstream relays (slow first visit)
+- No centralized consistency guarantee
+- Mobile clients with no persistent cache still pay full fan-out cost
 
-### 4. Cache-First Loading — `createEventLoaderForStore`
-```ts
-import { createEventLoaderForStore } from "applesauce-loaders/loaders";
-import { persistEventsToCache } from "applesauce-core/helpers";
+### Option 2: Server-side aggregator (Khatru)
 
-// Cache request function — checks IndexedDB first
-const cacheRequest = (filters) => nostrIDB.filters(filters);
+Deploy a Khatru relay that mirrors market-relevant events. Clients prepend
+it as primary read relay in production.
 
-// Auto-persist new events to cache
-persistEventsToCache(eventStore, async (events) => {
-  await Promise.allSettled(events.map((event) => nostrIDB.add(event)));
-});
+**Pros:**
+- Single fast relay for all clients (low latency)
+- Server-side consistency and deduplication
+- Clients don't need to manage N relay connections for market data
 
-// Loader: cache first, then relay fallback
-createEventLoaderForStore(eventStore, pool, {
-  cacheRequest,
-  lookupRelays: ["wss://purplepag.es/", "wss://index.hzrd149.com/"],
-});
-```
+**Cons:**
+- New infrastructure to operate and monitor
+- Single point of failure if not redundant
+- Aggregator must stay in sync (scraper lag, missing events)
+- Adds a trusted relay to the stack
 
-The loader checks the local cache **before** hitting relays. New events from relays are automatically persisted to cache. This is the exact "aggregation + caching" pattern the server-side relay was trying to achieve.
+### Option 3: Hybrid (Bootstrap relay + Applesauce)
 
-## Architecture Comparison
+A lightweight bootstrap relay that helps cold starts, then clients transition
+to Applesauce-managed relay reads for ongoing data.
 
-| Concern | Server-Side Aggregator (#1115) | Applesauce Client-Side |
-|---------|-------------------------------|----------------------|
-| Multi-relay queries | Khatru Go relay fetches from upstream relays | `RelayPool` queries multiple relays directly |
-| Event caching | Python scraper writes to relay DB | `nostr-idb` writes to IndexedDB |
-| Deduplication | Relay handles replacement | `EventStore` deduplicates by event ID |
-| Infrastructure cost | Requires hosting Go + Python services | Zero — runs in the browser |
-| Latency | Extra hop through aggregator relay | Direct client → relay queries |
-| Offline support | None (aggregator must be online) | IndexedDB cache works offline |
-| Single point of failure | Aggregator relay goes down = everyone loses data | Each client has its own cache |
-| Maintenance burden | Go binary + Python scraper + relay config | npm packages, auto-updated |
+**Pros:**
+- Fast cold start without full aggregator complexity
+- Applesauce handles ongoing reads with caching
+- Bootstrap relay can be read-only, low-maintenance
 
-## Open Questions for ADR Discussion
+**Cons:**
+- Still requires some server infrastructure
+- Transition logic adds complexity
+- Bootstrap relay must be kept current
 
-1. **Read replica relays**: Do we need a curated list of read relays, or do we let the user configure their own? The `lookupRelays` parameter in `createEventLoaderForStore` controls which relays are queried for "lookup" operations (profile resolution, etc.).
+## Open Questions
 
-2. **Negentropy sync**: Should we use applesauce's negentropy (set reconciliation) support for initial sync instead of full relay queries? This would dramatically reduce bandwidth on first load.
-
-3. **Cache invalidation**: `nostr-idb` caches events indefinitely. Do we need a TTL or max-size eviction policy for stale events?
-
-4. **Write relay strategy**: This ADR covers reads only. Publishing (writes) still needs a relay strategy — do we publish to a fixed set, or let the user choose?
-
-5. **Migration path**: If we adopt this pattern, what replaces the current NDK-based relay interaction code? How much of the existing query layer needs to change?
+1. Does Applesauce's RelayPool handle dead-relay detection and failover
+   adequately for production use at Plebeian Market's scale?
+2. Is client-side caching sufficient for cold starts, or is the latency
+   unacceptable for new users?
+3. What is the operational cost of running a Khatru aggregator relay vs
+   relying on client-side Applesauce?
+4. If a server-side component is needed, should it be a full aggregator or
+   just a bootstrap relay?
+5. Can we ask hzrd149 (Applesauce author) for guidance on whether RelayPool
+   + EventStore is designed to handle dead-relay fan-out in production?
 
 ## Recommendation
 
-Use applesauce's native client-side stack (`RelayPool` + `EventStore` + `nostr-idb` + `createEventLoaderForStore`) instead of building a server-side aggregator relay. This eliminates infrastructure cost, reduces latency, provides offline support, and aligns with the ongoing NDK → applesauce migration.
+Defer decision until Applesauce migration reaches a point where RelayPool +
+EventStore can be benchmarked for cold-start and dead-relay scenarios.
 
-## References
+If benchmarks show acceptable performance, prefer Option 1 (client-side only).
 
-- [Applesauce caching docs](https://applesauce-mcp.build/docs/storage/caching)
-- `applesauce-core` — EventStore, persistEventsToCache
-- `applesauce-relay` — RelayPool (subscription, request, publish, count)
-- `applesauce-loaders` — createEventLoaderForStore
-- `nostr-idb` — IndexedDB persistence layer
-- Closed PR #1115 — original server-side aggregator proposal
+If cold-start latency is unacceptable, pursue Option 3 (hybrid bootstrap relay).
+
+## Related
+
+- Issue #1046 (dead-relay fan-out)
+- Closed PR #1115 (aggregator relay implementation — Khatru + scraper)
+- ADR-0002 (Strangler-fig I/O migration — stores benefit from clean relay strategy)
+- AGENTS.md relay strategy sections
+
+## Provenance
+
+Reconciled per D3 on 2026-08-14: this expanded ADR-XXX form (8 non-empty H2
+sections, `docs/pending-adrs-index`) replaces the shorter applesauce-focused
+proposal previously carried here (7 H2 sections). No live upstream PR backs
+either form. The superseded concise form's framing (client-side aggregation
+via applesauce as replacement for closed PR #1115) is preserved above via the
+#1115 references.
