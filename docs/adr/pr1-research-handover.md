@@ -24,20 +24,20 @@ foundation PR must establish to unblock later migration slices.
 
 Quantitative summary (across `src/components/**` + `src/routes/**`, `.tsx` only):
 
-| Signal | Count |
-|---|---|
-| Hardcoded `text-gray-*` utility uses | ~250+ (gray-500: 108, gray-600: 80, gray-400: 32, gray-900: 28, gray-700: 20, gray-300: 12) |
-| Hardcoded `text-red-*` | 91 red-500, 30 red-600, 20 red-700 |
-| Hardcoded `text-white` / `text-black` | 79 / 31 |
-| Hardcoded `bg-white` / `bg-black` | 68 / 22 |
-| Hardcoded status-chip pairs (`bg-X-100 text-X-800`) | scattered, ~8 distinct color families |
-| Files with inline `style={{ }}` | 19 |
-| `!important` rules injected from `.tsx` | 5 (all `useHeroBackground`) |
-| Components using string-concat className (not `cn()`) | 7+ (social/*, UserCard, AvatarUser, Nip05Badge) |
-| `forwardRef` components | 6 of ~125 |
-| Components calling stores/queries inline | 53 |
-| `useHeroBackground` hook copies | 5 (one per hero route) |
-| `handlePostToNostr` sign/publish-with-timeout copies | 3 (ShareDialog, ShareProductDialog, BugReportModal) |
+| Signal                                                | Count                                                                                       |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Hardcoded `text-gray-*` utility uses                  | ~250+ (gray-500: 108, gray-600: 80, gray-400: 32, gray-900: 28, gray-700: 20, gray-300: 12) |
+| Hardcoded `text-red-*`                                | 91 red-500, 30 red-600, 20 red-700                                                          |
+| Hardcoded `text-white` / `text-black`                 | 79 / 31                                                                                     |
+| Hardcoded `bg-white` / `bg-black`                     | 68 / 22                                                                                     |
+| Hardcoded status-chip pairs (`bg-X-100 text-X-800`)   | scattered, ~8 distinct color families                                                       |
+| Files with inline `style={{ }}`                       | 19                                                                                          |
+| `!important` rules injected from `.tsx`               | 5 (all `useHeroBackground`)                                                                 |
+| Components using string-concat className (not `cn()`) | 7+ (social/\*, UserCard, AvatarUser, Nip05Badge)                                            |
+| `forwardRef` components                               | 6 of ~125                                                                                   |
+| Components calling stores/queries inline              | 53                                                                                          |
+| `useHeroBackground` hook copies                       | 5 (one per hero route)                                                                      |
+| `handlePostToNostr` sign/publish-with-timeout copies  | 3 (ShareDialog, ShareProductDialog, BugReportModal)                                         |
 
 ---
 
@@ -77,7 +77,7 @@ relocated out of routes (routes must import UI only from `src/components/` per A
 
 - `ShareDialog` and `ShareProductDialog` share **byte-for-byte identical** `handleCopyUrl` and
   `handlePostToNostr` implementations, including the `Promise.race([signPromise, signTimeoutPromise])`
-  + `Promise.race([publishPromise, publishTimeoutPromise])` timeout-race pattern.
+  - `Promise.race([publishPromise, publishTimeoutPromise])` timeout-race pattern.
 - Same dialog shell (`Dialog`/`DialogContent`/`DialogHeader`), same "Copy URL" + "Post to Nostr"
   button row, same `bg-white` hardcoded `DialogContent`.
 
@@ -93,8 +93,9 @@ components.
 
 `ProductCard.tsx:88` and `CollectionCard.tsx:22` both define the same card:
 `border border-zinc-800 rounded-lg bg-white shadow-sm flex flex-col` + an `aspect-square` image slot
-+ a "No image" placeholder (`bg-gray-100 ... text-gray-400`). Neither imports `ui/card`.
-`FeaturedUserCard.tsx` *does* import `ui/card` but then layers `bg-background`/`hover:shadow-lg` on top.
+
+- a "No image" placeholder (`bg-gray-100 ... text-gray-400`). Neither imports `ui/card`.
+  `FeaturedUserCard.tsx` _does_ import `ui/card` but then layers `bg-background`/`hover:shadow-lg` on top.
 
 The product-detail route (`products.$productId.tsx`) redefines a card inline via
 `wrapContent = (content) => <div className="bg-white shadow-md p-6 rounded-lg">{content}</div>`.
@@ -197,10 +198,11 @@ inline (`ItemGrid`, `InfiniteProductList` title headings).
 pattern and the single biggest migration surface.
 
 **PR 1 implication:** Define the clean token set (`:root`/`.dark`/`@theme inline` Shadcn-conventional
-+ `font-body`/`font-header` + `info/warning/error/success` fg/bg/border). Do **not** attempt to
-repoint all 250 gray usages in PR 1 — that is the job of later slices, which migrate consumers
-into the `.theme-new` scope (ADR 2b, amended). PR 1 only needs to (a) establish the scoped token
-system and (b) wire the `ThemeMigrationWrapper` so slices can opt in.
+
+- `font-body`/`font-header` + `info/warning/error/success` fg/bg/border). Do **not** attempt to
+  repoint all 250 gray usages in PR 1 — that is the job of later slices, which migrate consumers
+  into the `.theme-new` scope (ADR 2b, amended). PR 1 only needs to (a) establish the scoped token
+  system and (b) wire the `ThemeMigrationWrapper` so slices can opt in.
 
 ---
 
@@ -295,11 +297,13 @@ into the new scope as a unit).
 5 copies (§1a). It creates `<style>` elements appended to `<head>` and uses `!important` to override
 `background-image`. This bypasses the entire stylesheet system and is non-SSR-safe (manipulates
 `document.head` during render effects). Correct approach: an inline `style` prop or a data-attribute
-+ token, never global CSS injection.
+
+- token, never global CSS injection.
 
 ### 5b. Business logic trapped in presentational components
 
 53 components call stores/queries inline. Notable:
+
 - `ProductCard` calls `useCart`, `useAuth`, `useQueryClient`, `useLocation`, fires `cartActions`,
   `uiActions`, seeds the query cache — far beyond presentation. ADR 1c wants callbacks.
 - `FeaturedUserCard` runs `useQuery` for profile + products inline.
@@ -348,6 +352,7 @@ The `ui/` primitives use the modern Shadcn function-component style (no `forward
 ADR 1c asks migrated components to forward refs.
 
 **Decision (captured in `src/components/AGENTS.md`):**
+
 - `ui/` Shadcn primitives are left **as-is, no diffs** — do not convert to `forwardRef` or modify.
   They keep the `React.ComponentProps` + `data-slot` style.
 - All components authored by us (`ui-wrappers/`, `shared/`, `nostr/`, `layout/`, `dialogs/`, feature
@@ -382,6 +387,7 @@ No component implements a `density`/`compact` prop (ADR 1c mentions it). `UserCa
 ### 6d. Import convention drift
 
 ADR 1d wants `@/components/{dir}/{component}`. Current usage mixes:
+
 - `@/components/ui/button` ✅
 - `./ProductCard` (relative) in `InfiniteProductList` ❌
 - `../BugReportModal`, `../shared/TooltipButton` (relative) in `Header` ❌
@@ -439,7 +445,7 @@ The ADR as written specifies `@layer legacy { ... }` as both (a) a quarantine fo
 (b) the migration-progress tracker ("migration is complete when `@layer legacy` is empty"). This
 mechanism is not viable in Tailwind v4 and has been abandoned. A working alternative already exists
 on branch **`feat/theme-migration`** (commits `507848d1` + `c55fd8d7`, WIP spike). It inverts the
-quarantine direction: instead of boxing *old* styles in a legacy layer, it boxes the *new* token
+quarantine direction: instead of boxing _old_ styles in a legacy layer, it boxes the _new_ token
 system in a class scope and progressively wraps migrated UI in that scope.
 
 ### 8a. The approach (as implemented on `feat/theme-migration`)
@@ -452,7 +458,7 @@ system in a class scope and progressively wraps migrated UI in that scope.
    (using the existing custom naming scheme: `primary`/`secondary`/`tertiary`/`focus` +
    `-hover`/`-foreground`/`-border` variants), the **UX-state tokens** (`info`/`warning`/`error`/
    `success`, each with `-foreground`/`-border`/`-muted`), chart colors, and sidebar tokens.
-3. **Dark mode is nested coherently** via `& .dark { ... }` inside `.theme-new`, mirroring *all*
+3. **Dark mode is nested coherently** via `& .dark { ... }` inside `.theme-new`, mirroring _all_
    custom variants — fixing the current incoherence where `.dark` omits the custom `-hover`/
    `-border-hover` tokens.
 4. **A `ThemeMigrationWrapper` React component** (`src/components/theme-migration/`) renders
@@ -496,16 +502,16 @@ classification system) are unchanged. Concretely:
 - **§2b (Component styles migration):** The `@layer legacy` extraction flow is replaced with:
   migrated consumers are wrapped in `ThemeMigrationWrapper` (or the wrapper is moved up the tree to
   cover them); components repoint hardcoded colors to the scoped tokens; when a legacy utility in
-  `globals.css` has zero remaining *unwrapped* consumers, it is deleted. Migration is complete when
+  `globals.css` has zero remaining _unwrapped_ consumers, it is deleted. Migration is complete when
   `ThemeMigrationWrapper` covers the entire app and the legacy `:root` block + legacy utilities are
   removed from `globals.css`.
 - **Consequences:** The `@layer legacy` indicator line is replaced with the `.theme-new` scope +
   `ThemeMigrationWrapper` placement indicator.
 - **PR 1 strategy:** PR 1's "Foundation – Styles" deliverable becomes: land `styles/globals-new.css`
-  + `ThemeMigrationWrapper` + the `index.css`/`index.html` wiring (all already prototyped on
-  `feat/theme-migration`), then create the new component directories and AGENTS.md files. The
-  example "Modify" components per subdir (§9) are built *inside* the `.theme-new` scope to validate
-  it.
+  - `ThemeMigrationWrapper` + the `index.css`/`index.html` wiring (all already prototyped on
+    `feat/theme-migration`), then create the new component directories and AGENTS.md files. The
+    example "Modify" components per subdir (§9) are built _inside_ the `.theme-new` scope to validate
+    it.
 
 ### 8d. Notes / open questions for the architecture step
 
@@ -526,20 +532,18 @@ classification system) are unchanged. Concretely:
   within migrated subtrees. The spike scopes only custom properties + nested `.dark`; the amended
   ADR explicitly permits extending this.
 
-
-
 ## 9. Suggested PR 1 "Modify" example components (one per new subdir)
 
 To satisfy ADR PR 1 ("1+ compliant example component in each subdirectory"), the smallest
 demonstrative set:
 
-| Subdir | Example "Modify" component | Demonstrates |
-|---|---|---|
-| `ui-wrappers/` | `StatusBadge` (cva variant on `ui/badge`: `info/warning/error/success`) | variant system + UX-state tokens + `cn()` + `React.ComponentProps` |
-| `ui-wrappers/` | `Avatar` (wraps generated `ui/avatar.tsx`, replaces `AvatarUser`) | `ui → ui-wrappers` import hierarchy + tokenized fallback colors |
-| `shared/` | `EmptyState` / `LoadingState` / `ErrorState` | callback-free presentation + `className` merge + `forwardRef`/props decision |
-| `nostr/` | `UserCard` (refactored to accept `profile` + `onPress` callback, drop inline `useProfile`) | the documented hooks-exception + callback pattern |
-| `layout/` | `IconButton` / `NotificationBadge` (extracted from `Header`) | `shared → layout` hierarchy + tokenized badge colors |
-| `dialogs/` | `ShareDialog` (collapsed from 3 copies, publish logic extracted to `src/publish/`) | dialog-shell wrapper + action-via-store exception |
+| Subdir         | Example "Modify" component                                                                 | Demonstrates                                                                 |
+| -------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `ui-wrappers/` | `StatusBadge` (cva variant on `ui/badge`: `info/warning/error/success`)                    | variant system + UX-state tokens + `cn()` + `React.ComponentProps`           |
+| `ui-wrappers/` | `Avatar` (wraps generated `ui/avatar.tsx`, replaces `AvatarUser`)                          | `ui → ui-wrappers` import hierarchy + tokenized fallback colors              |
+| `shared/`      | `EmptyState` / `LoadingState` / `ErrorState`                                               | callback-free presentation + `className` merge + `forwardRef`/props decision |
+| `nostr/`       | `UserCard` (refactored to accept `profile` + `onPress` callback, drop inline `useProfile`) | the documented hooks-exception + callback pattern                            |
+| `layout/`      | `IconButton` / `NotificationBadge` (extracted from `Header`)                               | `shared → layout` hierarchy + tokenized badge colors                         |
+| `dialogs/`     | `ShareDialog` (collapsed from 3 copies, publish logic extracted to `src/publish/`)         | dialog-shell wrapper + action-via-store exception                            |
 
 These are recommendations for the architecture step to confirm, not commitments.
