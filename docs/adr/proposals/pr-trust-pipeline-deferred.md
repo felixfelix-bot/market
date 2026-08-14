@@ -1,6 +1,7 @@
 # ADR: PR Trust Pipeline — Deferred Components
 
 **Status**: PROPOSED
+**Number**: ADR-xxx (assigned at upstream merge; formerly 0016 on `adr/consolidated-collection`)
 **Date**: 2026-08-05
 **Authors**: Felix (c03rad0r)
 

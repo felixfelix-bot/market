@@ -2,7 +2,10 @@
 
 ## Status
 
-Proposed
+Proposed — Number: ADR-xxx (assigned at upstream merge; formerly carried
+unnumbered as `ADR-vitest-mutation-testing-migration.md` on
+`adr/consolidated-collection`; supersedes the older
+`ADR-015-vitest-migration-for-stryker` draft on `docs/adr-e2e-parallelization`)
 
 ## Date
 

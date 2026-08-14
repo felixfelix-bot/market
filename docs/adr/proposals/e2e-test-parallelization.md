@@ -1,8 +1,10 @@
-# ADR-0017: E2E Test Parallelization Strategy
+# E2E Test Parallelization Strategy
 
 ## Status
 
-Proposed
+Proposed — Number: ADR-xxx (assigned at upstream merge; formerly 0017 on
+`adr/consolidated-collection`, also carried as ADR-016 on
+`docs/adr-e2e-parallelization`)
 
 ## Date
 
