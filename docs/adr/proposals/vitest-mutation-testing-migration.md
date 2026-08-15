@@ -5,7 +5,9 @@
 Proposed — Number: ADR-xxx (assigned at upstream merge; formerly carried
 unnumbered as `ADR-vitest-mutation-testing-migration.md` on
 `adr/consolidated-collection`; supersedes the older
-`ADR-015-vitest-migration-for-stryker` draft on `docs/adr-e2e-parallelization`)
+`ADR-015-vitest-migration-for-stryker` draft on `docs/adr-e2e-parallelization`
+— that "015" was branch-local numbering on the source branch, unrelated to
+upstream's accepted ADR-015 production-safe-ndk-filters)
 
 ## Date
 

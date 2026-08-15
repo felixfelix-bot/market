@@ -22,6 +22,20 @@ by that pass are render-equivalent formatting only.
 - ✅ **Accepted upstream** — merged into upstream/master
 - — not previously surfaced/indexed
 
+## Consolidation Decision Key
+
+Codes used in the Notes column of the catalog and disposition tables:
+
+- **D3** — content reconciliation rule: when the same ADR existed in multiple
+  forms across branches, the form tied to a live PR (or the more complete
+  section structure, noted as H2 counts) was kept.
+- **D4** — snapshot-copy rule: for proposals backing a live integration branch,
+  the integration branch stays authoritative until its PR merges; the copy
+  here is a catalog snapshot.
+- **Q3** — v2-merge-deployment-strategy decision: include as Draft after
+  stripping leaked AI-assistant reasoning text; number assigned at upstream
+  merge like every other proposal.
+
 ---
 
 ## Master Catalog
@@ -33,7 +47,7 @@ by that pass are render-equivalent formatting only.
 | [aggregator-relay.md](./aggregator-relay.md)                                                                                 | 🟡     | consolidated; expanded ADR-XXX form from docs/pending-adrs-index substituted 2026-08-14                                                              | XXX                           | #1115 (closed, prior art)                 | D3: no live PR, 8 H2 beats 7 H2 concise form                                   |
 | [relay-data-validation.md](./relay-data-validation.md)                                                                       | 🟡     | consolidated; expanded ADR-XXX from docs/adr-relay-data-validation substituted                                                                       | XXX                           | #1176 (closed, replaced)                  | D3: 8 H2 beats 3 H2                                                            |
 | [error-boundary-observability.md](./error-boundary-observability.md)                                                         | 🟡     | consolidated; expanded ADR-XXX from docs/adr-error-boundary-observability substituted                                                                | XXX                           | #1177 (closed, replaced)                  | D3: 8 H2 beats 3 H2                                                            |
-| [e2e-test-stabilization.md](./e2e-test-stabilization.md)                                                                     | 🟡     | consolidated; expanded ADR-XXX from docs/adr-e2e-test-stabilization substituted                                                                      | XXX                           | #1116 (history), #1175 (closed, replaced) | D3: 9 H2 beats 4 H2; coordinate numbering w/ maximotodev PR #1174 (ADR-015)    |
+| [e2e-test-stabilization.md](./e2e-test-stabilization.md)                                                                     | 🟡     | consolidated; expanded ADR-XXX from docs/adr-e2e-test-stabilization substituted                                                                      | XXX                           | #1116 (history), #1175 (closed, replaced) | D3: 9 H2 beats 4 H2                                                            |
 | [notification-counting-scoped-map.md](./notification-counting-scoped-map.md)                                                 | 🟡     | collection chain (adr-collection ⊃ proposals-index ⊃ pending-adrs-index)                                                                             | —                             | —                                         | Notification Phase 1, ships standalone                                         |
 | [notification-event-cache-architecture.md](./notification-event-cache-architecture.md)                                       | 🟡     | collection chain                                                                                                                                     | —                             | —                                         | Notification Phase 2, requires applesauce migration                            |
 | [notification-derived-state.md](./notification-derived-state.md)                                                             | 🟡     | collection chain                                                                                                                                     | —                             | —                                         | Notification Phase 3, depends on Phase 2                                       |
@@ -61,6 +75,19 @@ by that pass are render-equivalent formatting only.
 | [v2-merge-deployment-strategy.md](./v2-merge-deployment-strategy.md)                                                         | 📝     | adr/v2-merge-deployment-strategy (cleaned per Q3: leaked AI text stripped, Draft status)                                                             | (draft claimed 0016, stale)   | —                                         | Internal ADR references use stale external numbering — revise before surfacing |
 
 ---
+
+## Pending Creation (Salvage Backlog)
+
+Drafts not yet written — tracked in
+`docs/adr/ADR-BACKLOG-HANDOVER.md` § Pending Salvage Drafts (sources:
+`docs/handover/closed-pr-preservation-2026-08-14.md`,
+`docs/handover/PR-SALVAGE-462-472.md` on `docs/closed-pr-handover`).
+
+| Proposal (planned name)                 | Status | Source                                                |
+| --------------------------------------- | ------ | ----------------------------------------------------- |
+| product-review-event-model (kind 31555) | —      | PR #462, branch `feat/product-reviews` @ `ab64dd48e0` |
+| storefront-data-model                   | —      | PR #475 salvage (see HANDOVER)                        |
+| pickup-location-storage                 | —      | PR #472 salvage (see HANDOVER)                        |
 
 ## Notification System (3-Phase Sequence)
 
