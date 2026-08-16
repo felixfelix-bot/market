@@ -73,21 +73,16 @@ Codes used in the Notes column of the catalog and disposition tables:
 | [status-communication.md](./status-communication.md)                                                                         | —      | docs/adr-status-communication                                                                                                                        | XXX                           | —                                         | Shared status components; pairs with semantic-color-tokens                     |
 | [untrusted-content-rendering-and-markdown-descriptions.md](./untrusted-content-rendering-and-markdown-descriptions.md)       | —      | docs/adr-untrusted-content                                                                                                                           | XXX (claimed 0017, withdrawn) | prior art #475, #684 (closed)             | 0017 claim withdrawn under uniform policy                                      |
 | [v2-merge-deployment-strategy.md](./v2-merge-deployment-strategy.md)                                                         | 📝     | adr/v2-merge-deployment-strategy (cleaned per Q3: leaked AI text stripped, Draft status)                                                             | (draft claimed 0016, stale)   | —                                         | Internal ADR references use stale external numbering — revise before surfacing |
+| [product-review-event-model.md](./product-review-event-model.md)                                                             | 📝     | closed PR #462 salvage, branch `feat/product-reviews` @ `ab64dd48e0`; landed via fork PR #6 (`d71fdd9c`)                                             | —                             | —                                         | Salvage draft; review-auth decision pending before implementation              |
+| [storefront-data-model.md](./storefront-data-model.md)                                                                       | 📝     | closed PR #694 salvage @ `06063c0b`; landed via fork PR #7 (`e1572812`)                                                                              | —                             | —                                         | Salvage draft; reframed to NIP-99 30402; maintainer discussion pending         |
+| [pickup-location-storage.md](./pickup-location-storage.md)                                                                   | 📝     | closed PR #684 salvage @ `4424b8ac`; landed via fork PR #8 (`651f190e`)                                                                              | —                             | —                                         | Salvage draft; review decision pending; no runtime geocoding locked            |
 
 ---
 
 ## Pending Creation (Salvage Backlog)
 
-Drafts not yet written — tracked in
-`docs/adr/ADR-BACKLOG-HANDOVER.md` § Pending Salvage Drafts (sources:
-`docs/handover/closed-pr-preservation-2026-08-14.md`,
-`docs/handover/PR-SALVAGE-462-472.md` on `docs/closed-pr-handover`).
-
-| Proposal (planned name)                 | Status | Source                                                |
-| --------------------------------------- | ------ | ----------------------------------------------------- |
-| product-review-event-model (kind 31555) | —      | PR #462, branch `feat/product-reviews` @ `ab64dd48e0` |
-| storefront-data-model                   | —      | PR #475 salvage (see HANDOVER)                        |
-| pickup-location-storage                 | —      | PR #472 salvage (see HANDOVER)                        |
+Empty since 2026-08-16 — all three salvage drafts landed (fork PRs #6–#8);
+history in `docs/adr/ADR-BACKLOG-HANDOVER.md` § Pending Salvage Drafts.
 
 ## Notification System (3-Phase Sequence)
 
