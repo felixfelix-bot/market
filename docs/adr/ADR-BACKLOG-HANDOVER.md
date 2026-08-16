@@ -19,8 +19,10 @@ provenance in Status headers and the INDEX — they reserve nothing.
 
 ## Pending Salvage Drafts (from closed-PR preservation, 2026-08-14)
 
-Sources: `docs/handover/closed-pr-preservation-2026-08-14.md` and
-`docs/handover/PR-SALVAGE-462-472.md` on branch `docs/closed-pr-handover`
+Sources: [`docs/handover/closed-pr-preservation-2026-08-14.md`](../handover/closed-pr-preservation-2026-08-14.md) and
+[`docs/handover/PR-SALVAGE-462-472.md`](../handover/PR-SALVAGE-462-472.md) —
+salvaged onto fork/master 2026-08-17 via branch `adr/consolidation-salvage`
+(previously carried only on branch `docs/closed-pr-handover`)
 (full 7-entry backlog in that doc's PART D). All three salvage ADRs have since
 been drafted and merged to fork/master — this section is kept as historical
 record:
