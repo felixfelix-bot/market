@@ -119,16 +119,20 @@ async function recoverNip46UserPubkey(
 	expectedUserPubkey: string | undefined,
 	timeoutMs: number,
 ): Promise<string | null> {
-	const configuredUserPubkey = signer.userPubkey ?? undefined
-	const expectedPubkeys = new Set([expectedUserPubkey, configuredUserPubkey].filter((value): value is string => Boolean(value)))
+	// Only the explicitly-provided expectedUserPubkey (persisted from a prior
+	// login) is a valid expected user identity. signer.userPubkey is populated
+	// by NDK from the bunker URL and identifies the *remote signer*, not the
+	// user — it must never be treated as an expected user pubkey.
+	const expectedPubkeys = new Set([expectedUserPubkey].filter((value): value is string => Boolean(value)))
 	const knownResponseEvents = new Set(getNip46ResponseEventNames(signer))
 	const recoveryTimeoutMs = Math.max(1, Math.min(timeoutMs, NIP46_USER_PUBKEY_RECOVERY_TIMEOUT_MS))
 	const timeoutError = new Error('NIP-46 get_public_key recovery timed out')
 	let timeout: ReturnType<typeof setTimeout> | undefined
 
 	// NDK's getPublicKey() returns userPubkey without making an RPC request when
-	// it is already populated from a bunker URL. Clear that unverified value so
-	// recovery always resolves the account identity from the remote signer.
+	// it is already populated from a bunker URL. That value is the remote signer
+	// pubkey, not the user pubkey. Clear it so recovery always resolves the
+	// actual account identity from the remote signer via get_public_key.
 	signer.userPubkey = undefined
 
 	try {

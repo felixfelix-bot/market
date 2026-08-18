@@ -82,6 +82,34 @@ describe('completeNip46LoginHandshake', () => {
 		expect(loginResult?.signer.userSync.pubkey).toBe(actualUserPubkey)
 	})
 
+	test('does not collapse remote-signer-pubkey into user-pubkey when get_public_key resolves', async () => {
+		// Simulate NDK populating userPubkey from the bunker URL — this is the
+		// remote signer pubkey, not the user pubkey. get_public_key must return
+		// the actual user identity, and login must succeed even though it
+		// differs from the signer pubkey.
+		const signer = {
+			bunkerPubkey: remoteSignerPubkey,
+			blockUntilReady: mock(() => new Promise(() => {})),
+			getPublicKey: mock(async () => actualUserPubkey),
+			userPubkey: remoteSignerPubkey as string | undefined,
+			rpc: {
+				eventNames: mock(() => []),
+				removeAllListeners: mock(() => {}),
+			},
+		}
+		const ndk = {
+			getUser: ({ pubkey }: { pubkey: string }) => ({ pubkey }),
+		}
+
+		const loginResult = await completeNip46LoginHandshake(signer as any, undefined, 1, ndk as any)
+
+		expect(loginResult).not.toBeNull()
+		expect(loginResult?.user.pubkey).toBe(actualUserPubkey)
+		expect(signer.userPubkey).toBe(actualUserPubkey)
+		expect(signer.bunkerPubkey).toBe(remoteSignerPubkey)
+		expect(signer.getPublicKey).toHaveBeenCalledTimes(1)
+	})
+
 	test('fails closed when get_public_key does not respond after a timeout', async () => {
 		const responseEvents: string[] = []
 		const removeAllListeners = mock(() => {})
