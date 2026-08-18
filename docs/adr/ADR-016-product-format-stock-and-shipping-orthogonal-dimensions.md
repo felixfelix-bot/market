@@ -16,7 +16,7 @@ Proposed
 
 ## Context
 
-PR #1201 ("FIX: Digital product detection inconsistency") attempts to fix a real problem: the app previously inferred whether a product was digital by inspecting the *shipping option's* `service` tag (`getShippingService(shippingOption)?.[1] === 'digital'`), rather than reading the product's own `type` tag. The PR correctly moves detection to the product `type` tag — the Gamma Markets spec signal.
+PR #1201 ("FIX: Digital product detection inconsistency") attempts to fix a real problem: the app previously inferred whether a product was digital by inspecting the _shipping option's_ `service` tag (`getShippingService(shippingOption)?.[1] === 'digital'`), rather than reading the product's own `type` tag. The PR correctly moves detection to the product `type` tag — the Gamma Markets spec signal.
 
 However, the PR introduces a new problem: it **couples digital format to the absence of stock tracking**. When `delivery === 'digital'`, the PR hides the quantity field, skips stock validation, shows "Digital products do not track stock," and skips stock decrement in order processing. This conflates two dimensions that the Gamma Markets spec deliberately separates:
 
@@ -32,6 +32,7 @@ Real-world use cases that break the PR's `digital = no stock` assumption:
 - Made-to-order physical goods (no fixed inventory count)
 
 The PR also contains critical bugs identified in review:
+
 - Physical products are misclassified as "unresolved" in checkout because the `productType` ternary only ever produces `'digital'` or `undefined`, never `'physical'`
 - Digital products get `['stock', '']` (empty string) — schema-invalid, violates `ProductStockTagSchema` (`/^\d+$/`)
 - `migration.tsx` doesn't pass `deliveryType`, so migrated digital products get `['type', …, 'physical']`
@@ -45,17 +46,17 @@ The Gamma Markets spec has already thought through these dimensions and models t
 
 ### What the spec defines
 
-| Tag | Spec location | Values | Required? | Controls |
-|-----|---------------|--------|-----------|----------|
-| `type` | Product listing (kind 30402), optional | `["type", "<simple\|variable\|variation>", "<digital\|physical>"]` | Optional (defaults: `simple`, `digital`) | Product format / delivery mechanism |
-| `stock` | Product listing (kind 30402), optional | `["stock", "<integer>"]` | Optional | Available quantity |
-| `visibility` | Product listing (kind 30402), optional | `["visibility", "<hidden\|on-sale\|pre-order>"]` | Optional (default: `on-sale`) | Display / availability status |
-| `shipping_option` | Product listing (kind 30402), optional | `["shipping_option", "30406:<pubkey>:<d-tag>"]` | Optional | Physical delivery method |
-| `service` | Shipping option (kind 30406), required | `"standard" \| "express" \| "overnight" \| "pickup"` | Required | Shipping service type |
+| Tag               | Spec location                          | Values                                                             | Required?                                | Controls                            |
+| ----------------- | -------------------------------------- | ------------------------------------------------------------------ | ---------------------------------------- | ----------------------------------- |
+| `type`            | Product listing (kind 30402), optional | `["type", "<simple\|variable\|variation>", "<digital\|physical>"]` | Optional (defaults: `simple`, `digital`) | Product format / delivery mechanism |
+| `stock`           | Product listing (kind 30402), optional | `["stock", "<integer>"]`                                           | Optional                                 | Available quantity                  |
+| `visibility`      | Product listing (kind 30402), optional | `["visibility", "<hidden\|on-sale\|pre-order>"]`                   | Optional (default: `on-sale`)            | Display / availability status       |
+| `shipping_option` | Product listing (kind 30402), optional | `["shipping_option", "30406:<pubkey>:<d-tag>"]`                    | Optional                                 | Physical delivery method            |
+| `service`         | Shipping option (kind 30406), required | `"standard" \| "express" \| "overnight" \| "pickup"`               | Required                                 | Shipping service type               |
 
 ### What the spec says about digital products
 
-The spec notes state: *"Digital products skip shipping requirements."* Not "digital products use a digital shipping method" — they skip shipping entirely. The four defined `service` types in kind 30406 are all physical delivery methods. There is no `"digital"` service type in the spec.
+The spec notes state: _"Digital products skip shipping requirements."_ Not "digital products use a digital shipping method" — they skip shipping entirely. The four defined `service` types in kind 30406 are all physical delivery methods. There is no `"digital"` service type in the spec.
 
 ### Where Plebeian Market diverges
 
@@ -161,15 +162,15 @@ A digital product with a fixed number of available copies.
 
 ```jsonc
 {
-  "kind": 30402,
-  "tags": [
-    ["d", "limited-digital-art-pack"],
-    ["title", "Limited Digital Art Pack"],
-    ["price", "25", "USD"],
-    ["type", "simple", "digital"],
-    ["stock", "100"],
-    ["visibility", "on-sale"]
-  ]
+	"kind": 30402,
+	"tags": [
+		["d", "limited-digital-art-pack"],
+		["title", "Limited Digital Art Pack"],
+		["price", "25", "USD"],
+		["type", "simple", "digital"],
+		["stock", "100"],
+		["visibility", "on-sale"],
+	],
 }
 ```
 
@@ -185,14 +186,14 @@ A digital product with no quantity limit.
 
 ```jsonc
 {
-  "kind": 30402,
-  "tags": [
-    ["d", "ebook-unlimited"],
-    ["title", "The Bitcoin Handbook (eBook)"],
-    ["price", "10", "USD"],
-    ["type", "simple", "digital"],
-    ["visibility", "on-sale"]
-  ]
+	"kind": 30402,
+	"tags": [
+		["d", "ebook-unlimited"],
+		["title", "The Bitcoin Handbook (eBook)"],
+		["price", "10", "USD"],
+		["type", "simple", "digital"],
+		["visibility", "on-sale"],
+	],
 }
 ```
 
@@ -209,16 +210,16 @@ A physical product with a fixed inventory count.
 
 ```jsonc
 {
-  "kind": 30402,
-  "tags": [
-    ["d", "handmade-ceramic-bowl"],
-    ["title", "Handmade Ceramic Bowl"],
-    ["price", "45", "USD"],
-    ["type", "simple", "physical"],
-    ["stock", "5"],
-    ["visibility", "on-sale"],
-    ["shipping_option", "30406:<pubkey>:standard-shipping"]
-  ]
+	"kind": 30402,
+	"tags": [
+		["d", "handmade-ceramic-bowl"],
+		["title", "Handmade Ceramic Bowl"],
+		["price", "45", "USD"],
+		["type", "simple", "physical"],
+		["stock", "5"],
+		["visibility", "on-sale"],
+		["shipping_option", "30406:<pubkey>:standard-shipping"],
+	],
 }
 ```
 
@@ -234,15 +235,15 @@ A physical product with no fixed inventory — made to order or print on demand.
 
 ```jsonc
 {
-  "kind": 30402,
-  "tags": [
-    ["d", "print-on-demand-tshirt"],
-    ["title", "Custom T-Shirt (Print on Demand)"],
-    ["price", "20", "USD"],
-    ["type", "simple", "physical"],
-    ["visibility", "on-sale"],
-    ["shipping_option", "30406:<pubkey>:standard-shipping"]
-  ]
+	"kind": 30402,
+	"tags": [
+		["d", "print-on-demand-tshirt"],
+		["title", "Custom T-Shirt (Print on Demand)"],
+		["price", "20", "USD"],
+		["type", "simple", "physical"],
+		["visibility", "on-sale"],
+		["shipping_option", "30406:<pubkey>:standard-shipping"],
+	],
 }
 ```
 
@@ -307,11 +308,11 @@ A product offered in both digital and physical form.
 When a cart contains both digital and physical items:
 
 | Item format | Stock tag | Shipping address | Shipping method | Stock decrement |
-|-------------|-----------|------------------|-----------------|----------------|
-| Digital | present | Not required | Not required | Yes |
-| Digital | absent | Not required | Not required | No |
-| Physical | present | Required | Required | Yes |
-| Physical | absent | Required | Required | No |
+| ----------- | --------- | ---------------- | --------------- | --------------- |
+| Digital     | present   | Not required     | Not required    | Yes             |
+| Digital     | absent    | Not required     | Not required    | No              |
+| Physical    | present   | Required         | Required        | Yes             |
+| Physical    | absent    | Required         | Required        | No              |
 
 - Shipping address and method selection are driven by the presence of physical items only
 - Digital items show "Digital delivery — no shipping required"
