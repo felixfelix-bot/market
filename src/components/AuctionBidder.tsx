@@ -23,7 +23,7 @@ import { computeAuctionFloorMultiplier, getAuctionMinBidCurve } from '@/lib/auct
 import { AUCTION_MIN_BID_LEG_SATS, AUCTION_MIN_BID_SATS } from '@/lib/auction/constants'
 import { NDKEvent } from '@nostr-dev-kit/ndk'
 import { toast } from 'sonner'
-import { useMemo, useState, useEffect, useCallback, useRef, type ChangeEvent, type ClipboardEvent, type KeyboardEvent } from 'react'
+import { useMemo, useState, useEffect, useCallback, useRef, type ChangeEvent } from 'react'
 import { useAuctionCountdown } from './AuctionCountdown'
 import { InputGroup, InputGroupInput } from './ui/input-group'
 import { cn } from '@/lib/utils'
@@ -216,7 +216,10 @@ export function AuctionBidder({ auction, bids: bidsProp, currentUserPubkey, onBi
 		deltaAmount > 0 &&
 		!canFund
 
-	// Initialize input to min bid on mount or when min changes
+	// Sync input to the current minBid floor on mount and whenever minBid
+	// changes — but only if the user hasn't started editing. This preserves
+	// the user's custom amount when minBid rises during the anti-snipe ramp
+	// (issue #4: bid ramp clobbering custom amount).
 	useEffect(() => {
 		if (hasStartedEditingBidAmount) return
 		setBidAmountInput(String(minBid))
@@ -321,8 +324,13 @@ export function AuctionBidder({ auction, bids: bidsProp, currentUserPubkey, onBi
 		try {
 			await bidMutation.mutateAsync(bidData)
 			toast.success('Bid placed successfully')
-			// Reset the editing flag so the input re-syncs to the new minBid floor.
+			// Reset the editing flag and clear the input so it re-syncs to the
+			// new minBid floor. Setting hasStartedEditingBidAmount=false lets
+			// the useEffect re-sync to minBid, and clearing bidAmountInput
+			// ensures the field is visually empty until that re-sync happens
+			// (e.g. when minBid hasn't changed yet because bids haven't propagated).
 			setHasStartedEditingBidAmount(false)
+			setBidAmountInput('')
 			onBidSuccess?.()
 		} catch {
 			// Error handled by mutation
@@ -341,24 +349,23 @@ export function AuctionBidder({ auction, bids: bidsProp, currentUserPubkey, onBi
 		await submitPreparedBid(bidData)
 	}
 
-	const handleBidAmountInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-		if (hasStartedEditingBidAmount) return
-		if (!event.key) return
-		if (String(bidAmountInput) !== String(minBid)) return
-		if (!/^[0-9]$/.test(event.key)) return
-
-		setHasStartedEditingBidAmount(true)
-		setBidAmountInput('')
-	}
-
-	const handleBidAmountInputPaste = (event: ClipboardEvent<HTMLInputElement>) => {
-		event.preventDefault()
-		const pasted = event.clipboardData?.getData('text') ?? ''
-		setHasStartedEditingBidAmount(true)
-		setBidAmountInput(pasted)
-	}
-
 	const handleBidAmountInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+		// First-edit clear: when the user's first interaction changes the value
+		// away from the auto-synced minBid, start from a clean state. This covers
+		// all input methods — keystrokes, paste, drag-drop, autocomplete, IME —
+		// because onChange fires for every value mutation. The previous
+		// onKeyDown approach only caught single-digit key presses and was
+		// bypassed by paste, drag-drop, and other non-keystroke inputs.
+		if (!hasStartedEditingBidAmount && String(bidAmountInput) === String(minBid)) {
+			setHasStartedEditingBidAmount(true)
+			const newValue = event.target.value
+			// If the browser replaced the entire selection, use the new value as-is.
+			// If it appended (e.g. typing a digit), strip the old minBid prefix so
+			// the user doesn't see "100005" after typing "5" on top of "10000".
+			const stripped = newValue.startsWith(String(minBid)) ? newValue.slice(String(minBid).length) : newValue
+			setBidAmountInput(stripped || newValue)
+			return
+		}
 		setHasStartedEditingBidAmount(true)
 		setBidAmountInput(event.target.value)
 	}
@@ -487,8 +494,6 @@ export function AuctionBidder({ auction, bids: bidsProp, currentUserPubkey, onBi
 							step={bidStep}
 							value={bidAmountInput}
 							onChange={handleBidAmountInputChange}
-							onKeyDown={handleBidAmountInputKeyDown}
-							onPaste={handleBidAmountInputPaste}
 							placeholder={`Min: ${minBid.toLocaleString()}`}
 							disabled={isDisabledInput}
 						/>
