@@ -1596,9 +1596,10 @@ export const cartActions = {
 				const sellerAmount = shares.sellerAmount + shippingSats
 
 				// Add shipping cost entirely to the seller's amount (shipping is not shared with V4V).
-				// Both displayed percentages use the final amount paid as their denominator.
-				const sellerPercentage = totalWithShipping > 0 ? (sellerAmount / totalWithShipping) * 100 : 100
-				const communityPercentage = totalWithShipping > 0 ? (shares.communityAmount / totalWithShipping) * 100 : 0
+				// Both displayed percentages use the product cost (sellerTotal) as their denominator
+				// so they always sum to 100% regardless of shipping amount.
+				const sellerPercentage = sellerTotal > 0 ? (shares.sellerAmount / sellerTotal) * 100 : 100
+				const communityPercentage = sellerTotal > 0 ? (shares.communityAmount / sellerTotal) * 100 : 0
 
 				const adjustedShares = {
 					sellerAmount,
