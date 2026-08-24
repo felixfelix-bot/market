@@ -188,10 +188,10 @@ export async function completeNip46LoginHandshake(
 			return null
 		}
 
-		cancelNip46HandshakeListeners(signer, knownResponseEvents)
 		console.warn('[NIP46] handshake timed out; resolving the user pubkey with get_public_key', error)
 	} finally {
 		if (timeout) clearTimeout(timeout)
+		cancelNip46HandshakeListeners(signer, knownResponseEvents)
 	}
 
 	const userPubkey = await recoverNip46UserPubkey(signer, expectedUserPubkey, timeoutMs)
