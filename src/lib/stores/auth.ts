@@ -8,7 +8,6 @@ import { uiActions } from './ui'
 import { getPublicKey, nip19 } from 'nostr-tools'
 import { decrypt, encrypt } from 'nostr-tools/nip49'
 import { hexToBytes } from 'nostr-tools/utils'
-import { toast } from 'sonner'
 
 export const NOSTR_CONNECT_KEY = 'nostr_connect_url'
 export const NOSTR_LOCAL_SIGNER_KEY = 'nostr_local_signer_key'
@@ -450,19 +449,12 @@ export const authActions = {
 			}
 			const { user, signer: authenticatedSigner } = loginResult
 
-			// The handshake above establishes the signer. Relay and wallet bootstrap
-			// can continue in the background; surface failures without logging out.
-			void ndkActions.setSigner(authenticatedSigner).then(
-				() => {
-					authStore.setState((state) => ({ ...state, bootstrapError: null }))
-				},
-				(error) => {
-					const message = error instanceof Error ? error.message : 'Wallet and relay setup could not finish'
-					console.error('[NIP46] post-login signer setup failed', error)
-					authStore.setState((state) => ({ ...state, bootstrapError: message }))
-					toast.error('Signed in, but wallet and relay setup could not finish. You can continue using the marketplace.')
-				},
-			)
+			// Await setSigner before flipping isAuthenticated so that a signer
+			// setup failure prevents the auth flag from being set.  If setSigner
+			// rejects, the catch block sets isAuthenticated: false and the error
+			// propagates to the caller.
+			await ndkActions.setSigner(authenticatedSigner)
+
 			persistAuthenticatedLoginState(user, localSigner.privateKey || '', bunkerUrl)
 
 			authStore.setState((state) => ({
