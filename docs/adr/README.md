@@ -28,7 +28,7 @@
 | (unnumbered) | Add Product Workflow Boundaries                                         | Accepted | `ADR-add-product-workflow-boundaries.md`                            | Predates the numbering system.                                                                                                                          |
 | 0017         | Cashu Wallet Dependency Stack — Migration to @cashu/coco-core 2.0      | Proposed | `ADR-0017-cashu-wallet-dependency-stack.md`                         | Branch `adr/wallet-rebuild`. Pending team call + Amperstrand confirmation. D2 of wallet research handover.                                              |
 | 0018         | Wallet Recovery via NUT-09 Restore-from-Mint (+NUT-27 Mint Backup)     | Proposed | `ADR-0018-wallet-recovery-nut09-restore-from-mint.md`               | Branch `adr/wallet-rebuild`. D3/D4 of wallet research handover.                                                                                        |
-| 0019         | Wallet State Synchronization — Hybrid WAL + Checkpoint                | Proposed | `ADR-0019-wallet-state-synchronization-hybrid-wal-checkpoint.md`    | Branch `adr/wallet-rebuild`. Pending Hazard review. D5/D6/D7 of wallet research handover.                                                              |
+| 0019         | Wallet State Synchronization — ContextVM Primary, Snapshot Backup, Mint Recovery | Revised | `ADR-0019-wallet-state-synchronization-hybrid-wal-checkpoint.md`   | Branch `adr/wallet-rebuild`. Revised after Hazard zombie-token report: NIP-60 heap dropped as canonical truth. ContextVM primary, 30078 backup, NUT-09+checkstate recovery. D5/D6/D7 of wallet research handover. |
 
 ## Pending Number Assignments
 
