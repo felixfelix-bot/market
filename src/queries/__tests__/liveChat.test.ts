@@ -1,12 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 import { finalizeEvent, getPublicKey, verifyEvent as realVerifyEvent } from 'nostr-tools'
 import type { NostrEvent } from 'nostr-tools/pure'
-import {
-	parseLiveActivity,
-	deriveLiveActivityStatus,
-	buildLiveActivityDTag,
-	LIVE_ACTIVITY_KIND,
-} from '@/lib/nip53'
+import { parseLiveActivity, deriveLiveActivityStatus, buildLiveActivityDTag, LIVE_ACTIVITY_KIND } from '@/lib/nip53'
 import { configStore } from '@/lib/stores/config'
 import { applesauceIo, type NostrFilter } from '@/lib/nostr/io'
 
@@ -36,14 +31,16 @@ mock.module('@/lib/stores/ndk', () => ({
 
 const { fetchLiveActivity } = await import('@/queries/liveChat')
 
-function signActivity(overrides: {
-	pubkey?: never
-	dTag?: string
-	kind?: number
-	tags?: string[][]
-	created_at?: number
-	content?: string
-} = {}): NostrEvent {
+function signActivity(
+	overrides: {
+		pubkey?: never
+		dTag?: string
+		kind?: number
+		tags?: string[][]
+		created_at?: number
+		content?: string
+	} = {},
+): NostrEvent {
 	return finalizeEvent(
 		{
 			kind: overrides.kind ?? LIVE_ACTIVITY_KIND,
@@ -199,9 +196,7 @@ describe('liveChat queries', () => {
 		})
 
 		test('🔴 post-fetch validation: rejects candidate whose d tag belongs to a different auction', async () => {
-			relayEvents.push(
-				signActivity({ dTag: `auction:${SELLER_PUBKEY.slice(0, 16)}:other-auction` }),
-			)
+			relayEvents.push(signActivity({ dTag: `auction:${SELLER_PUBKEY.slice(0, 16)}:other-auction` }))
 			const result = await fetchLiveActivity(auctionEvent())
 			expect(result).toBeNull()
 		})
@@ -269,9 +264,7 @@ describe('liveChat queries', () => {
 			const olderValid = signActivity({
 				created_at: Math.floor(Date.now() / 1000) - 100,
 			})
-			const newerInvalid = forgeSignature(
-				signActivity({ created_at: Math.floor(Date.now() / 1000) - 10 }),
-			)
+			const newerInvalid = forgeSignature(signActivity({ created_at: Math.floor(Date.now() / 1000) - 10 }))
 
 			relayEvents.push(newerInvalid)
 			relayEvents.push(olderValid)

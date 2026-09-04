@@ -55,9 +55,7 @@ mock.module('@/lib/stores/ndk', () => ({
 	},
 }))
 
-const { fetchAuctionSettlementsForList, fetchAuctionPathReleasesForList, getAuctionTopBidFromBids } = await import(
-	'@/queries/auctions'
-)
+const { fetchAuctionSettlementsForList, fetchAuctionPathReleasesForList, getAuctionTopBidFromBids } = await import('@/queries/auctions')
 
 const TEST_SECRET_KEY = new Uint8Array(32).fill(7)
 
@@ -136,9 +134,12 @@ describe('fetchAuctionSettlementsForList', () => {
 		const coordinateOnly = signEvent(AUCTION_SETTLEMENT_KIND, 100, [['a', coordinate]])
 		const duplicateNewestRootOnly = { ...newestRootOnly }
 
-		applesauceIo.fetchEvents = mock(
-			async () => [newestRootOnly, bothRefs, coordinateOnly, duplicateNewestRootOnly],
-		) as typeof applesauceIo.fetchEvents
+		applesauceIo.fetchEvents = mock(async () => [
+			newestRootOnly,
+			bothRefs,
+			coordinateOnly,
+			duplicateNewestRootOnly,
+		]) as typeof applesauceIo.fetchEvents
 
 		const grouped = await fetchAuctionSettlementsForList([rootId], [coordinate])
 
@@ -187,9 +188,13 @@ describe('fetchAuctionPathReleasesForList', () => {
 		const eventBOnly = signEvent(AUCTION_PATH_RELEASE_KIND as number, 250, [['a', coordinateB]])
 		const eventOther = signEvent(AUCTION_PATH_RELEASE_KIND as number, 999, [['a', `30408:${'b'.repeat(64)}:other`]])
 
-		applesauceIo.fetchEvents = mock(
-			async () => [eventAOld, eventANew, eventShared, eventBOnly, eventOther],
-		) as typeof applesauceIo.fetchEvents
+		applesauceIo.fetchEvents = mock(async () => [
+			eventAOld,
+			eventANew,
+			eventShared,
+			eventBOnly,
+			eventOther,
+		]) as typeof applesauceIo.fetchEvents
 
 		const grouped = await fetchAuctionPathReleasesForList([coordinateA, coordinateB])
 
