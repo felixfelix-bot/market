@@ -210,7 +210,14 @@ test.describe('Product Page - View Only (Unauthenticated)', () => {
 		expect(html).toContain('<meta property="og:type" content="product" />')
 		expect(html).toContain('<meta property="og:title" content="View Test Product')
 		expect(html).toContain('<meta property="og:image"')
-		expect(html).toContain('cdn.satellite.earth')
+		// The seeded image URL mirrors the img-src assertion below — it is
+		// env-overridable (E2E_TEST_IMAGE_URL) and defaults to a non-satellite
+		// Blossom host, so assert the URL originates from a known host
+		// instead of one hardcoded domain.
+		const ogImage = html.match(/<meta property="og:image" content="([^"]+)"/)?.[1] ?? ''
+		expect(ogImage).toMatch(
+			/^https?:\/\/(localhost|blossom\d?\.orangesync\.tech|cdn\.satellite\.earth|24242\.io|blossom\.primal\.net|nostr\.download)\//,
+		)
 		expect(html).toContain(`<meta property="og:url" content="${BASE_URL}/products/${currentProductId}" />`)
 	})
 
