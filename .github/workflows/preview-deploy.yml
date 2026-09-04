@@ -100,6 +100,24 @@ jobs:
           target: '/home/${{ secrets.PREVIEW_VPS_USER }}/previews/pr-${{ github.event.pull_request.number }}/deploy-package'
           strip_components: 1
 
+      - name: Build nak image on VPS (registry image is gone)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PREVIEW_VPS_HOST }}
+          username: ${{ secrets.PREVIEW_VPS_USER }}
+          key: ${{ secrets.PREVIEW_VPS_SSH_KEY }}
+          script: |
+            if docker image inspect market-nak:b6568388 >/dev/null 2>&1; then
+              echo "nak image already built"
+              exit 0
+            fi
+            cd /tmp
+            rm -rf nak-build
+            git clone https://github.com/fiatjaf/nak.git nak-build
+            cd nak-build
+            git checkout b65683886b58382890888fbdda90e5c2129df488
+            docker build -t market-nak:b6568388 .
+
       - name: Write docker-compose.yml and bring up services
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -133,7 +151,7 @@ jobs:
                 depends_on:
                   - nak-relay
               nak-relay:
-                image: ghcr.io/fiatjaf/nak:latest
+                image: market-nak:b6568388
                 command: serve --hostname 0.0.0.0
                 ports:
                   - "${RELAY_PORT}:10547"
