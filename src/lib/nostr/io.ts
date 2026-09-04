@@ -40,6 +40,8 @@ export interface SubscribeOptions {
 	closeOnEose?: boolean
 	/** Restrict the subscription to these relay URLs. Default: adapter's configured relays. */
 	relayUrls?: string[]
+	/** Boundary notification fired when relays reach EOSE. NOT a stop signal. */
+	onEose?: () => void
 }
 
 export interface PublishOptions {

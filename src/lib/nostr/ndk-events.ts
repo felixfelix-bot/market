@@ -1,7 +1,7 @@
 import { NDKEvent, type NDKFilter, type NDKSigner } from '@nostr-dev-kit/ndk'
 import { verifyEvent, type Event } from 'nostr-tools'
 
-import type { NostrFilter, NostrIo } from './io'
+import type { FetchOptions, NostrFilter, NostrIo } from './io'
 
 export { NDKEvent }
 export type { NDKFilter, NDKSigner }
@@ -21,14 +21,39 @@ export async function fetchNdkEventSet(
 	nostrIo: Pick<NostrIo, 'fetchEvents'>,
 	ndk: NdkEventContext,
 	filter: NDKFilter | NDKFilter[],
+	opts?: FetchOptions,
 ): Promise<Set<NDKEvent>> {
-	const rawEvents = await nostrIo.fetchEvents(filter as NostrFilter | NostrFilter[])
+	const rawEvents = await nostrIo.fetchEvents(filter as NostrFilter | NostrFilter[], opts)
 	const eventsById = new Map<string, NDKEvent>()
 	for (const event of rawEvents) {
 		const ndkEvent = rehydrateVerifiedNdkEvent(ndk, event)
 		if (ndkEvent && !eventsById.has(ndkEvent.id)) eventsById.set(ndkEvent.id, ndkEvent)
 	}
 	return new Set(eventsById.values())
+}
+
+/**
+ * Fetch a single event for a filter with deterministic newest-wins selection.
+ *
+ * NDK's `fetchEvent` resolves a coordinate/replaceable kind to its newest
+ * event regardless of which relay returns first. `fetchNdkEventSet` dedupes by
+ * id (first arrival wins), which would make `limit: 1` replaceable reads
+ * relay-arrival-order dependent. This helper restores the newest-wins contract
+ * (created_at desc, event id asc as tiebreaker) for single-event coordinate
+ * fetches.
+ */
+export async function fetchNdkEvent(
+	nostrIo: Pick<NostrIo, 'fetchEvents'>,
+	ndk: NdkEventContext,
+	filter: NDKFilter | NDKFilter[],
+	opts?: FetchOptions,
+): Promise<NDKEvent | null> {
+	const events = await fetchNdkEventSet(nostrIo, ndk, filter, opts)
+	if (events.size === 0) return null
+	return Array.from(events).sort((a, b) => {
+		if ((b.created_at ?? 0) !== (a.created_at ?? 0)) return (b.created_at ?? 0) - (a.created_at ?? 0)
+		return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+	})[0]
 }
 
 export function mergeNdkEventSetsById(...eventSets: Set<NDKEvent>[]): Set<NDKEvent> {

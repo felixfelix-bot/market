@@ -82,6 +82,7 @@ export const applesauceIo: NostrIo = {
 			.subscription(urls, filters, { resubscribe: false })
 			.subscribe((message) => {
 				if (message === 'EOSE') {
+					opts?.onEose?.()
 					if (opts?.closeOnEose) {
 						if (subscription) stop()
 						else {
