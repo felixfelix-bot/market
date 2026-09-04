@@ -5,28 +5,6 @@ import { devUser1, devUser2, devUser3 } from '@/lib/fixtures'
 import { kinds, type VerifiedEvent } from 'nostr-tools'
 import type { Locator, Page } from '@playwright/test'
 import { seedComment, seedProduct, seedReaction } from '../scenarios'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-
-// Path to a local image fixture used to intercept external CDN requests in CI.
-const __filename = fileURLToPath(import.meta.url)
-const LOCAL_IMAGE_PATH = path.join(path.dirname(__filename), '..', 'fixtures', 'test-product-image.png')
-
-/**
- * Intercepts requests to cdn.satellite.earth and serves a local fixture image.
- * This prevents flaky CI failures when the external CDN is unreachable from
- * GitHub Actions runners — the <img> always loads, so toBeVisible() passes.
- * The src attribute remains the original CDN URL, so src assertions still work.
- */
-async function interceptCdnImages(page: Page) {
-	await page.route('**/cdn.satellite.earth/**', async (route) => {
-		await route.fulfill({
-			status: 200,
-			contentType: 'image/png',
-			path: LOCAL_IMAGE_PATH,
-		})
-	})
-}
 
 // ==========================================
 // == GLOBAL STATE & SEEDING               ==
@@ -206,7 +184,7 @@ test.use({ scenario: 'base' })
 test.describe('Product Page - View Only (Unauthenticated)', () => {
 	// --- SocialInteractions Tests ---
 
-	test('should display correct product details', async ({ unauthenticatedPage }) => {
+	test('should display correct product details @happy-path', async ({ unauthenticatedPage }) => {
 		if (!currentProductId) throw new Error('Product not seeded')
 
 		await unauthenticatedPage.goto(`/products/${currentProductId}`)
@@ -232,24 +210,29 @@ test.describe('Product Page - View Only (Unauthenticated)', () => {
 		expect(html).toContain('<meta property="og:type" content="product" />')
 		expect(html).toContain('<meta property="og:title" content="View Test Product')
 		expect(html).toContain('<meta property="og:image"')
-		expect(html).toContain('cdn.satellite.earth')
+		// The seeded image URL mirrors the img-src assertion below — it is
+		// env-overridable (E2E_TEST_IMAGE_URL) and defaults to a non-satellite
+		// Blossom host, so assert the URL originates from a known host
+		// instead of one hardcoded domain.
+		const ogImage = html.match(/<meta property="og:image" content="([^"]+)"/)?.[1] ?? ''
+		expect(ogImage).toMatch(
+			/^https?:\/\/(localhost|blossom\d?\.orangesync\.tech|cdn\.satellite\.earth|24242\.io|blossom\.primal\.net|nostr\.download)\//,
+		)
 		expect(html).toContain(`<meta property="og:url" content="${BASE_URL}/products/${currentProductId}" />`)
 	})
 
 	test('should show product image', async ({ unauthenticatedPage }) => {
 		if (!currentProductId) throw new Error('Product not seeded')
-
-		// Intercept external CDN image requests to avoid flaky CI failures.
-		// The local fixture is served instead, so the image always loads.
-		await interceptCdnImages(unauthenticatedPage)
-
 		await unauthenticatedPage.goto(`/products/${currentProductId}`)
 
 		const headerContent = unauthenticatedPage.locator('.hero-content-product')
 		const img = headerContent.locator('img[alt*="View Test Product"]')
 
 		await expect(img).toBeVisible()
-		await expect(img).toHaveAttribute('src', /cdn\.satellite\.earth/)
+		await expect(img).toHaveAttribute(
+			'src',
+			/^https?:\/\/(localhost|blossom\d?\.orangesync\.tech|cdn\.satellite\.earth|24242\.io|blossom\.primal\.net|nostr\.download)/,
+		)
 	})
 
 	test('should navigate through tabs and show content', async ({ unauthenticatedPage }) => {
