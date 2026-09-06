@@ -354,6 +354,38 @@ Negative / tradeoffs:
 - `NDKUser` decoupling touches the 18-file identity surface during Wave A3.
 - #807 stays open until A3b lands (implementation is P2, after auctions).
 
+## Implementation status notes
+
+Updated 2026-09-06 as Wave B-3 (encrypted session persistence, #996 H8) lands on PR #1252:
+
+- **Session vault** (`src/lib/nostr/session-vault.ts`): the nbunksec NIP-46
+  session payload is wrapped PBKDF2-SHA256 (≥600k iterations) → AES-GCM-256
+  (envelope `{v,kdf,iterations,salt,iv,ct}`, base64) and stored under
+  localStorage key `nostr_session_v1`. `migrateLegacySessionToVault` wraps the
+  legacy plaintext pair then deletes it (read-ONCE migration); refusal
+  (`discardLegacySession`) writes no vault and logs the user out — invariant 4b.
+- **Auth store** (`src/lib/stores/auth.ts`): `loginWithNip46` persists the
+  vault ONLY when a `sessionPassphrase` is supplied (otherwise in-memory
+  session; the plaintext pair is never written again). The boot gate surfaces
+  `needsSessionUnlock` instead of silently re-logging-in with plaintext.
+  `unlockVaultedSession` rehydrates a `NostrConnectSigner` from the unwrapped
+  nbunksec (via `src/lib/nostr/nostr-connect-session.ts`, wrapped in the B-2
+  capability); `discardVaultedSession` is the refusal path; `logout` clears
+  the vault (lock-on-logout).
+- **UI**: `SessionUnlockDialog` (`src/components/auth/SessionUnlockDialog.tsx`,
+  mounted in `src/routes/__root.tsx`) drives unlock/discard;
+  `BunkerConnect.tsx` gained an optional session-passphrase field passed as
+  `sessionPassphrase`.
+- **NIP-49 lane** (`decryptAndLogin`): `nostr-tools/nip49.decrypt` was
+  replaced by `createPasswordSignerSession` (`PasswordSigner.fromNcryptsec`)
+  from `src/lib/nostr/password-signer-session.ts` — the ncryptsec is decrypted
+  inside the signer and every capability call is gated on `signer.unlocked`
+  (the library deadlocks on locked calls — signers-api-audit gap 4).
+- Unit evidence: `src/lib/__tests__/session-vault.test.ts` (11 tests) and
+  `src/lib/__tests__/auth-session-vault.test.ts` (12 tests) cover round-trip,
+  tamper/fail-closed, legacy migration, refuse-migration-logout, persistence
+  gating, and the locked-deadlock guard.
+
 ## References
 
 - ADR-0002: `ADR-0002-nostr-io-migration-ndk-to-applesauce.md`
