@@ -36,8 +36,8 @@ HOST="$(echo -n "${PREVIEW_VPS_HOST:?PREVIEW_VPS_HOST is required}" | tr -d '[:s
 _VPS_USER="$(echo -n "${PREVIEW_VPS_USER:?PREVIEW_VPS_USER is required}" | tr -d '[:space:]')"
 KEY="$(echo -n "${PREVIEW_VPS_SSH_KEY:?PREVIEW_VPS_SSH_KEY is required}" | tr -d '[:space:]')"
 FINGERPRINT="$(echo -n "${PREVIEW_VPS_HOST_FINGERPRINT:?PREVIEW_VPS_HOST_FINGERPRINT is required}" | tr -d '[:space:]')"
-CF_TOKEN="${PREVIEW_CLOUDFLARE_API_TOKEN:?PREVIEW_CLOUDFLARE_API_TOKEN is required}"
-CF_ZONE="$(echo -n "${PREVIEW_CLOUDFLARE_ZONE_ID:?PREVIEW_CLOUDFLARE_ZONE_ID is required}" | tr -d '[:space:]')"
+CF_TOKEN="${PREVIEW_CLOUDFLARE_API_TOKEN:-}"
+CF_ZONE="$(echo -n "${PREVIEW_CLOUDFLARE_ZONE_ID:-}" | tr -d '[:space:]')"
 
 # ── Pinned host-key verification (no MITM window, no TOFU) ──────────────
 # Scan the host key, compare its SHA256 fingerprint against the pinned
@@ -206,11 +206,18 @@ REMOTE
 # Key names match what preview_manager.py reads: CLOUDFLARE_API_TOKEN /
 # CLOUDFLARE_ZONE_ID (the CI-side secrets are PREVIEW_CLOUDFLARE_*; the
 # mapping happens here — do NOT rename one side without the other).
+# If CF_TOKEN is empty (no Cloudflare credentials configured), the manager
+# env is skipped — DNS cleanup degrades to no-op, which is safe because
+# the manager already handles empty CF creds gracefully.
+if [ -n "$CF_TOKEN" ] && [ -n "$CF_ZONE" ]; then
 echo "==> Writing manager.env (Cloudflare credentials, chmod 600)"
 printf 'CLOUDFLARE_API_TOKEN=%s\nCLOUDFLARE_ZONE_ID=%s\n' \
   "${CF_TOKEN}" "${CF_ZONE}" \
   | "${SSH_BASE[@]}" "${_VPS_USER}@${HOST}" \
     'umask 077; mkdir -p /home/'"${_VPS_USER}"'/preview-infra && cat > /home/'"${_VPS_USER}"'/preview-infra/manager.env && chmod 600 /home/'"${_VPS_USER}"'/preview-infra/manager.env && echo "  manager.env written (600)"'
+else
+echo "==> Skipping manager.env (no Cloudflare credentials — DNS cleanup degraded)"
+fi
 
 # ── 5. Preview gateway service (TLS ask + HTTP router) ───────────────────
 # preview_gateway.py is version-controlled and shipped with the deploy
