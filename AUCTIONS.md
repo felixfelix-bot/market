@@ -372,6 +372,16 @@ in the signature, which only `derive(seller_xpriv, path)` can produce.
   proof, in compressed secp256k1 hex. MUST be 1-to-1 parallel with the
   `lock_secret` tags (same count, same order). Cashu mints accept Ys
   as a batched lookup key (NUT-7 `CheckStatePayload.Ys: string[]`).
+- `dleq_proof`: **repeated tag** — one entry per proof, containing the
+  DLEQ proof data `{e, s, r}` plus `amount` and keyset `id` as produced
+  by the Cashu mint at issuance (NUT-12). MUST be 1-to-1 parallel with
+  the `lock_secret` and `proof_y` tags (same count, same order).
+  Specified by ADR-0011 (Decision 1) as REQUIRED for post-rollout
+  auctions (publisher wiring lands with the DLEQ rollout — see §11.1).
+  Enables offline bid-amount verification — a verifier reconstructs
+  `B_ = Y + r·G` and `C_ = C + r·A` and checks the DLEQ challenge
+  against the mint's public key for the claimed amount, so the declared
+  bid amount is cryptographically bound to the mint's signature (§9.1.1).
 - `created_for_end_at`: copied auction end timestamp to bind client intent.
 - `bid_nonce`: random id per bid.
 - `key_scheme`: MUST match the auction `key_scheme`.
@@ -976,6 +986,17 @@ Interpretation:
 - `SIG_ALL` remains a long-term consideration; v1 uses `SIG_INPUTS`
   for cashu-ts compatibility.
 
+> **NUT-11 + DLEQ (ADR-0011).** Under ADR-0011 the bid event is specified
+> to publish the full locked proof — `C` (mint signature), `amount`, keyset
+> `id`, and the DLEQ proof `{e, s, r}` — via the `dleq_proof` tag on
+> kind-1023 (§4.2). This enables offline verification that the mint actually
+> promised the declared amount (a verifier reconstructs `C_ = C + r·A`
+> and checks the DLEQ challenge against the mint's public key for the
+> claimed denomination), closing the known gap in §9.1.1. The lock
+> secret itself remains publishable in cleartext as before: it contains
+> only the spending condition (pubkey, locktime, refund), not bearer
+> authority.
+
 ## 5.4 cashu-ts shape
 
 ```ts
@@ -1403,7 +1424,10 @@ flowchart TD
     OK --> CLIENT{Client: NUT-7 state == unspent?<br/>(via checkProofStateBatch)}
     CLIENT -->|spent| CR1[Client: treat as invalid<br/>proof_spent / fraudulent_bid]
     CLIENT -->|pending/unknown| CR2[Client: bid_pending_review<br/>no settlement CTAs]
-    CLIENT -->|unspent| COK[Client: bid fully valid<br/>settlement CTAs enabled]
+    CLIENT -->|unspent| COK[Client: NUT-7 confirmed<br/>proceed to DLEQ check]
+    COK --> DLEQ{Client: DLEQ proof valid?<br/>(verify e,s,r against<br/>mint keys for claimed amount)}
+    DLEQ -->|invalid| DR1[Client: treat as invalid<br/>dleq_invalid]
+    DLEQ -->|valid| DOK[Client: bid fully valid<br/>collateral + state confirmed<br/>settlement CTAs enabled]
 ```
 
 Operational notes:
@@ -1416,6 +1440,12 @@ Operational notes:
 - If the mint is unreachable, the client MAY treat the bid as
   `bid_pending_review` and retry; it MUST NOT treat the bid as fully
   valid until at least one successful `unspent` reading.
+- **DLEQ verification (ADR-0011).** After NUT-7 confirms `unspent`, the
+  client verifies each proof's DLEQ `{e, s, r}` against the mint's public
+  keys for the claimed amount (via `hasValidDleq` / `verifyDLEQProof_reblind`
+  from `@cashu/crypto`). A missing, malformed, or invalid DLEQ proof fails
+  closed (`dleq_invalid`). Grandfathered pre-rollout bids that lack
+  `dleq_proof` tags skip this check.
 - Each listed validator runs the pipeline independently. Compliant
   clients consult the `auditor_quorum` count of agreeing
   `valid_bid_placed` verdicts before treating the bid as a real
@@ -1790,39 +1820,43 @@ sell). See §14 for the full threat analysis.
   silent-grief variant retrospectively. Either path produces a
   `fraudulent_bid` reputation event.
 
-### 9.1.1 Locked amount not verifiable at bid time (known gap)
+### 9.1.1 Locked amount not verifiable at bid time (resolved — ADR-0011)
 
-> **Known gap (not yet resolved).** The kind-1023 bid event publishes
-> `lock_secret` (the P2PK lock script) and `proof_y` (for NUT-7 state
-> checks), but it does NOT publish the proof's `C` (mint signature),
-> `amount`, or `id` (keyset). NUT-7 verifies spend state (`UNSPENT` /
-> `SPENT` / `PENDING`) but does NOT return the proof's amount.
+> **Status: RESOLVED by ADR-0011** (NUT-12 DLEQ proofs). The kind-1023 bid
+> event previously published only `lock_secret` (the P2PK lock script) and
+> `proof_y` (for NUT-7 state checks) — but not the proof's `C` (mint
+> signature), `amount`, or `id` (keyset). NUT-7 verifies spend state
+> (`UNSPENT` / `SPENT` / `PENDING`) but does NOT return the proof's amount,
+> so a bidder could lock a small amount (e.g. 1 sat) and claim a much larger
+> cumulative `amount` (e.g. 100,000 sats), with the mismatch only caught at
+> settlement. That was a griefing vector (not a theft vector) — fake price
+> inflation, winner selection, and min-bid floor distortion.
 >
-> Consequently, a bidder can lock a small amount (e.g. 1 sat) at the
-> mint and publish a bid claiming a much larger cumulative `amount`
-> (e.g. 100,000 sats). The bid passes all current bid-time checks
-> (NUT-7 shows `UNSPENT`, lock structure is valid, `amount` >
-> `prev_bid` + increment). The mismatch is only caught at settlement
-> when the kind-1025 reveals the full `cashu_token` and
-> `validatePathRelease` checks `sum(proofs.amount) == expectedDelta`.
+> **Resolution (ADR-0011).** The bid event is specified to additionally
+> publish the full locked proof — `amount`, keyset `id`, `C`, and the DLEQ
+> proof `{e, s, r}` — via the `dleq_proof` tag (§4.2), once the DLEQ
+> publisher wiring lands (ADR-0011 rollout; the tag is required by the spec
+> but the code path emitting it is part of the same DLEQ implementation
+> effort). A verifier reconstructs
+> `B_ = Y + r·G` and `C_ = C + r·A` and verifies the DLEQ challenge against
+> the mint's public key for the claimed amount (obtained from `/v1/keys`).
+> Any false amount, false `C`, or false `r` fails the check. Combined with
+> NUT-7 `unspent`, this composes into bid-time economic validation
+> (ADR-0011, Decision 2): `sum(proofs.amount)` must equal the declared
+> `amount` tag (for rebid legs, the leg delta), and missing or invalid DLEQ
+> data fails closed (`dleq_invalid`).
 >
-> This is a **griefing vector**, not a theft vector: the malicious
-> bidder locks real funds (even if tiny) and the fraud is caught at
-> settlement. But during the auction, the fake bid affects winner
-> selection, min-increment floor, and reserve-met determination.
->
-> The `content.leg_locked` field in the kind-1023 event body is
-> UNSIGNED and MUST NOT be used to verify the locked amount. The delta
-> is computed from signed tags: `amount - prev_bid.amount`. But the
-> actual amount locked at the mint is only verifiable at settlement
-> via the `cashu_token`.
->
-> **Mitigation:** Per-auction rate limits, validator policy gates
-> (relatr score, account age, NIP-05), and the `vadium_ratio_bps`
-> parameter (which can require >100% deposit) partially deter this
-> attack. A future protocol enhancement could close this gap by
-> enabling offline signature validation, but the specific approach is
-> not yet settled (see ADR-0004 known limitations).
+> **Residuals (explicitly unsolved by ADR-0011).**
+> - `child_pubkey` still cannot be verified against the seller's `p2pk_xpub`
+>   before kind-1025 — deliberate, since early path disclosure would let the
+>   seller derive the child privkey and drain bids mid-auction.
+> - DLEQ proves the mint _promised_ the amount; mint solvency remains a
+>   separate trust axis (mint allowlist, `vadium_ratio_bps`).
+> - NUT-7 `unspent` remains a point-in-time reading; the double-spend race
+>   is bounded by the lock (funds cannot move pre-`T_unlock` without the
+>   seller key).
+> - The `content.leg_locked` field remains UNSIGNED and MUST NOT be used to
+>   verify the locked amount; use the signed `dleq_proof` tags instead.
 
 ## 9.2 Fake cashu / invalid proofs
 
@@ -1839,6 +1873,13 @@ sell). See §14 for the full threat analysis.
 - A proof reported `spent` before legitimate settlement → the bid
   is treated as `bid_invalid` with `reason=proof_spent` (or
   `fraudulent_bid` if the bidder still claims a live bid).
+- **DLEQ amount verification (ADR-0011).** The client verifies each
+  published `dleq_proof` `{e, s, r}` against the mint's public keys for
+  the claimed amount, and checks `sum(proofs.amount)` equals the declared
+  `amount` tag (leg delta for rebids). A missing, malformed, or invalid
+  DLEQ proof fails closed (`dleq_invalid`) so a fabricated or
+  under-funded proof can never pass as an economically valid bid — closing
+  the former zero-cost "lock 1 sat, claim 100,000 sats" gap (§9.1.1).
 
 ## 9.3 End-time manipulation
 
