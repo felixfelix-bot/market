@@ -1442,8 +1442,9 @@ Operational notes:
   valid until at least one successful `unspent` reading.
 - **DLEQ verification (ADR-0011).** After NUT-7 confirms `unspent`, the
   client verifies each proof's DLEQ `{e, s, r}` against the mint's public
-  keys for the claimed amount (via `hasValidDleq` / `verifyDLEQProof_reblind`
-  from `@cashu/crypto`). A missing, malformed, or invalid DLEQ proof fails
+  keys for the claimed amount (via `hasValidDleq` from `@cashu/cashu-ts` and
+  `verifyDLEQProof_reblind` from `@cashu/crypto`). A missing, malformed, or
+  invalid DLEQ proof fails
   closed (`dleq_invalid`). Grandfathered pre-rollout bids that lack
   `dleq_proof` tags skip this check.
 - Each listed validator runs the pipeline independently. Compliant
@@ -1842,7 +1843,7 @@ sell). See §14 for the full threat analysis.
 > the mint's public key for the claimed amount (obtained from `/v1/keys`).
 > Any false amount, false `C`, or false `r` fails the check. Combined with
 > NUT-7 `unspent`, this composes into bid-time economic validation
-> (ADR-0011, Decision 2): `sum(proofs.amount)` must equal the declared
+> (ADR-0011, Decision 3): `sum(proofs.amount)` must equal the declared
 > `amount` tag (for rebid legs, the leg delta), and missing or invalid DLEQ
 > data fails closed (`dleq_invalid`).
 >
