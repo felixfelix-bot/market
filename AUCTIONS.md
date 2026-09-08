@@ -2353,3 +2353,10 @@ DLEQ proof fixture for tests. It constructs a keyset and a valid DLEQ proof
 offline so that `hasValidDleq(proof, keyset)` returns `true` (honest case)
 and exposes per-field corruption helpers for negative-path verification
 tests. No mint, no network. See `src/lib/__tests__/dleqFixture.test.ts`.
+
+The happy-path verification coverage lives in
+`src/lib/__tests__/auctionDLEQ.test.ts`: `verifyProofDleq` returns `true`
+for an honest fixture proof (single and across denominations), and
+`verifyBidDleq` returns `ok=true` when honest proofs sum to the declared
+`legDelta` (single- and multi-proof), while an honest-but-mismatched sum
+yields `allProofsValid=true` / `matchesAmount=false` / `ok=false`.
