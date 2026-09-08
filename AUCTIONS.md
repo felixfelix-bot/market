@@ -2346,3 +2346,12 @@ DLEQ proof fixture for tests. It constructs a keyset and a valid DLEQ proof
 offline so that `hasValidDleq(proof, keyset)` returns `true` (honest case)
 and exposes per-field corruption helpers for negative-path verification
 tests. No mint, no network. See `src/lib/__tests__/dleqFixture.test.ts`.
+
+### 15.8 DLEQ bid sum-check (verifyBidDleq)
+
+`verifyBidDleq` (in `src/lib/cashu/dleq.ts`) batch-verifies a bid's DLEQ
+proofs and enforces the amount invariant: `ok` is `true` only when every
+proof verifies AND `sum(proofs[].amount) === legDelta`. The sum-check is
+covered by unit tests in `src/lib/__tests__/auctionDLEQ.test.ts` using the
+honest A3 fixture for both the single-leg bid (one proof) and the rebid-leg
+(multiple proofs) cases, asserting `ok` flips with the amount sum.
