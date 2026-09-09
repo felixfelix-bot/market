@@ -4,10 +4,14 @@ import { v4 as uuidv4 } from 'uuid'
 import { useEffect, useState } from 'react'
 import NDK, { type NDKSigner } from '@nostr-dev-kit/ndk'
 import { NDKNWCWallet } from '@nostr-dev-kit/wallet'
-import { getSecret, setSecret, migrateLegacy } from '@/lib/crypto/vault'
+import { getSecret, setSecret, migrateLegacy, registerWalletSecretKey } from '@/lib/crypto/vault'
 
 /** localStorage key holding the NWC wallets array (sealed as a vault envelope). */
 export const NWC_WALLETS_KEY = 'nwc_wallets'
+
+// Register the NWC wallets key so logout wipes it via the shared helper
+// (ADR-017). The wallets array embeds NWC URIs with spending secrets.
+registerWalletSecretKey(NWC_WALLETS_KEY)
 
 // Wallet interface
 export interface Wallet {

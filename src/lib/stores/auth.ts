@@ -8,12 +8,21 @@ import { uiActions } from './ui'
 import { getPublicKey, nip19 } from 'nostr-tools'
 import { decrypt, encrypt } from 'nostr-tools/nip49'
 import { hexToBytes } from 'nostr-tools/utils'
+import { getSecret, setSecret, migrateLegacy, registerWalletSecretKey, wipeWalletSecrets } from '@/lib/crypto/vault'
 
 export const NOSTR_CONNECT_KEY = 'nostr_connect_url'
 export const NOSTR_LOCAL_SIGNER_KEY = 'nostr_local_signer_key'
 export const NOSTR_LOCAL_ENCRYPTED_SIGNER_KEY = 'nostr_local_encrypted_signer_key'
 export const NOSTR_AUTO_LOGIN = 'nostr_auto_login'
 export const NOSTR_USER_PUBKEY = 'nostr_user_pubkey'
+
+// Register the NIP-46 session secrets so logout wipes them via the shared
+// helper (ADR-017). The signer key is the primary target; the bunker URL and
+// the ncryptsec-encrypted key are session material that must not survive
+// logout either.
+registerWalletSecretKey(NOSTR_LOCAL_SIGNER_KEY)
+registerWalletSecretKey(NOSTR_CONNECT_KEY)
+registerWalletSecretKey(NOSTR_LOCAL_ENCRYPTED_SIGNER_KEY)
 
 interface AuthState {
 	user: NDKUser | null
@@ -59,7 +68,11 @@ export const authActions = {
 
 			// Signer / Bunker URL
 
-			const privateKeySigner = localStorage.getItem(NOSTR_LOCAL_SIGNER_KEY)
+			// The NIP-46 local signer key is sealed in a vault envelope at rest
+			// (ADR-017). Migrate any legacy plaintext key to an envelope, then
+			// open it with the unlocked session key. Returns null when absent.
+			await migrateLegacy(NOSTR_LOCAL_SIGNER_KEY)
+			const privateKeySigner = await getSecret(NOSTR_LOCAL_SIGNER_KEY)
 			const bunkerUrl = localStorage.getItem(NOSTR_CONNECT_KEY)
 
 			if (privateKeySigner && bunkerUrl) {
@@ -263,7 +276,15 @@ export const authActions = {
 
 			// Wait until user is logged in successfully before saving the bunkerURL/private key.
 
-			localStorage.setItem(NOSTR_LOCAL_SIGNER_KEY, localSigner.privateKey || '')
+			// Seal the NIP-46 local signer key into a vault envelope before
+			// persisting — localStorage only ever holds ciphertext (ADR-017).
+			// Fire-and-forget: the login flow stays synchronous for callers;
+			// a failure surfaces via the console.
+			if (localSigner.privateKey) {
+				void setSecret(NOSTR_LOCAL_SIGNER_KEY, localSigner.privateKey).catch((error) => {
+					console.error('Failed to save NIP-46 signer key to localStorage:', error)
+				})
+			}
 			localStorage.setItem(NOSTR_CONNECT_KEY, bunkerUrl)
 
 			authStore.setState((state) => ({
@@ -290,9 +311,11 @@ export const authActions = {
 		const ndk = ndkActions.getNDK()
 		if (!ndk) return
 		ndkActions.removeSigner()
-		localStorage.removeItem(NOSTR_LOCAL_SIGNER_KEY)
-		localStorage.removeItem(NOSTR_CONNECT_KEY)
-		localStorage.removeItem(NOSTR_LOCAL_ENCRYPTED_SIGNER_KEY)
+		// Wipe every wallet secret from localStorage via the shared helper
+		// (ADR-017): the NIP-46 signer key, bunker URL, ncryptsec key, the NWC
+		// wallets array, every cashu_wallet_seed_* key, and the vault
+		// envelope/session material. Also locks the in-memory session key.
+		wipeWalletSecrets()
 		localStorage.removeItem(NOSTR_AUTO_LOGIN)
 		// Clear cart when user logs out
 		cartActions.clear({ publishRemote: false, reason: 'logout' })

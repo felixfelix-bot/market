@@ -251,3 +251,52 @@ export async function migrateLegacy(keyName: string): Promise<boolean> {
 	await setSecret(keyName, raw)
 	return true
 }
+
+// ---------------------------------------------------------------------------
+// Wallet-secret key registry + logout wipe
+// ---------------------------------------------------------------------------
+
+/**
+ * Registry of wallet-secret localStorage keys and key prefixes. Stores
+ * register the keys they own so `wipeWalletSecrets()` can remove every wallet
+ * secret from localStorage in one place (ADR-017). Exact keys cover
+ * single-entry secrets (e.g. the NWC wallets array, the NIP-46 signer key);
+ * prefixes cover enumerated keys (e.g. `cashu_wallet_seed_<pubkey>`).
+ */
+const walletSecretKeys = new Set<string>()
+const walletSecretPrefixes = new Set<string>()
+
+/** Register an exact localStorage key as a wallet secret to wipe on logout. */
+export function registerWalletSecretKey(keyName: string): void {
+	walletSecretKeys.add(keyName)
+}
+
+/** Register a localStorage key prefix; every key starting with it is wiped. */
+export function registerWalletSecretPrefix(prefix: string): void {
+	walletSecretPrefixes.add(prefix)
+}
+
+/**
+ * Remove every registered wallet secret from localStorage: exact keys,
+ * prefix-enumerated keys (e.g. all `cashu_wallet_seed_<pubkey>` entries), and
+ * the vault envelope/session material. Also locks the in-memory session key so
+ * a subsequent getSecret/setSecret fails closed. Idempotent.
+ */
+export function wipeWalletSecrets(): void {
+	for (const key of walletSecretKeys) {
+		localStorage.removeItem(key)
+	}
+	for (const prefix of walletSecretPrefixes) {
+		const keysToRemove: string[] = []
+		for (let i = 0; i < localStorage.length; i++) {
+			const key = localStorage.key(i)
+			if (key && key.startsWith(prefix)) keysToRemove.push(key)
+		}
+		for (const key of keysToRemove) {
+			localStorage.removeItem(key)
+		}
+	}
+	// Vault envelope/session material.
+	localStorage.removeItem(VAULT_STORAGE_KEY)
+	lock()
+}

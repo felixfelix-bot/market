@@ -12,10 +12,15 @@ import { IndexedDbRepositories } from 'coco-cashu-indexeddb'
 import { authStore } from './auth'
 import { nip60Store } from './nip60'
 import { loadUserData, saveUserData, type PendingToken } from '@/lib/wallet'
-import { getSecret, setSecret, migrateLegacy } from '@/lib/crypto/vault'
+import { getSecret, setSecret, migrateLegacy, registerWalletSecretPrefix } from '@/lib/crypto/vault'
 
 const CASHU_SEED_KEY = 'cashu_wallet_seed'
 const PENDING_TOKENS_KEY = 'cashu_pending_tokens'
+
+// Register the cashu seed key prefix so logout wipes every
+// cashu_wallet_seed_<pubkey> entry via the shared helper (ADR-017). There may
+// be multiple pubkeys, so the prefix (not an exact key) is registered.
+registerWalletSecretPrefix(`${CASHU_SEED_KEY}_`)
 
 // Re-export for backward compatibility
 export type { PendingToken }
