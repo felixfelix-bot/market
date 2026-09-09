@@ -12,6 +12,7 @@ import { IndexedDbRepositories } from 'coco-cashu-indexeddb'
 import { authStore } from './auth'
 import { nip60Store } from './nip60'
 import { loadUserData, saveUserData, type PendingToken } from '@/lib/wallet'
+import { getSecret, setSecret, migrateLegacy } from '@/lib/crypto/vault'
 
 const CASHU_SEED_KEY = 'cashu_wallet_seed'
 const PENDING_TOKENS_KEY = 'cashu_pending_tokens'
@@ -50,9 +51,13 @@ const savePendingTokens = (tokens: PendingToken[]): void => saveUserData(PENDING
 
 /**
  * Get or generate a seed for the wallet.
- * The seed is stored in localStorage and used for deterministic key derivation.
+ * The seed is stored encrypted at rest in localStorage (vault envelope) and
+ * used for deterministic key derivation. Legacy plaintext seeds are migrated
+ * to an envelope on load and the plaintext copy removed.
+ *
+ * Exported as a test seam; the store's external API for callers is unchanged.
  */
-async function getOrCreateSeed(): Promise<Uint8Array> {
+export async function getOrCreateSeed(): Promise<Uint8Array> {
 	const pubkey = authStore.state.user?.pubkey
 	if (!pubkey) {
 		throw new Error('User not authenticated')
@@ -60,7 +65,16 @@ async function getOrCreateSeed(): Promise<Uint8Array> {
 
 	// Use a user-specific key
 	const seedKey = `${CASHU_SEED_KEY}_${pubkey}`
-	let seedHex = localStorage.getItem(seedKey)
+
+	// Migrate a legacy plaintext seed to a vault envelope if one exists.
+	// migrateLegacy re-encrypts the plaintext under the unlocked session key
+	// and removes the plaintext copy. It is a no-op when the key is absent or
+	// already an envelope.
+	await migrateLegacy(seedKey)
+
+	// Read the seed through the vault (opens the envelope with the unlocked
+	// session key). Returns null when the key is absent.
+	let seedHex = await getSecret(seedKey)
 
 	if (!seedHex) {
 		// Generate a new 64-byte seed
@@ -69,7 +83,9 @@ async function getOrCreateSeed(): Promise<Uint8Array> {
 		seedHex = Array.from(seed)
 			.map((b) => b.toString(16).padStart(2, '0'))
 			.join('')
-		localStorage.setItem(seedKey, seedHex)
+		// Seal the seed before persisting — localStorage only ever holds the
+		// ciphertext envelope.
+		await setSecret(seedKey, seedHex)
 		console.log('[cashu] Generated new wallet seed')
 	}
 
