@@ -59,7 +59,10 @@ describe('wipeWalletSecrets on logout', () => {
 		await setSecret(NWC_WALLETS_KEY, JSON.stringify([{ nwcUri: 'nostr+walletconnect://...&secret=spending' }]))
 		await setSecret('cashu_wallet_seed_aaaa', 'seed-hex-aaaa')
 		await setSecret('cashu_wallet_seed_bbbb', 'seed-hex-bbbb')
-		localStorage.setItem(VAULT_STORAGE_KEY, '{"v":1,"alg":"AES-256-GCM","kdf":"PBKDF2-SHA256","iterations":1000,"salt":"x","iv":"y","ct":"z"}')
+		localStorage.setItem(
+			VAULT_STORAGE_KEY,
+			'{"v":1,"alg":"AES-256-GCM","kdf":"PBKDF2-SHA256","iterations":1000,"salt":"x","iv":"y","ct":"z"}',
+		)
 
 		// Sanity: everything is present before the wipe.
 		expect(localStorage.getItem(NOSTR_LOCAL_SIGNER_KEY)).toBeTruthy()
