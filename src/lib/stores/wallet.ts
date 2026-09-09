@@ -4,6 +4,10 @@ import { v4 as uuidv4 } from 'uuid'
 import { useEffect, useState } from 'react'
 import NDK, { type NDKSigner } from '@nostr-dev-kit/ndk'
 import { NDKNWCWallet } from '@nostr-dev-kit/wallet'
+import { getSecret, setSecret, migrateLegacy } from '@/lib/crypto/vault'
+
+/** localStorage key holding the NWC wallets array (sealed as a vault envelope). */
+export const NWC_WALLETS_KEY = 'nwc_wallets'
 
 // Wallet interface
 export interface Wallet {
@@ -168,7 +172,15 @@ export const walletActions = {
 	// Load wallets from localStorage
 	loadWalletsFromLocalStorage: async (): Promise<Wallet[]> => {
 		try {
-			const savedWallets = localStorage.getItem('nwc_wallets')
+			// Migrate a legacy plaintext wallets array to a vault envelope if one
+			// exists. migrateLegacy re-encrypts the plaintext under the unlocked
+			// session key and removes the plaintext copy. It is a no-op when the
+			// key is absent or already an envelope.
+			await migrateLegacy(NWC_WALLETS_KEY)
+
+			// Read the wallets array through the vault (opens the envelope with
+			// the unlocked session key). Returns null when the key is absent.
+			const savedWallets = await getSecret(NWC_WALLETS_KEY)
 			if (savedWallets) {
 				const parsed = JSON.parse(savedWallets)
 				// Ensure all fields are present
@@ -191,12 +203,14 @@ export const walletActions = {
 
 	// Save wallets to local storage
 	saveWalletsToLocalStorage: (wallets: Wallet[]): void => {
-		try {
-			localStorage.setItem('nwc_wallets', JSON.stringify(wallets))
-		} catch (error) {
+		// Seal the wallets array (which embeds NWC URIs with spending secrets)
+		// into a vault envelope before persisting — localStorage only ever holds
+		// ciphertext. Fire-and-forget: the store API stays synchronous for
+		// callers; failures surface via the toast.
+		void setSecret(NWC_WALLETS_KEY, JSON.stringify(wallets)).catch((error) => {
 			console.error('Failed to save wallets to localStorage:', error)
 			toast.error('Failed to save wallets to local storage')
-		}
+		})
 	},
 
 	// Add a new wallet (does not save to Nostr directly anymore)
