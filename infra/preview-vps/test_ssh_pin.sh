@@ -314,5 +314,21 @@ else
   no "provision.sh does not source ssh-pin.sh (two divergent pinning models)"
 fi
 
+# A whole-file rewrite from a masked tool read once turned every
+# `Bearer $CF_TOKEN` header into the literal masked form, which the Cloudflare
+# API rejects (6111 invalid Authorization header) and which only becomes
+# visible as an opaque `jq: ... Cannot iterate over null` at the DNS step.
+if grep -qE 'Bearer \*\*\*' "${WORKFLOW}"; then
+  no "preview-deploy.yml sends a literal masked Authorization header instead of \$CF_TOKEN"
+else
+  ok "no masked Authorization header in the preview workflow"
+fi
+cf_headers="$(grep -c 'Bearer \$CF_TOKEN' "${WORKFLOW}" || true)"
+if [ "${cf_headers:-0}" -ge 5 ]; then
+  ok "all ${cf_headers} Cloudflare headers interpolate \$CF_TOKEN"
+else
+  no "only ${cf_headers:-0} Cloudflare headers interpolate \$CF_TOKEN (want >= 5)"
+fi
+
 printf '\n%d passed, %d failed\n' "${PASS}" "${FAIL}"
 [ "${FAIL}" -eq 0 ]

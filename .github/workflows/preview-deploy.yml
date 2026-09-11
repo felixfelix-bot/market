@@ -298,19 +298,19 @@ jobs:
           # GitHub Actions log redaction masks $CF_TOKEN automatically.
           LIST_RESPONSE=$(curl -sS -X GET \
             "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/dns_records?type=A&name=$SUBDOMAIN" \
-            -H "Authorization: Bearer ***" \
+            -H "Authorization: Bearer $CF_TOKEN" \
             -H "Content-Type: application/json")
           EXISTING_IDS=$(echo "$LIST_RESPONSE" | jq -r '.result[].id // empty')
           for rid in $EXISTING_IDS; do
             echo "Deleting existing A record $rid for $SUBDOMAIN"
             curl -sS -X DELETE \
               "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/dns_records/$rid" \
-              -H "Authorization: Bearer ***" >/dev/null
+              -H "Authorization: Bearer $CF_TOKEN" >/dev/null
           done
           echo "Creating A record $SUBDOMAIN → $VPS_IP"
           curl -sS -X POST \
             "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/dns_records" \
-            -H "Authorization: Bearer ***" \
+            -H "Authorization: Bearer $CF_TOKEN" \
             -H "Content-Type: application/json" \
             --data "{\"type\":\"A\",\"name\":\"$SUBDOMAIN\",\"content\":\"$VPS_IP\",\"ttl\":60,\"proxied\":false}" \
             | jq .
@@ -451,14 +451,14 @@ jobs:
           set -uo pipefail
           LIST_RESPONSE=$(curl -sS -X GET \
             "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/dns_records?type=A&name=$SUBDOMAIN" \
-            -H "Authorization: Bearer ***" \
+            -H "Authorization: Bearer $CF_TOKEN" \
             -H "Content-Type: application/json")
           EXISTING_IDS=$(echo "$LIST_RESPONSE" | jq -r '.result[].id // empty')
           for rid in $EXISTING_IDS; do
             echo "Deleting DNS record $rid for $SUBDOMAIN"
             curl -sS -X DELETE \
               "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/dns_records/$rid" \
-              -H "Authorization: Bearer ***" >/dev/null
+              -H "Authorization: Bearer $CF_TOKEN" >/dev/null
           done
 
       - name: Update PR comment (torn down)
