@@ -12,6 +12,8 @@ GitHub configuration currently includes issue templates and these workflows:
 - `.github/workflows/deploy-relay.yml`
 - `.github/workflows/e2e.yml`
 - `.github/workflows/prettier.yml`
+- `.github/workflows/preview-collect.yml`
+- `.github/workflows/preview-deploy.yml`
 - `.github/workflows/promote-production.yml`
 - `.github/workflows/release.yml`
 

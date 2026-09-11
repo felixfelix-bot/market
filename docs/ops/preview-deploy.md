@@ -1,17 +1,54 @@
 # Preview Deploy — configuration & known issues
 
-This document explains how the PR preview-deployment workflow
-(`.github/workflows/preview-deploy.yml`) is configured and why it may skip,
-plus the exact secrets the maintainer must set to enable live per-PR previews.
+This document explains how the PR preview-deployment pipeline
+(`.github/workflows/preview-collect.yml` + `.github/workflows/preview-deploy.yml`)
+is configured and why it may fail fast, plus the exact secrets the
+maintainer must set to enable live per-PR previews — including for fork
+PRs.
 
 ## What it does
 
-On `pull_request` events (`opened`, `synchronize`, `closed`), the workflow
-builds the market app, ships a deploy package to a shared test VPS over SSH,
-brings up per-PR `docker compose` services (market app + nak relay on offset
-ports), creates a Cloudflare A record `pr{N}.test-market.orangesync.tech`, and
-posts the live URL as an idempotent PR comment. On `closed` it tears the
-preview down.
+The pipeline is two workflows, split so that fork PRs (whose
+`pull_request` events never receive repository secrets) still get live
+previews:
+
+1. **Preview Collect** (`pull_request: opened/synchronize/closed`) — the
+   unprivileged collector. It holds ZERO secrets (a regression test fails
+   if a `secrets` reference appears in the file), builds the PR code in
+   that isolated runner, and seals a `preview-bundle` artifact: the
+   deploy package plus `preview-request.json` metadata (PR number,
+   action, head SHA, labels — written by
+   `infra/preview-vps/preview-request.sh write`).
+2. **Preview Deploy** (`workflow_run` on Preview Collect completion) —
+   the privileged deployer. Under `workflow_run` the job runs in the
+   base-repo context, so repository secrets ARE available **even for
+   fork PRs** (that is the fix for the fork-PR root cause). It routes
+   the request (`preview-request.sh route`: strict schema validation,
+   subdomain/port math computed from the validated PR number, head SHA
+   bound to the triggering run), ships the deploy package to the shared
+   test VPS over host-key-pinned SSH, brings up per-PR `docker compose`
+   services (market app + nak relay on offset ports), creates the
+   Cloudflare A record `pr{N}.test-market.orangesync.tech`, health-checks,
+   and posts an idempotent PR comment with the live URL. On `closed` it
+   tears the preview down (compose down, DNS delete, port-offset
+   release).
+
+Trade-offs of the `workflow_run` pattern (vs the old single
+`pull_request` workflow): the deploy only starts after the collector's
+build completes, and the PR check list shows **Preview Collect** as the
+check — the deploy run reports on the Actions tab and via the PR
+comment, not as a second PR check.
+
+**Trust boundary (security-critical).** The privileged workflow executes
+ONLY default-branch code — its checkout is the workflow_run default (the
+default-branch commit), never `github.event.workflow_run.head_sha` (the
+PR head). Everything in the `preview-bundle` artifact is PR-controlled
+DATA: the metadata is validated by `preview-request.sh route` before any
+field reaches a shell string, and the deploy package is shipped to the
+VPS as bytes and runs THERE, in the per-PR sandbox containers — never in
+the secrets-holding runner. `infra/preview-vps/test_workflow_pattern.sh`
+pins this contract (plus: no job-level `continue-on-error`, no
+`appleboy` actions, collector references no secrets).
 
 The deploy path claims a **port-offset marker** on the VPS
 (`preview_manager.py --claim-port-offset N`, marker file
@@ -68,7 +105,7 @@ makes **no** destructive decisions for that run — it logs a `skip_reason`
 line (visible in `journalctl`) instead. Teardown failures are recorded in
 the cycle summary and the preview is kept for retry rather than deleted.
 
-## Why the check skips (empty `PREVIEW_VPS_*` secrets)
+## Why a deploy fails fast (missing secrets)
 
 The "Bootstrap VPS" step consumes four secrets:
 
@@ -82,26 +119,30 @@ The "Bootstrap VPS" step consumes four secrets:
 - `PREVIEW_CLOUDFLARE_API_TOKEN`
 - `PREVIEW_CLOUDFLARE_ZONE_ID`
 
-A `pull_request`-triggered workflow **never receives repository secrets when
-the PR head is on a fork**. `secrets.PREVIEW_VPS_*` resolve to empty strings in
-the runner, so `provision.sh` aborts immediately with:
+Under the old `pull_request` trigger these resolved to empty strings for
+fork PRs (fork-PR secret isolation) and `provision.sh` aborted with:
 
 ```
 infra/preview-vps/provision.sh: PREVIEW_VPS_HOST is required
 ```
 
-The workflow detects this up front (step `Check preview VPS secrets`),
-emits a clear annotation, skips all VPS/DNS/deploy steps, and posts a
-"Preview deploy skipped" PR comment instead of failing confusingly. The
-"Deploy preview" check reports success (skipped) in this state.
+Under the `workflow_run` trigger secrets ARE available even for fork
+PRs, so a missing secret now means "not configured in the repository" —
+and the deploy job's SECOND step (`Fail fast when preview VPS secrets
+are absent`, `infra/preview-vps/require-secrets.sh`) fails immediately
+with one `::error` annotation per missing secret, e.g. `missing secret
+PREVIEW_VPS_HOST — fork PR secret isolation blanks secrets on
+pull_request runs, but this workflow_run job DOES see repository
+secrets, so PREVIEW_VPS_HOST is not configured in the repository`. A red
+run at step 2 names the secret; a deep crash inside provision.sh names
+nothing. Cloudflare credentials remain optional (warn + skip) — the SSH
+quartet is not.
 
 ## Required secrets (maintainer-side)
 
 For live previews, a maintainer with admin access to `PlebeianApp/market` must
-add these as **repository secrets** (the `deploy` job currently has no
-`environment:` binding, so repo-level secrets are required) —**or**, if the
-trigger is switched to `pull_request_target`, as secrets scoped to that
-environment:
+add these as **repository secrets** (the deploy jobs currently have no
+`environment:` binding, so repo-level secrets are required):
 
 | Secret                         | Value                                                                                                                                                                                                                                                                                                                                                                                        |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -112,8 +153,9 @@ environment:
 | `PREVIEW_CLOUDFLARE_API_TOKEN` | Cloudflare API token (DNS edit on the zone)                                                                                                                                                                                                                                                                                                                                                  |
 | `PREVIEW_CLOUDFLARE_ZONE_ID`   | Cloudflare zone id for `test-market.orangesync.tech`                                                                                                                                                                                                                                                                                                                                         |
 
-If any required secret is missing the workflow skips loudly instead of failing
-opaque — do not treat a green "skipped" check as proof previews are live.
+If any required secret is missing the deploy fails fast at the guard step
+naming the secret — do not treat a green collector check as proof previews are
+live (look for the ✅ PR comment / the Preview Deploy run).
 
 ### `PREVIEW_VPS_SSH_KEY` byte shape
 
@@ -220,41 +262,44 @@ remaining actions in the workflow are pinned by commit SHA (with the version in 
 trailing comment), so a mutated upstream tag cannot exfiltrate the key. Audit the
 SHA when bumping the version.
 
-**`pull_request_target` (do not switch blindly).** To get real previews from
-**fork** PR branches you would need the secrets in the runner, which
-`pull_request` does not allow. The typical workaround is
-`pull_request_target`, which runs the workflow with the **base branch's**
-workflow file and grants repository secrets. That is a privilege escalation
-vector: a malicious PR can alter the base-branch workflow to exfiltrate
-secrets. If you adopt it, you MUST:
+**`pull_request_target` (considered and rejected).** To get real previews
+from **fork** PR branches you need the secrets in the runner, which
+`pull_request` does not allow. The two candidates were:
 
-1. Pin the checkout to a trusted ref (never `actions/checkout` on the
-   untrusted PR merge ref with default settings), and
-2. Never interpolate PR-controlled content (e.g. `github.event.pull_request.*`)
-   into shell strings or actions that touch secrets, and
-3. Review the workflow every time the pinned ref is bumped.
+1. `pull_request_target` — runs the **base branch's** workflow file with
+   repository secrets against the PR. That is a privilege-escalation
+   vector: a malicious PR can alter the base-branch workflow to
+   exfiltrate secrets, and adopting it safely would require pinning
+   every checkout to a trusted ref, auditing every step for
+   PR-controlled interpolation, and re-reviewing the workflow on every
+   bump. **Rejected.**
+2. The `workflow_run` pattern (adopted) — an unprivileged
+   `pull_request` collector builds and seals the bundle with zero
+   secrets; the privileged `workflow_run` deploy workflow executes only
+   default-branch code and treats the bundle as data. Secrets reach the
+   deploy side for fork PRs WITHOUT ever co-locating secrets with
+   PR-controlled code execution.
 
-Given the added risk and that previews are explicitly not a merge gate
-(Layer G of the PR trust pipeline), the safer long-term option is for the
-maintainer to push the preview-deploy workflow changes onto `master` and run
-the preview deploy there via `pull_request` with `if:` guards on
-`github.head_ref` / `github.repository`, keeping the fork-PR case as a loud
-skip. Revisit only if maintainer wants live fork-PR previews.
+Do not switch the deploy workflow to `pull_request_target`; if the
+`workflow_run` chain ever needs to change, keep the invariant:
+**PR-controlled code executes only in the secretless collector.**
 
 ## Status handling (why the run is no longer masked)
 
-Previously the job had job-level `continue-on-error: true`, which set the **run**
-conclusion to `success` while an individual step still reported a red FAIL check
-— a mismatch that hid the real failure. The job now uses step-level guards
-(keyed on `steps.secrets.outputs.previews_ready`) instead: secrets missing →
-all VPS/DNS steps skip with a visible annotation and a "skipped" PR comment;
-secrets present → steps run and a real failure surfaces as a red check.
+The file now contains **zero job-level `continue-on-error`** (the last one —
+a leftover `continue-on-error: false` directive from the earlier fix — was
+removed with the workflow_run conversion; `test_workflow_pattern.sh` fails
+if one reappears). Job-level `continue-on-error` sets the **run** conclusion
+to `success` while an individual step still reports a red FAIL check — a
+mismatch that hid real failures. Step-level `continue-on-error` remains ONLY
+on the two best-effort PR-comment steps: a comment failure must never mask
+the deploy result, and vice versa.
 
 **Health-check reporting (the check is never green next to a dead preview).**
 The health check retries for ~3 minutes; individual failed attempts inside that
 loop are transient warm-up (preview booting, DNS propagating, certificate
 issuance). If the check fails after all attempts the step exits nonzero and the
-**`Deploy preview` check turns red**. A green check next to a dead preview was
+**Preview Deploy run turns red**. A green run next to a dead preview was
 the last masked failure in this workflow: in run 34605660792 the preview was
 deployed, the health check failed 12/12, and the check still reported `pass`
 (the step carried `continue-on-error: true`). The PR comment is not lost by
