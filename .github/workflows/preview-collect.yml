@@ -1,0 +1,130 @@
+name: Preview Collect
+
+# Unprivileged half of the fork-PR-safe preview pipeline (Layer G of
+# docs/plans/pr-trust-pipeline.md — see docs/ops/preview-deploy.md).
+#
+# `pull_request` events NEVER receive repository secrets when the PR head
+# lives on a fork (t_fa71dc15 root cause: Bootstrap VPS failed for ANY
+# fork PR because PREVIEW_VPS_* resolved to empty strings in the runner).
+# This workflow embraces that isolation instead of fighting it: it runs
+# PR-controlled code (bun install / build) in a runner that holds ZERO
+# secrets, and seals the result — the deploy package plus
+# preview-request.json metadata (PR number, action, head SHA, labels) —
+# into the `preview-bundle` artifact.
+#
+# The privileged Preview Deploy workflow then triggers via `workflow_run`
+# (base-repo context: repository secrets ARE available there, even for
+# fork PRs) and ships those bytes to the VPS without ever executing
+# PR-controlled code in the secrets-holding runner.
+#
+# SECURITY: never reference a repository secret in this file — it executes
+# arbitrary fork code, so any secret here is a fork-PR exfiltration
+# vector. infra/preview-vps/test_workflow_pattern.sh enforces this.
+#
+# Trade-off vs the old single pull_request workflow: the deploy now waits
+# for this build to finish before it even starts (workflow_run fires on
+# completion), and the PR check list shows "Preview Collect" (the
+# workflow_run deploy run reports on the Actions tab + PR comment, not as
+# a PR check). In exchange, fork PRs finally get live previews.
+
+on:
+  pull_request:
+    types: [opened, synchronize, closed]
+
+# One collector per PR: a newer push supersedes the previous bundle, and
+# a close supersedes an in-flight bundle (the teardown note wins).
+concurrency:
+  group: preview-collect-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  BUN_VERSION: 'latest'
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    name: Bundle preview request
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 'Checkout PR head (safe: this runner holds no secrets)'
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build application
+        run: |
+          bun run generate-routes
+          bun run build
+
+      - name: Create deployment package
+        run: |
+          mkdir -p deploy-package
+          cp -r dist deploy-package/
+          cp -r src deploy-package/
+          cp -r contextvm deploy-package/
+          cp package.json bun.lock tsconfig.json deploy-package/
+
+      # Seal the metadata the privileged side needs. The deploy workflow
+      # validates this file with preview-request.sh route (strict schema,
+      # computed subdomain/ports) before any field reaches a shell string
+      # over there — the JSON is PR-controlled data.
+      - name: Seal preview-request metadata
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_ACTION: ${{ github.event.action }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          PR_LABELS_JSON: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: bash infra/preview-vps/preview-request.sh write deploy-package
+
+      - name: Upload preview bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-bundle
+          path: deploy-package/
+          retention-days: 1
+          if-no-files-found: error
+
+  # The closed action needs no build — only the metadata artifact, under
+  # the same artifact name, so the deploy workflow has one contract.
+  close-note:
+    name: Bundle teardown request
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code (writer script copy)
+        uses: actions/checkout@v4
+
+      - name: Seal preview-request metadata (closed)
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_ACTION: ${{ github.event.action }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          PR_LABELS_JSON: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          mkdir -p deploy-package
+          bash infra/preview-vps/preview-request.sh write deploy-package
+
+      - name: Upload preview bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-bundle
+          path: deploy-package/
+          retention-days: 1
+          if-no-files-found: error

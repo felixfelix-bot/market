@@ -57,6 +57,7 @@ jobs:
           bash infra/preview-vps/test_ssh_pin.sh
           bash infra/preview-vps/test_preview_request.sh
           bash infra/preview-vps/test_require_secrets.sh
+          bash infra/preview-vps/test_workflow_pattern.sh
 
       # Hermetic python regressions for the preview-deploy infrastructure
       # (pure functions + injected fakes: no network, no docker, no VPS).
