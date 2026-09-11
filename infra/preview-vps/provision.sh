@@ -13,14 +13,18 @@ set -euo pipefail
 # Requires these env vars:
 #   PREVIEW_VPS_HOST             — VPS hostname or IP (SSH port 22)
 #   PREVIEW_VPS_USER             — SSH user (typically "debian")
-#   PREVIEW_VPS_SSH_KEY          — path to the SSH private key file
-#   PREVIEW_VPS_HOST_FINGERPRINT — VPS SSH *host* key SHA256 fingerprint
-#                                  (format: `SHA256:...`, exactly as printed
-#                                  by `ssh-keyscan -t ed25519 <host> |
-#                                  ssh-keygen -lf -`; the SAME secret the
-#                                  appleboy actions verify via their
-#                                  `fingerprint:` input). The connection is
-#                                  pinned to it — no TOFU, no
+#   PREVIEW_VPS_SSH_KEY          — the SSH private key material (the CI
+#                                  secret) OR the path to an existing
+#                                  private-key file (manual runs)
+#   PREVIEW_VPS_HOST_FINGERPRINT — SHA256 fingerprint of the VPS SSH *host*
+#                                  key to pin (format `SHA256:…`, exactly the
+#                                  2nd field of
+#                                  `ssh-keyscan <host> | ssh-keygen -lf -`).
+#                                  The pin may name ANY host-key type the VPS
+#                                  offers (ed25519 / ecdsa / rsa); the
+#                                  handshake is then restricted to the type
+#                                  that matched. The connection is pinned to
+#                                  it — no TOFU, no
 #                                  StrictHostKeyChecking=no.
 #   PREVIEW_CLOUDFLARE_API_TOKEN — Cloudflare token (DNS edit on the zone);
 #                                  shipped to the VPS as manager.env so the
@@ -31,45 +35,27 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# ── Trim whitespace from env vars (GitHub secrets often have trailing newlines) ──
-HOST="$(echo -n "${PREVIEW_VPS_HOST:?PREVIEW_VPS_HOST is required}" | tr -d '[:space:]')"
-_VPS_USER="$(echo -n "${PREVIEW_VPS_USER:?PREVIEW_VPS_USER is required}" | tr -d '[:space:]')"
-KEY="$(echo -n "${PREVIEW_VPS_SSH_KEY:?PREVIEW_VPS_SSH_KEY is required}" | tr -d '[:space:]')"
-FINGERPRINT="$(echo -n "${PREVIEW_VPS_HOST_FINGERPRINT:?PREVIEW_VPS_HOST_FINGERPRINT is required}" | tr -d '[:space:]')"
 CF_TOKEN="${PREVIEW_CLOUDFLARE_API_TOKEN:-}"
 CF_ZONE="$(echo -n "${PREVIEW_CLOUDFLARE_ZONE_ID:-}" | tr -d '[:space:]')"
 
-# ── Pinned host-key verification (no MITM window, no TOFU) ──────────────
-# Scan the host key, compare its SHA256 fingerprint against the pinned
-# secret, and abort BEFORE any private-key material is exchanged: a
-# mismatch means impostor and the deploy key is never handed over. The
-# pinned line is then written to a private known_hosts and ssh runs with
-# StrictHostKeyChecking=yes against it. HostKeyAlgorithms pins the
-# negotiation to the verified ed25519 key, so an impostor cannot offer a
-# different key type that was never pinned.
-echo "==> Verifying VPS host key fingerprint for ${HOST}"
-HOSTKEY_LINE="$(ssh-keyscan -T 10 -t ed25519 "${HOST}" 2>/dev/null | head -n 1)"
-if [ -z "${HOSTKEY_LINE}" ]; then
-  echo "FATAL: ssh-keyscan could not reach ${HOST} to fetch its host key" >&2
-  exit 1
-fi
-ACTUAL_FP="$(printf '%s\n' "${HOSTKEY_LINE}" | ssh-keygen -lf - | awk '{print $2}')"
-if [ "${ACTUAL_FP}" != "${FINGERPRINT}" ]; then
-  echo "FATAL: host key fingerprint mismatch for ${HOST}" >&2
-  echo "  pinned: ${FINGERPRINT}" >&2
-  echo "  actual: ${ACTUAL_FP}" >&2
-  echo "  Refusing to hand the deploy key to an unverified host." >&2
-  exit 1
-fi
-echo "  Host key fingerprint verified (${FINGERPRINT})"
+# ── Deploy key + pinned host key ────────────────────────────────────────
+# ssh-pin.sh owns the whole model and is shared with every remote step of
+# .github/workflows/preview-deploy.yml: secret trimming, key materialisation
+# via write-ssh-key.sh (the stored secret byte shape must not matter), a
+# single ssh-keyscan host-key verification against
+# PREVIEW_VPS_HOST_FINGERPRINT (an unreachable target is reported as such, not
+# as a secret failure), the private known_hosts, and the ssh/scp option set
+# (StrictHostKeyChecking=yes + HostKeyAlgorithms restricted to the pinned
+# key's type). Nothing here hands the deploy key to an unverified host.
+# shellcheck source=infra/preview-vps/ssh-pin.sh
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/ssh-pin.sh"
+ssh_pin_init
 
-KNOWN_HOSTS="$(mktemp)"
-printf '%s\n' "${HOSTKEY_LINE}" > "${KNOWN_HOSTS}"
-chmod 600 "${KNOWN_HOSTS}"
-trap 'rm -f "${KNOWN_HOSTS}"' EXIT
-
-SSH_BASE=(ssh -i "${KEY}" -o StrictHostKeyChecking=yes -o UserKnownHostsFile="${KNOWN_HOSTS}" -o HostKeyAlgorithms=ssh-ed25519 -o LogLevel=ERROR)
-SCP_BASE=(scp -i "${KEY}" -o StrictHostKeyChecking=yes -o UserKnownHostsFile="${KNOWN_HOSTS}" -o HostKeyAlgorithms=ssh-ed25519 -o LogLevel=ERROR)
+HOST="${SSH_PIN_HOST}"
+_VPS_USER="${SSH_PIN_USER}"
+SSH_BASE=(ssh "${SSH_PIN_ARGS[@]}")
+SCP_BASE=(scp "${SSH_PIN_ARGS[@]}")
 
 echo "==> Provisioning VPS ${_VPS_USER}@${HOST} (host key pinned)"
 
