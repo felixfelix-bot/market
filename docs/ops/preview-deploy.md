@@ -102,13 +102,47 @@ environment:
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `PREVIEW_VPS_HOST`             | Hostname or public IP of the preview VPS                                                                                                                                                                                                                                                                                                 |
 | `PREVIEW_VPS_USER`             | SSH user on that VPS (typically `debian`)                                                                                                                                                                                                                                                                                                |
-| `PREVIEW_VPS_SSH_KEY`          | PEM private key for SSH/scp (multiline; must be a valid key)                                                                                                                                                                                                                                                                             |
+| `PREVIEW_VPS_SSH_KEY`          | PEM private key for SSH/scp (multiline; must be a valid, unencrypted key — the byte shape does not matter, see below)                                                                                                                                                                                                                    |
 | `PREVIEW_VPS_HOST_FINGERPRINT` | SSH **host**-key SHA256 fingerprint of the VPS, format `SHA256:…` (from `ssh-keyscan -t ed25519 <host> \| ssh-keygen -lf -`). The same secret verifies the host in the appleboy actions (`fingerprint:` input) and in `provision.sh`, which compares it against the scanned key and aborts before any private-key material is exchanged. |
 | `PREVIEW_CLOUDFLARE_API_TOKEN` | Cloudflare API token (DNS edit on the zone)                                                                                                                                                                                                                                                                                              |
 | `PREVIEW_CLOUDFLARE_ZONE_ID`   | Cloudflare zone id for `test-market.orangesync.tech`                                                                                                                                                                                                                                                                                     |
 
 If any required secret is missing the workflow skips loudly instead of failing
 opaque — do not treat a green "skipped" check as proof previews are live.
+
+### `PREVIEW_VPS_SSH_KEY` byte shape
+
+A GitHub secret does not preserve its trailing newline reliably: `gh secret set
+NAME < keyfile` keeps the file's final LF, while `gh secret set NAME --body
+"$(cat keyfile)"` (and JSON-flattened stores) strip it, and some stores escape
+newlines as literal `\n`. An OpenSSH/PEM key whose last line is not
+newline-terminated is rejected by ssh with
+
+```
+Load key "/tmp/tmp.XXXX": error in libcrypto
+Permission denied, please try again.
+```
+
+which reads like a wrong key or a wrong host even though the material is fine
+(observed on run 34560831880, 2026-09-11: the pre-flight guard had passed and
+the host-key fingerprint had verified). The Bootstrap step therefore pipes the
+secret through `infra/preview-vps/write-ssh-key.sh`, which
+
+- converts literal `\n` escapes and CRLF to real newlines and guarantees a
+  newline-terminated last line,
+- writes the result mode `600`,
+- validates it with `ssh-keygen -y` before any key material is offered to a
+  host, failing loudly with a message that names the secret and this document.
+
+Re-set the secret with a plain redirect and the shape is handled:
+
+```
+gh secret set PREVIEW_VPS_SSH_KEY --repo <owner>/<repo> < ~/.ssh/preview_deploy
+```
+
+Regression coverage: `bash infra/preview-vps/test_write_ssh_key.sh` — accepted
+shapes are real newlines, no trailing newline, literal `\n`, and CRLF; rejected
+shapes are empty, garbage, a public key, and a passphrase-protected key.
 
 ## Security notes
 
