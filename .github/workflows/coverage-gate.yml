@@ -52,9 +52,16 @@ jobs:
         run: |
           set -euo pipefail
           UNIT_TESTS="$(
-            # NOTE: This mirrors `test:unit` in package.json plus `scripts/`.
-            # If test:unit scope changes, update both to prevent coverage drift.
-            find contextvm src/queries/__tests__ src/lib/__tests__ scripts \
+            # NOTE: This mirrors `test:unit` in package.json plus `scripts/` and
+            # the e2e/ bun:test guards (e2e/lib/diff-specs.test.ts,
+            # e2e/playwright.config.test.ts, e2e/fixtures/video.test.ts).
+            # e2e/ must be listed explicitly: only *.test.ts is swept in, so
+            # Playwright's *.spec.ts stay out of `bun test`. These guards were
+            # silently skipped before (bunfig ignored all of e2e/**) — see
+            # scripts/__tests__/test-scope-guard.test.ts, which fails if the
+            # scope regresses. If test:unit scope changes, update both to
+            # prevent coverage drift.
+            find contextvm src/queries/__tests__ src/lib/__tests__ scripts e2e \
               -type f -name '*.test.ts' ! -name '*.integration.test.ts' \
               | sort | tr '\n' ' '
           )"

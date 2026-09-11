@@ -3,9 +3,13 @@ plugins = ["bun-plugin-tailwind"]
 env = "BUN_PUBLIC_*"
 
 [test]
-# Exclude Playwright e2e spec files from Bun's test runner.
-# These use Playwright's test runner API (test.use(), test.describe())
-# which bun:test doesn't understand, causing spurious failures
-# when the pre-push hook runs `bun test` and picks up *.spec.ts files.
-# `pathIgnorePatterns` is the correct Bun key (not `exclude`).
-pathIgnorePatterns = ["e2e/**", "node_modules/**"]
+# Ignore only the Playwright spec files under e2e/ — they use Playwright's test
+# runner API (test.use(), test.describe()) which bun:test doesn't understand,
+# causing spurious failures when `bun test` (and the pre-push hook) picks them up.
+#
+# NOTE: do NOT widen this back to "e2e/**". The e2e/ tree also contains plain
+# bun:test unit guards (e2e/lib/diff-specs.test.ts, e2e/playwright.config.test.ts,
+# e2e/fixtures/video.test.ts); a blanket e2e/** ignore silently orphaned them —
+# they never ran in CI or locally. scripts/__tests__/test-scope-guard.test.ts
+# pins this invariant.
+pathIgnorePatterns = ["e2e/**/*.spec.ts", "node_modules/**"]
