@@ -12,16 +12,21 @@ import {
 	ProductVisibilityTagSchema,
 	ProductWeightTagSchema,
 } from '@/lib/schemas/productListing'
-import { ndkActions } from '@/lib/stores/ndk'
-import type { NDKFilter } from '@nostr-dev-kit/ndk'
-import { NDKEvent } from '@nostr-dev-kit/ndk'
+import {
+	fetchEvents,
+	fetchListingByDTag,
+	fetchListingById,
+	fetchListings,
+	fetchListingsByMerchant,
+	type NostrEvent,
+	type NostrFilter,
+} from '@/lib/nostr/io'
 import { queryOptions, useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 import { productKeys } from './queryKeyFactory'
 import { getCoordsFromATag, getATagFromCoords } from '@/lib/utils/coords.ts'
 import { discoverNip50Relays } from '@/lib/relays'
 import { filterBlacklistedEvents, filterBlacklistedPubkeys } from '@/lib/utils/blacklistFilters'
-import { naddrFromAddress } from '@/lib/nostr/naddr'
 import { isValidHexKey } from '@/lib/utils'
 
 // Re-export productKeys for use in other query files
@@ -88,7 +93,7 @@ export const isProductDeleted = (dTag: string, eventCreatedAt?: number) => {
 	return eventCreatedAt < deletionTimestamp
 }
 
-const filterDeletedProducts = (events: NDKEvent[]): NDKEvent[] => {
+const filterDeletedProducts = (events: NostrEvent[]): NostrEvent[] => {
 	return events.filter((event) => {
 		const dTag = event.tags.find((t) => t[0] === 'd')?.[1]
 		if (!dTag) return true
@@ -105,7 +110,7 @@ export const isEventId = (id: string): boolean => /^[a-f0-9]{64}$/i.test(id)
  * @param event The product event
  * @returns true if the product is in stock
  */
-export const isProductInStock = (event: NDKEvent): boolean => {
+export const isProductInStock = (event: NostrEvent): boolean => {
 	const visibilityTag = event.tags.find((t) => t[0] === 'visibility')
 	const visibility = visibilityTag?.[1] || 'on-sale'
 
@@ -131,20 +136,15 @@ export const isProductInStock = (event: NDKEvent): boolean => {
  * @returns Array of product events sorted by creation date (blacklist filtered, optionally hidden products excluded)
  */
 export const fetchProducts = async (limit: number = 500, tag?: string, includeHidden: boolean = false) => {
-	const ndk = ndkActions.getNDK()
-	if (!ndk) {
-		console.warn('NDK not ready, returning empty product list')
-		return []
-	}
-
-	const filter: NDKFilter = {
+	const filter: NostrFilter = {
 		kinds: [30402], // Product listings in Nostr
 		limit,
 		...(tag && { '#t': [tag] }), // Add tag filter if provided
 	}
 
-	const events = await ndkActions.fetchEventsWithTimeout(filter, { timeoutMs: 8000 })
-	const allEvents = Array.from(events).sort((a, b) => (b.created_at || 0) - (a.created_at || 0))
+	const events = await fetchListings(filter, { timeoutMs: 8000 })
+	// fetchListings already sorts newest-first; keep the explicit sort for clarity.
+	const allEvents = events.slice().sort((a, b) => (b.created_at || 0) - (a.created_at || 0))
 
 	// Filter out blacklisted products and authors, then filter out locally-deleted products
 	const filteredEvents = filterDeletedProducts(filterBlacklistedEvents(allEvents))
@@ -172,21 +172,16 @@ export const fetchProducts = async (limit: number = 500, tag?: string, includeHi
  * @returns Array of product events sorted by creation date (blacklist filtered, optionally hidden products excluded)
  */
 export const fetchProductsPaginated = async (limit: number = 20, until?: number, tag?: string, includeHidden: boolean = false) => {
-	const ndk = ndkActions.getNDK()
-	if (!ndk) {
-		console.warn('NDK not ready, returning empty paginated product list')
-		return []
-	}
-
-	const filter: NDKFilter = {
+	const filter: NostrFilter = {
 		kinds: [30402], // Product listings in Nostr
 		limit,
 		...(until && { until }),
 		...(tag && { '#t': [tag] }), // Add tag filter if provided
 	}
 
-	const events = await ndkActions.fetchEventsWithTimeout(filter, { timeoutMs: 8000 })
-	const allEvents = Array.from(events).sort((a, b) => b.created_at! - a.created_at!)
+	const events = await fetchListings(filter, { timeoutMs: 8000 })
+	// fetchListings already sorts newest-first; keep the explicit sort for clarity.
+	const allEvents = events.slice().sort((a, b) => b.created_at! - a.created_at!)
 
 	// Filter out blacklisted products and authors, then filter out locally-deleted products
 	const filteredEvents = filterDeletedProducts(filterBlacklistedEvents(allEvents))
@@ -209,25 +204,11 @@ export const fetchProductsPaginated = async (limit: number = 20, until?: number,
  * @returns The product listing event
  */
 export const fetchProduct = async (id: string) => {
-	const ndk = ndkActions.getNDK()
-	if (!ndk) {
-		console.warn('NDK not ready, cannot fetch product')
-		return null
-	}
 	if (!id) return null
 
-	// Kick off (or join) relay connection, but keep this fetch bounded.
+	// Kick off (or join) relay connection is handled by the active adapter;
 	// React Query retries handle the eventual-consistency / propagation side.
-	void ndkActions.connect(10000)
-
-	const filter: NDKFilter = {
-		kinds: [30402],
-		ids: [id],
-		limit: 1,
-	}
-
-	const events = await ndkActions.fetchEventsWithTimeout(filter, { timeoutMs: 8000 })
-	const event = Array.from(events)[0] ?? null
+	const event = await fetchListingById(id, { timeoutMs: 8000 })
 	if (event) return event
 
 	throw new Error('Product not found')
@@ -243,20 +224,10 @@ export const fetchProduct = async (id: string) => {
 export const fetchProductsByPubkey = async (pubkey: string, includeHidden: boolean = false, limit: number = 50) => {
 	if (!isValidHexKey(pubkey)) throw new Error('fetchProductsByPubkey: invalid seller pubkey')
 
-	const ndk = ndkActions.getNDK()
-	if (!ndk) {
-		console.warn('NDK not ready, returning empty products by pubkey list')
-		return []
-	}
-
-	const filter: NDKFilter = {
-		kinds: [30402],
-		authors: [pubkey],
-		limit,
-	}
-
-	const events = await ndkActions.fetchEventsWithTimeout(filter, { timeoutMs: 8000 })
-	const allEvents = Array.from(events)
+	// fetchListingsByMerchant builds the kind-30402 author filter and routes it
+	// through the active adapter, sorting newest-first like the legacy feed.
+	const events = await fetchListingsByMerchant(pubkey, { limit, timeoutMs: 8000 })
+	const allEvents = events
 
 	// Filter out blacklisted products (author check not needed since we're querying by author)
 	// Then filter out locally-deleted products
@@ -277,11 +248,10 @@ export const fetchProductsByPubkey = async (pubkey: string, includeHidden: boole
 }
 
 export const fetchProductByATag = async (pubkey: string, dTag: string) => {
-	const ndk = ndkActions.getNDK()
-	if (!ndk) throw new Error('NDK not initialized')
 	if (!pubkey || !dTag) return null
-	const naddr = naddrFromAddress(30402, pubkey, dTag)
-	return await ndk.fetchEvent(naddr)
+	// The seam has no naddr helper; fetchListingByDTag resolves the addressable
+	// 30402 listing by authors + #d instead.
+	return await fetchListingByDTag(pubkey, dTag, { timeoutMs: 8000 })
 }
 
 /**
@@ -290,7 +260,7 @@ export const fetchProductByATag = async (pubkey: string, dTag: string) => {
  * @param sellerPubkey Optional seller pubkey (required when id is a d-tag)
  * @returns The product event or null
  */
-export const fetchProductSmart = async (id: string, sellerPubkey?: string): Promise<NDKEvent | null> => {
+export const fetchProductSmart = async (id: string, sellerPubkey?: string): Promise<NostrEvent | null> => {
 	if (!id) return null
 
 	// If it looks like an event ID (64 hex chars), fetch by event ID
@@ -407,11 +377,11 @@ export const productByATagQueryOptions = (pubkey: string, dTag: string) =>
  * @param collectionEvent The collection event containing a-tags
  * @returns Array of product events (blacklist filtered)
  */
-export const fetchProductsByCollection = async (collectionEvent: NDKEvent): Promise<NDKEvent[]> => {
+export const fetchProductsByCollection = async (collectionEvent: NostrEvent): Promise<NostrEvent[]> => {
 	if (!collectionEvent) return []
 
 	// Get a-tags from the collection event
-	const aTags = collectionEvent.getMatchingTags('a')
+	const aTags = collectionEvent.tags.filter((t) => t[0] === 'a')
 
 	// Parse each a-tag and fetch the corresponding product
 	const productPromises = aTags.map(async (tag) => {
@@ -436,7 +406,7 @@ export const fetchProductsByCollection = async (collectionEvent: NDKEvent): Prom
 	})
 
 	const results = await Promise.all(productPromises)
-	const allProducts = results.filter((event) => event !== null) as NDKEvent[]
+	const allProducts = results.filter((event) => event !== null) as NostrEvent[]
 
 	// Filter out blacklisted products and authors, then filter out locally-deleted products
 	const filteredProducts = filterDeletedProducts(filterBlacklistedEvents(allProducts))
@@ -450,13 +420,13 @@ export const fetchProductsByCollection = async (collectionEvent: NDKEvent): Prom
  * @param collectionEvent The collection event
  * @returns Query options object
  */
-export const productsByCollectionQueryOptions = (collectionEvent: NDKEvent | null) => {
+export const productsByCollectionQueryOptions = (collectionEvent: NostrEvent | null) => {
 	// Generate a consistent query key using coordinate utilities
 	const collectionCoords = collectionEvent
 		? getATagFromCoords({
 				kind: collectionEvent.kind!,
 				pubkey: collectionEvent.pubkey,
-				identifier: collectionEvent.dTag || '',
+				identifier: collectionEvent.tags.find((t) => t[0] === 'd')?.[1] || '',
 			})
 		: ''
 
@@ -475,7 +445,7 @@ export const productsByCollectionQueryOptions = (collectionEvent: NDKEvent | nul
  * @param event The product event or null
  * @returns The product ID string
  */
-export const getProductId = (event: NDKEvent | null): string => {
+export const getProductId = (event: NostrEvent | null): string => {
 	const dTag = event?.tags.find((t) => t[0] === 'd')
 	return dTag?.[1] || ''
 }
@@ -485,7 +455,7 @@ export const getProductId = (event: NDKEvent | null): string => {
  * @param event The product event
  * @returns The product coordinates string
  */
-export const getProductCoordinates = (event: NDKEvent): string => {
+export const getProductCoordinates = (event: NostrEvent): string => {
 	const id = getProductId(event)
 	return `30402:${event.pubkey}:${id}`
 }
@@ -495,7 +465,7 @@ export const getProductCoordinates = (event: NDKEvent): string => {
  * @param event The product event or null
  * @returns The product title string
  */
-export const getProductTitle = (event: NDKEvent | null): z.infer<typeof ProductTitleTagSchema>[1] =>
+export const getProductTitle = (event: NostrEvent | null): z.infer<typeof ProductTitleTagSchema>[1] =>
 	event?.tags.find((t) => t[0] === 'title')?.[1] || 'Untitled Product'
 
 /**
@@ -503,14 +473,14 @@ export const getProductTitle = (event: NDKEvent | null): z.infer<typeof ProductT
  * @param event The product event or null
  * @returns The product description string
  */
-export const getProductDescription = (event: NDKEvent | null): string => event?.content || ''
+export const getProductDescription = (event: NostrEvent | null): string => event?.content || ''
 
 /**
  * Gets the product summary from a product event
  * @param event The product event or null
  * @returns The product summary string
  */
-export const getProductSummary = (event: NDKEvent | null): z.infer<typeof ProductSummaryTagSchema>[1] =>
+export const getProductSummary = (event: NostrEvent | null): z.infer<typeof ProductSummaryTagSchema>[1] =>
 	event?.tags.find((t) => t[0] === 'summary')?.[1] || ''
 
 /**
@@ -522,7 +492,7 @@ export const getProductSummary = (event: NDKEvent | null): z.infer<typeof Produc
  * - [2]: currency (string)
  * - [3]: frequency (optional string)
  */
-export const getProductPrice = (event: NDKEvent | null): z.infer<typeof ProductPriceTagSchema> | undefined => {
+export const getProductPrice = (event: NostrEvent | null): z.infer<typeof ProductPriceTagSchema> | undefined => {
 	if (!event) return undefined
 	const priceTag = event.tags.find((t) => t[0] === 'price')
 	if (!priceTag) return undefined
@@ -540,7 +510,7 @@ export const getProductPrice = (event: NDKEvent | null): z.infer<typeof ProductP
  * - [2]: dimensions (optional string)
  * - [3]: order (optional string - numeric)
  */
-export const getProductImages = (event: NDKEvent | null): z.infer<typeof ProductImageTagSchema>[] => {
+export const getProductImages = (event: NostrEvent | null): z.infer<typeof ProductImageTagSchema>[] => {
 	if (!event) return []
 	return event.tags
 		.filter((t) => t[0] === 'image')
@@ -562,7 +532,7 @@ export const getProductImages = (event: NDKEvent | null): z.infer<typeof Product
  * - [1]: key (string)
  * - [2]: value (string)
  */
-export const getProductSpecs = (event: NDKEvent | null): z.infer<typeof ProductSpecTagSchema>[] => {
+export const getProductSpecs = (event: NostrEvent | null): z.infer<typeof ProductSpecTagSchema>[] => {
 	if (!event) return []
 	return event.tags.filter((t) => t[0] === 'spec').map((t) => t as z.infer<typeof ProductSpecTagSchema>)
 }
@@ -575,7 +545,7 @@ export const getProductSpecs = (event: NDKEvent | null): z.infer<typeof ProductS
  * - [1]: productType ('simple' | 'variable' | 'variation')
  * - [2]: physicalType ('digital' | 'physical')
  */
-export const getProductType = (event: NDKEvent | null): z.infer<typeof ProductTypeTagSchema> | undefined => {
+export const getProductType = (event: NostrEvent | null): z.infer<typeof ProductTypeTagSchema> | undefined => {
 	if (!event) return undefined
 	const typeTag = event.tags.find((t) => t[0] === 'type')
 	if (!typeTag) return undefined
@@ -590,7 +560,7 @@ export const getProductType = (event: NDKEvent | null): z.infer<typeof ProductTy
  * - [0]: 'visibility' (literal)
  * - [1]: visibility ('hidden' | 'on-sale' | 'pre-order')
  */
-export const getProductVisibility = (event: NDKEvent | null): z.infer<typeof ProductVisibilityTagSchema> | undefined => {
+export const getProductVisibility = (event: NostrEvent | null): z.infer<typeof ProductVisibilityTagSchema> | undefined => {
 	if (!event) return undefined
 	const visibilityTag = event.tags.find((t) => t[0] === 'visibility')
 	return visibilityTag ? (visibilityTag as z.infer<typeof ProductVisibilityTagSchema>) : undefined
@@ -603,7 +573,7 @@ export const getProductVisibility = (event: NDKEvent | null): z.infer<typeof Pro
  * - [0]: 'stock' (literal)
  * - [1]: stock (string - numeric)
  */
-export const getProductStock = (event: NDKEvent | null): z.infer<typeof ProductStockTagSchema> | undefined => {
+export const getProductStock = (event: NostrEvent | null): z.infer<typeof ProductStockTagSchema> | undefined => {
 	if (!event) return undefined
 	const stockTag = event.tags.find((t) => t[0] === 'stock')
 	return stockTag ? (stockTag as z.infer<typeof ProductStockTagSchema>) : undefined
@@ -617,7 +587,7 @@ export const getProductStock = (event: NDKEvent | null): z.infer<typeof ProductS
  * - [1]: value (string - numeric)
  * - [2]: unit (string)
  */
-export const getProductWeight = (event: NDKEvent | null): z.infer<typeof ProductWeightTagSchema> | undefined => {
+export const getProductWeight = (event: NostrEvent | null): z.infer<typeof ProductWeightTagSchema> | undefined => {
 	if (!event) return undefined
 	const weightTag = event.tags.find((t) => t[0] === 'weight')
 	if (!weightTag) return undefined
@@ -633,7 +603,7 @@ export const getProductWeight = (event: NDKEvent | null): z.infer<typeof Product
  * - [1]: dimensions (string - in format LxWxH)
  * - [2]: unit (string)
  */
-export const getProductDimensions = (event: NDKEvent | null): z.infer<typeof ProductDimensionsTagSchema> | undefined => {
+export const getProductDimensions = (event: NostrEvent | null): z.infer<typeof ProductDimensionsTagSchema> | undefined => {
 	if (!event) return undefined
 	const dimensionsTag = event.tags.find((t) => t[0] === 'dim')
 	if (!dimensionsTag) return undefined
@@ -646,7 +616,7 @@ export const getProductDimensions = (event: NDKEvent | null): z.infer<typeof Pro
  * @param event The product event or null
  * @returns An array of shipping option tuples with format [tag, shipping_reference, extra_cost?]
  */
-export const getProductShippingOptions = (event: NDKEvent | null): Array<string[]> => {
+export const getProductShippingOptions = (event: NostrEvent | null): Array<string[]> => {
 	if (!event) return []
 	return event.tags.filter((t) => t[0] === 'shipping_option')
 }
@@ -656,7 +626,7 @@ export const getProductShippingOptions = (event: NDKEvent | null): Array<string[
  * @param event The product event or null
  * @returns The collection reference string or null
  */
-export const getProductCollection = (event: NDKEvent | null): string | null => {
+export const getProductCollection = (event: NostrEvent | null): string | null => {
 	if (!event) return null
 	const collectionTag = event.tags.find((t) => t[0] === 'collection')
 	return collectionTag?.[1] || null
@@ -667,7 +637,7 @@ export const getProductCollection = (event: NDKEvent | null): string | null => {
  * @param event The product event or null
  * @returns An array of category tuples
  */
-export const getProductCategories = (event: NDKEvent | null): z.infer<typeof ProductCategoryTagSchema>[] => {
+export const getProductCategories = (event: NostrEvent | null): z.infer<typeof ProductCategoryTagSchema>[] => {
 	if (!event) return []
 	return event.tags.filter((t) => t[0] === 't').map((t) => t as z.infer<typeof ProductCategoryTagSchema>)
 }
@@ -677,28 +647,28 @@ export const getProductCategories = (event: NDKEvent | null): z.infer<typeof Pro
  * @param event The product event or null
  * @returns The creation timestamp (number)
  */
-export const getProductCreatedAt = (event: NDKEvent | null): number => event?.created_at || 0
+export const getProductCreatedAt = (event: NostrEvent | null): number => event?.created_at || 0
 
 /**
  * Gets the pubkey from a product event
  * @param event The product event or null
  * @returns The pubkey (string)
  */
-export const getProductPubkey = (event: NDKEvent | null): string => event?.pubkey || ''
+export const getProductPubkey = (event: NostrEvent | null): string => event?.pubkey || ''
 
 /**
  * Gets the location for product from the event tags
  * @param event The product event or null
  * @returns The location in string format or empty string
  */
-export const getProductLocation = (event: NDKEvent | null): string => event?.tags.find((t) => t[0] === 'location')?.[1] || ''
+export const getProductLocation = (event: NostrEvent | null): string => event?.tags.find((t) => t[0] === 'location')?.[1] || ''
 
 /**
  * Gets the content warning tag from a product event
  * @param event The product event or null
  * @returns The content warning tuple or undefined
  */
-export const getProductContentWarning = (event: NDKEvent | null): z.infer<typeof ProductContentWarningTagSchema> | undefined => {
+export const getProductContentWarning = (event: NostrEvent | null): z.infer<typeof ProductContentWarningTagSchema> | undefined => {
 	if (!event) return undefined
 	const contentWarningTag = event.tags.find((t) => t[0] === 'content-warning')
 	return contentWarningTag ? (contentWarningTag as z.infer<typeof ProductContentWarningTagSchema>) : undefined
@@ -709,7 +679,7 @@ export const getProductContentWarning = (event: NDKEvent | null): z.infer<typeof
  * @param event The product event or null
  * @returns true if the product is marked as NSFW
  */
-export const isNSFWProduct = (event: NDKEvent | null): boolean => {
+export const isNSFWProduct = (event: NostrEvent | null): boolean => {
 	if (!event) return false
 	const contentWarning = getProductContentWarning(event)
 	return contentWarning?.[1] === 'nsfw'
@@ -721,7 +691,7 @@ export const isNSFWProduct = (event: NDKEvent | null): boolean => {
  * @param showNSFW Whether to show NSFW products (if true, no filtering is done)
  * @returns Filtered array of product events
  */
-export const filterNSFWProducts = (events: NDKEvent[], showNSFW: boolean): NDKEvent[] => {
+export const filterNSFWProducts = (events: NostrEvent[], showNSFW: boolean): NostrEvent[] => {
 	if (showNSFW) return events
 	return events.filter((event) => !isNSFWProduct(event))
 }
@@ -729,7 +699,7 @@ export const filterNSFWProducts = (events: NDKEvent[], showNSFW: boolean): NDKEv
 /**
  * Gets the event that created a product based on its ID
  * @param id The product event ID
- * @returns A promise that resolves to the NDKEvent or null if not found
+ * @returns A promise that resolves to the NostrEvent or null if not found
  */
 export const getProductEvent = async (id: string) => {
 	try {
@@ -941,7 +911,7 @@ export const useProductSeller = (id: string) => {
  * @param collectionEvent The collection event
  * @returns Query result with an array of product events
  */
-export const useProductsByCollection = (collectionEvent: NDKEvent | null) => {
+export const useProductsByCollection = (collectionEvent: NostrEvent | null) => {
 	return useQuery({
 		...productsByCollectionQueryOptions(collectionEvent),
 	})
@@ -987,11 +957,10 @@ const PRODUCT_SEARCH_RELAYS = [
  * Uses NIP-50 `search` on relays that support it.
  */
 export const fetchProductsBySearch = async (query: string, limit: number = 20) => {
-	const ndk = ndkActions.getNDK()
-	if (!ndk) throw new Error('NDK not initialized')
 	if (!query?.trim()) return []
 
-	// Discover relays that claim NIP-50 support via NIP-11 and connect to them
+	// Discover relays that claim NIP-50 support via NIP-11 and route the search
+	// through the seam to those relays specifically.
 	let relays: string[] = []
 	try {
 		relays = await discoverNip50Relays(PRODUCT_SEARCH_RELAYS)
@@ -1001,33 +970,27 @@ export const fetchProductsBySearch = async (query: string, limit: number = 20) =
 	if (!relays || relays.length === 0) {
 		relays = PRODUCT_SEARCH_RELAYS
 	}
-	try {
-		ndkActions.addExplicitRelay(relays)
-	} catch (error) {
-		console.error('Failed to add discovered search relays:', error)
-	}
 
-	const filter: NDKFilter = {
+	const filter: NostrFilter = {
 		kinds: [30402],
 		search: query,
 		limit,
 	}
 
-	// In some deployments, ndk.fetchEvents may hang if relays are slow/unresponsive.
+	// In some deployments, a search may hang if relays are slow/unresponsive.
 	// Race the fetch with a timeout so the UI can recover gracefully.
 	const SEARCH_TIMEOUT_MS = 15000
 	try {
-		const fetchPromise = ndk
-			.fetchEvents(filter)
-			.then((events) => filterBlacklistedEvents(Array.from(events)))
+		const fetchPromise = fetchEvents(filter, { relayUrls: relays, timeoutMs: SEARCH_TIMEOUT_MS })
+			.then((events) => filterBlacklistedEvents(events))
 			.then((events) => filterDeletedProducts(events)) // Filter out locally-deleted products
 			.then((events) => events.filter(isProductInStock)) // Filter out out-of-stock products
 			.catch((err) => {
 				console.error('Product search fetch failed:', err)
-				return []
+				return [] as NostrEvent[]
 			})
 
-		const timeoutPromise = new Promise<import('@nostr-dev-kit/ndk').NDKEvent[]>((resolve) => {
+		const timeoutPromise = new Promise<NostrEvent[]>((resolve) => {
 			setTimeout(() => {
 				console.warn(`Search timed out after ${SEARCH_TIMEOUT_MS}ms`, { query })
 				resolve([])
@@ -1047,8 +1010,6 @@ export const fetchProductsBySearch = async (query: string, limit: number = 20) =
  * Returns pubkeys of matching profiles.
  */
 export const fetchSellersBySearch = async (query: string, limit: number = 10): Promise<string[]> => {
-	const ndk = ndkActions.getNDK()
-	if (!ndk) throw new Error('NDK not initialized')
 	if (!query?.trim()) return []
 
 	// Use the same relay discovery as product search
@@ -1061,13 +1022,8 @@ export const fetchSellersBySearch = async (query: string, limit: number = 10): P
 	if (!relays || relays.length === 0) {
 		relays = PRODUCT_SEARCH_RELAYS
 	}
-	try {
-		ndkActions.addExplicitRelay(relays)
-	} catch (error) {
-		console.error('Failed to add discovered search relays for profile search:', error)
-	}
 
-	const filter: NDKFilter = {
+	const filter: NostrFilter = {
 		kinds: [0], // Profile events
 		search: query,
 		limit,
@@ -1075,12 +1031,11 @@ export const fetchSellersBySearch = async (query: string, limit: number = 10): P
 
 	const SEARCH_TIMEOUT_MS = 10000 // Profile search timeout
 	try {
-		const fetchPromise = ndk
-			.fetchEvents(filter)
-			.then((events) => filterBlacklistedPubkeys(Array.from(events).map((e) => e.pubkey)))
+		const fetchPromise = fetchEvents(filter, { relayUrls: relays, timeoutMs: SEARCH_TIMEOUT_MS })
+			.then((events) => filterBlacklistedPubkeys(events.map((e) => e.pubkey)))
 			.catch((err) => {
 				console.error('Profile search fetch failed:', err)
-				return []
+				return [] as string[]
 			})
 
 		const timeoutPromise = new Promise<string[]>((resolve) => {
@@ -1101,12 +1056,7 @@ export const fetchSellersBySearch = async (query: string, limit: number = 10): P
  * Combined search that searches both products and seller names.
  * Returns products matching the query directly OR products from sellers whose name matches.
  */
-export const fetchProductsBySearchWithSellers = async (
-	query: string,
-	limit: number = 20,
-): Promise<import('@nostr-dev-kit/ndk').NDKEvent[]> => {
-	const ndk = ndkActions.getNDK()
-	if (!ndk) throw new Error('NDK not initialized')
+export const fetchProductsBySearchWithSellers = async (query: string, limit: number = 20): Promise<NostrEvent[]> => {
 	if (!query?.trim()) return []
 
 	// Run product search and seller search in parallel
@@ -1114,7 +1064,7 @@ export const fetchProductsBySearchWithSellers = async (
 
 	// If we found matching sellers, fetch their products directly by author pubkey
 	// This queries the regular connected relays (not search relays) which support author filters
-	let sellerProducts: import('@nostr-dev-kit/ndk').NDKEvent[] = []
+	let sellerProducts: NostrEvent[] = []
 	if (sellerPubkeys.length > 0) {
 		try {
 			const sellerProductPromises = sellerPubkeys.map((pubkey) => fetchProductsByPubkey(pubkey, false, 20))
@@ -1127,7 +1077,7 @@ export const fetchProductsBySearchWithSellers = async (
 
 	// Merge and deduplicate results (product results first, then seller products)
 	const seenIds = new Set<string>()
-	const mergedResults: import('@nostr-dev-kit/ndk').NDKEvent[] = []
+	const mergedResults: NostrEvent[] = []
 
 	// Add product search results first (direct matches are prioritized)
 	for (const product of productResults) {
