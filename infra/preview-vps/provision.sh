@@ -289,8 +289,15 @@ REMOTE
 #     stopped — fail-safe);
 #   - loads Cloudflare credentials from manager.env via EnvironmentFile=
 #     so closed-PR teardown can delete DNS records;
-#   - queries GitHub anonymously (public repo; no GITHUB_TOKEN — an empty
-#     token previously made every cycle look like "all PRs closed").
+#   - queries GitHub anonymously (public repos; no GITHUB_TOKEN — an empty
+#     token previously made every cycle look like "all PRs closed");
+#   - lists the open PRs of EVERY repo a preview can come from
+#     (GITHUB_REPO is a comma-separated list). Fork PR previews live in the
+#     fork, upstream PR previews in the upstream repo, and one preview VPS
+#     serves both: with the upstream repo alone the manager saw the fork's own
+#     previews as "closed" and tore them down every cycle (observed
+#     2026-09-11: pr-4 of felixfelix-bot/market deleted ~4 min after each
+#     deploy, DNS record included).
 # Content-compared before rewriting (m7-style) so re-provisioning is a
 # no-op when nothing changed.
 echo "==> Installing preview-manager unit + timer"
@@ -307,7 +314,7 @@ Wants=docker.service
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/python3 /home/${USER}/preview-infra/preview_manager.py --cron --preview-root /home/${USER}/previews --access-log /var/log/caddy/access.json
-Environment=GITHUB_REPO=PlebeianApp/market
+Environment=GITHUB_REPO=PlebeianApp/market,felixfelix-bot/market
 EnvironmentFile=/home/${USER}/preview-infra/manager.env
 UNIT
 
@@ -367,30 +374,28 @@ sudo chmod 0644 /var/log/caddy/access.json
 echo "  /var/log/caddy/access.json ready (0644, caddy:caddy)"
 REMOTE
 
-# ── 8. Ensure Caddy has on_demand_tls global block ────────────────────────
-echo "==> Checking Caddy on_demand_tls global block"
-"${SSH_BASE[@]}" "${_VPS_USER}@${HOST}" bash -s <<'REMOTE'
-set -euo pipefail
-CADDYFILE="/etc/caddy/Caddyfile"
-
-if ! sudo grep -q 'on_demand_tls' "$CADDYFILE" 2>/dev/null; then
-  echo "  Adding on_demand_tls global block to Caddyfile"
-  TMP=$(mktemp)
-  cat > "$TMP" <<'GLOBAL'
-{
-  on_demand_tls {
-    ask http://localhost:6799/ask
-  }
-}
-
-GLOBAL
-  sudo cat "$CADDYFILE" >> "$TMP"
-  sudo mv "$TMP" "$CADDYFILE"
-  echo "  Global block added"
-else
-  echo "  on_demand_tls block already present"
-fi
-REMOTE
+# ── 8. Reconcile the preview route + on_demand_tls ask endpoint ───────────
+# This Caddyfile is SHARED (nsite gateway, tollgate, strfry, continuum, …) and
+# an earlier revision of this repo wrote its own preview blocks into it, so a
+# presence grep is NOT enough to keep the preview route healthy. On 2026-09-11
+# the live file still held a legacy
+#   *.test-market.orangesync.tech { reverse_proxy localhost:3002 }
+# block (the nsite gateway), the old "grep -q test-market.orangesync.tech →
+# already present" guard skipped installing the real route, and every pr{N}
+# preview answered the nsite gateway's 404 "Invalid address" page
+# (run 34613164958) while every deploy step succeeded.
+# reconcile_caddyfile.py owns both preview blocks idempotently — it rewrites the
+# managed wildcard route, removes any stale top-level block for the preview
+# domain, and repoints the global on_demand_tls ask endpoint — while leaving
+# every unrelated route byte-for-byte untouched. It is piped over stdin so the
+# box needs no copy of it.
+echo "==> Reconciling Caddy preview route + on_demand_tls ask endpoint"
+CADDYFILE_REMOTE="/etc/caddy/Caddyfile"
+CADDY_BACKUP="${CADDYFILE_REMOTE}.bak-preview-$(date -u +%Y%m%d%H%M%S)"
+"${SSH_BASE[@]}" "${_VPS_USER}@${HOST}" \
+  "sudo cp -a '${CADDYFILE_REMOTE}' '${CADDY_BACKUP}' && sudo python3 - --file '${CADDYFILE_REMOTE}' --wildcard '*.test-market.orangesync.tech' --upstream localhost:6799 --ask http://127.0.0.1:6799/ask" \
+  < "${SCRIPT_DIR}/reconcile_caddyfile.py"
+echo "  Caddyfile reconciled (backup: ${CADDY_BACKUP})"
 
 # ── 9. Ensure Caddy has *.nsite.orangesync.tech site block ───────────────
 echo "==> Checking *.nsite.orangesync.tech site block"
@@ -415,46 +420,23 @@ else
 fi
 REMOTE
 
-# ── 10. Ensure Caddy has the *.test-market.orangesync.tech route ─────────
-# This is the block that actually routes preview traffic (M1): on-demand
-# TLS (ask → preview-gateway) plus reverse_proxy to the gateway's HTTP
-# router, which maps Host pr{N} → 127.0.0.1:3000+(N%100)*10 and wakes
-# stopped previews on every request. The JSON access log feeds the
-# manager's idle detection.
-echo "==> Checking *.test-market.orangesync.tech site block"
-"${SSH_BASE[@]}" "${_VPS_USER}@${HOST}" bash -s <<'REMOTE'
-set -euo pipefail
-CADDYFILE="/etc/caddy/Caddyfile"
-
-if ! sudo grep -q 'test-market.orangesync.tech' "$CADDYFILE" 2>/dev/null; then
-  echo "  Adding *.test-market.orangesync.tech site block"
-  sudo tee -a "$CADDYFILE" > /dev/null <<'SITE'
-
-*.test-market.orangesync.tech {
-  log {
-    output file /var/log/caddy/access.json {
-      roll_size 50MiB
-      roll_keep 3
-    }
-    format json
-  }
-  tls {
-    on_demand
-  }
-  reverse_proxy localhost:6799
-}
-SITE
-  echo "  Site block added"
-else
-  echo "  test-market.orangesync.tech route already present"
-fi
-REMOTE
-
-# ── 11. Validate and reload Caddy ──
+# ── 10. Validate, reload and verify Caddy (rollback on invalid config) ─────
+# A broken shared Caddyfile takes the nsite gateway, the relays and every other
+# route on this box down with it, so an invalid reconcile is rolled back to the
+# backup taken in step 8 instead of being reloaded. The post-condition asserts
+# what actually broke the previews on 2026-09-11: the adapted config must dial
+# the preview gateway (6799) for the managed wildcard, not the nsite gateway.
 echo "==> Validating Caddy config"
-"${SSH_BASE[@]}" "${_VPS_USER}@${HOST}" "sudo caddy validate --config /etc/caddy/Caddyfile 2>&1 || true"
+if ! "${SSH_BASE[@]}" "${_VPS_USER}@${HOST}" "sudo caddy validate --config ${CADDYFILE_REMOTE}"; then
+  echo "::error::Caddy config is invalid after the preview reconcile; restoring ${CADDY_BACKUP}"
+  "${SSH_BASE[@]}" "${_VPS_USER}@${HOST}" "sudo cp -a '${CADDY_BACKUP}' '${CADDYFILE_REMOTE}'"
+  exit 1
+fi
 
 echo "==> Reloading Caddy"
 "${SSH_BASE[@]}" "${_VPS_USER}@${HOST}" "sudo systemctl reload caddy 2>/dev/null || sudo systemctl restart caddy"
+
+echo "==> Verifying the preview route in the adapted config"
+"${SSH_BASE[@]}" "${_VPS_USER}@${HOST}" "sudo caddy adapt --config ${CADDYFILE_REMOTE} 2>/dev/null | tr -d ' ' | grep -q '\"dial\":\"[^\"]*6799\"' && echo '  preview gateway route present (dial …:6799)'"
 
 echo "==> Done. VPS provisioned successfully."

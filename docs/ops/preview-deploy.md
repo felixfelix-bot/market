@@ -39,7 +39,10 @@ pr{N}` to this PR's app port, and — on **every** request — pokes the
 - **Caddy**: the version-controlled site block for
   `*.test-market.orangesync.tech` with on-demand TLS (`ask` → gateway), a
   JSON access log to `/var/log/caddy/access.json` (0644, readable by the
-  manager's non-root unit), and `reverse_proxy` to the gateway.
+  manager's non-root unit), and `reverse_proxy` to the gateway. This box's
+  Caddyfile is **shared** (nsite gateway, tollgate, strfry, continuum…), so the
+  preview blocks are **reconciled** on every provision instead of
+  grep-checked — see "Shared Caddyfile reconciliation" below.
 - **`preview_manager.py`** (`preview-manager.service` + timer, every
   10 min): the only writer of preview lifecycle decisions. It stops
   previews idle beyond `IDLE_HOURS` (per the Caddy access log — a preview
@@ -48,7 +51,9 @@ pr{N}` to this PR's app port, and — on **every** request — pokes the
   (K=5) most recently pushed previews running, tears down previews whose PR
   is closed (running or not), and releases orphaned port markers. DNS-record
   deletion uses Cloudflare credentials loaded from
-  `~/preview-infra/manager.env` (chmod 600).
+  `~/preview-infra/manager.env` (chmod 600). The open-PR set spans **every repo
+  a preview can come from** (`GITHUB_REPO` is a comma-separated list) — see
+  "One VPS, several repos" below.
 
 **CI never runs the manager** (`preview_manager.py --cron` is not invoked
 from the workflow). Over SSH it would have no GitHub credentials, so the
@@ -265,10 +270,77 @@ the last HTTP status, the resolved address(es), the response's
 another route on the same hostname (observed: the nsite gateway's `Invalid
 address` page) is otherwise indistinguishable from a preview that never booted.
 
+## Shared Caddyfile reconciliation (`infra/preview-vps/reconcile_caddyfile.py`)
+
+The VPS Caddyfile is not owned by this repo alone: it also serves the nsite
+gateway, the tollgate/buzz routes, continuum and the strfry relays. An earlier
+revision of `provision.sh` wrote its preview blocks with a _presence grep_
+(`grep -q test-market.orangesync.tech`) and skipped the rest when the string was
+already there, which made a stale block unrepairable.
+
+Observed (2026-09-11, run 34613164958): the live file still contained
+
+```
+*.test-market.orangesync.tech {
+    tls { on_demand }
+    reverse_proxy localhost:3002      # nsite gateway, from the old design
+}
+```
+
+while the real route to the preview gateway (`localhost:6799`) was never
+installed. Every deploy step succeeded (bootstrap, deploy-package upload, compose
+up, DNS upsert, Caddy reload) and the Health check still failed 12/12 with the
+nsite gateway's `404 Invalid address` page — the preview was deployed and
+completely unreachable. The global `on_demand_tls` block had the same defect: it
+still asked `http://127.0.0.1:6798/` (the legacy tls-ask port) while the current
+gateway listens on `6799`.
+
+`reconcile_caddyfile.py` (piped over stdin, run as root by `provision.sh` step 8)
+now owns those regions deterministically and idempotently:
+
+- the preview wildcard site block is rewritten inside the
+  `# BEGIN/END PREVIEW MARKET ROUTES` markers, always `reverse_proxy
+localhost:6799`;
+- any **other** top-level site block whose header names the preview domain is
+  removed — that is the legacy block an earlier revision wrote, and leaving it in
+  place is what shadowed the route;
+- the global `on_demand_tls` ask endpoint is repointed to
+  `http://127.0.0.1:6799/ask`;
+- every unrelated route is preserved byte-for-byte, and a second run reports no
+  changes and writes nothing.
+
+`provision.sh` then validates the result, rolls back to the timestamped
+`Caddyfile.bak-preview-*` backup if Caddy rejects it, reloads, and asserts in the
+**adapted** config that a route dials `6799` — the assertion that would have
+caught the failure above during provisioning. Regression cover:
+`infra/preview-vps/test_reconcile_caddyfile.py` (hermetic, run by `ci-unit.yml`).
+
+## One VPS, several repos (the manager's open-PR set)
+
+Previews come from more than one repository: the upstream PRs
+(`PlebeianApp/market`) and this fork's own PRs (`felixfelix-bot/market`). The
+manager is the only thing allowed to destroy a preview and it decides "closed PR
+→ tear down" from the open-PR list, so that list must cover **every** repo a
+preview can come from.
+
+Observed (2026-09-11): the systemd unit pinned
+`Environment=GITHUB_REPO=PlebeianApp/market`. Fork PR #4 is not a PR upstream, so
+every cycle classified `pr-4` as closed and tore it down (compose stopped,
+preview directory removed, `pr4.test-market.orangesync.tech` Cloudflare record
+deleted) a few minutes after each deploy. `GITHUB_REPO` is now
+`PlebeianApp/market,felixfelix-bot/market`; `preview_manager.py` accepts a
+comma-separated list and takes the **union** of the open PRs, ranked newest
+`pushed_at` first. It still fails closed — but only when _every_ repo fetch
+fails; a repo that fails contributes nothing, so its previews can be kept but
+never destroyed. Regression cover:
+`infra/preview-vps/test_preview_manager.py::test_run_cycle_multi_repo_keeps_fork_pr_that_upstream_does_not_list`.
+
 **Expected result during a provider outage.** `23.182.128.0/24` has had provider
 outages; when the target host is unreachable the run is red with an explicit
 target problem, never a secret problem: `ssh-keyscan could not reach <host>` /
 `UNREACHABLE` from `ssh-pin.sh` in the Bootstrap step, or — when the box accepts
 SSH but nothing serves the hostname — a red Health check naming the status,
 resolved IPs, headers and body it got. Re-run the workflow once the host
-answers; nothing needs reconfiguring.
+answers; nothing needs reconfiguring. A red Health check whose body is the nsite
+gateway's `Invalid address` page is **not** an outage: it is the shared-Caddyfile
+routing defect described above, repaired by the reconcile step on the next run.

@@ -544,12 +544,12 @@ def _parse_pr_page(payload: object) -> Optional[List[dict]]:
     return page
 
 
-def open_pr_numbers(
+def open_pr_items(
     repo: str,
     runner: Runner | None = None,
     log: Callable[[str], None] = _log,
-) -> Optional[List[int]]:
-    """List open PR numbers for a repo, sorted by pushed_at (newest first).
+) -> Optional[List[dict]]:
+    """List the open PRs of a repo (full objects), sorted by pushed_at.
 
     Full pagination: fetches per_page=100 pages until a short page. The repo is
     public, so the API is called anonymously (no GITHUB_TOKEN) — no gh CLI
@@ -561,7 +561,7 @@ def open_pr_numbers(
     empty list is returned ONLY for a clean, complete listing with no open PRs.
     """
     runner = runner or Runner()
-    numbers: List[int] = []
+    items_out: List[dict] = []
     page = 1
     while True:
         body, rc = runner.curl_json("GET", _gh_pulls_url(repo, page))
@@ -592,14 +592,78 @@ def open_pr_numbers(
             log(f"preview-manager: open-PR fetch for {repo} returned a malformed "
                 "page; treating open-PR set as UNKNOWN")
             return None
-        numbers.extend(item["number"] for item in items)
+        items_out.extend(items)
         if len(items) < GITHUB_PAGE_SIZE:
-            return numbers
+            return items_out
         page += 1
         if page > 100:  # defensive bound (50k open PRs)
             log(f"preview-manager: open-PR fetch for {repo} exceeded pagination "
                 "bound; treating open-PR set as UNKNOWN")
             return None
+
+
+def open_pr_numbers(
+    repo: str,
+    runner: Runner | None = None,
+    log: Callable[[str], None] = _log,
+) -> Optional[List[int]]:
+    """List open PR numbers for a repo, sorted by pushed_at (newest first).
+
+    Thin wrapper over open_pr_items (see there for pagination and the
+    fail-closed contract): None means "open-PR data unknown"; callers must skip
+    teardown/recency decisions. An empty list is returned ONLY for a clean,
+    complete listing with no open PRs.
+    """
+    items = open_pr_items(repo, runner=runner, log=log)
+    if items is None:
+        return None
+    return [item["number"] for item in items]
+
+
+def split_repos(gh_repo: Optional[str]) -> List[str]:
+    """Split a --gh-repo/GITHUB_REPO value into individual owner/repo strings."""
+    if not gh_repo:
+        return []
+    return [repo.strip() for repo in gh_repo.split(",") if repo.strip()]
+
+
+def open_pr_numbers_multi(
+    repos: Sequence[str],
+    runner: Runner | None = None,
+    log: Callable[[str], None] = _log,
+) -> Optional[List[int]]:
+    """Union of the open-PR numbers of several repos, newest pushed_at first.
+
+    One preview VPS serves previews for more than one repo: upstream PR previews
+    live in the upstream repo, this fork's own previews in the fork. Ranking and
+    teardown against a SINGLE repo marked the other repo's open PRs as closed and
+    destroyed their previews (observed 2026-09-11: the fork's pr-4 preview and
+    its DNS record were deleted minutes after every deploy, because the manager
+    only knew PlebeianApp/market). A preview is open when its number is open in
+    ANY configured repo.
+
+    Fail-closed only when EVERY repo fetch fails: the union of the successful
+    listings is a conservative open-set — a repo whose fetch failed contributes
+    nothing, so its previews can only be kept, never torn down.
+    """
+    merged: dict[int, str] = {}
+    answered = False
+    for repo in repos:
+        items = open_pr_items(repo, runner=runner, log=log)
+        if items is None:
+            continue
+        answered = True
+        for item in items:
+            number = item["number"]
+            pushed = item.get("pushed_at") or ""
+            if number not in merged or pushed > merged[number]:
+                merged[number] = pushed
+    if not answered:
+        return None
+    return [
+        number
+        for number, _ in sorted(merged.items(), key=lambda kv: kv[1], reverse=True)
+    ]
 
 
 def delete_cloudflare_record(
@@ -732,16 +796,23 @@ def run_cycle(
     )
 
     # Open-PR recency ranking: keep top-K most recent running. None => unknown.
+    # gh_repo may name several repos ("upstream/project,fork/project"): a
+    # preview is open when its number is open in ANY of them, otherwise the
+    # previews of the repo the manager does not know are torn down every cycle.
     open_prs: Optional[List[int]] = None
-    if gh_repo:
-        open_prs = open_pr_numbers(repo=gh_repo, runner=runner, log=log)
+    repos = split_repos(gh_repo)
+    if repos:
+        if len(repos) == 1:
+            open_prs = open_pr_numbers(repo=repos[0], runner=runner, log=log)
+        else:
+            open_prs = open_pr_numbers_multi(repos, runner=runner, log=log)
     if open_prs is None:
         results["skip_reason"] = "open-PR fetch failed — teardown and recency-stop skipped (fail-closed)"
         log(
             "preview-manager: open-PR set UNKNOWN — skipping ALL teardown and "
             "recency-stop decisions this cycle (fail-closed). Idle-stop "
             "(recoverable) still runs. Fix the GitHub API access on the VPS; "
-            "previews are NOT being torn down."
+            f"previews are NOT being torn down. (repos: {', '.join(repos) or 'none'})"
         )
     else:
         open_set = set(open_prs)

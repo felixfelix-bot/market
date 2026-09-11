@@ -1018,3 +1018,172 @@ def test_parse_rfc3339_z_and_offsets():
     assert pm._parse_rfc3339("2026-08-27T12:00:00Z") == _ts(12)
     assert pm._parse_rfc3339("2026-08-27T12:00:00+00:00") == _ts(12)
     assert pm._parse_rfc3339(" 2026-08-27 09:30:00+00:00 ") == _ts(9, 30)
+
+# ── multi-repo open-PR set: one VPS, upstream + fork previews ──────────────────
+
+
+class _RepoRunner:
+    """Runner stub serving the open-PR API per repo path (newest page first)."""
+
+    def __init__(self, pages: dict, fail: set | None = None) -> None:
+        self.pages = pages
+        self.fail = fail or set()
+        self.urls: list[str] = []
+
+    def run(self, argv, timeout=60):
+        joined = " ".join(argv)
+        if "compose" in joined:
+            return "running", 0
+        return "", 0
+
+    def curl_json(self, method, url, headers=(), data=None, timeout=60):
+        self.urls.append(url)
+        for repo in sorted(self.pages, key=len, reverse=True):
+            if f"/repos/{repo}/pulls" in url:
+                if repo in self.fail:
+                    return "", 22  # curl transport error
+                return json.dumps(self.pages[repo]), 0
+        return json.dumps([]), 0
+
+
+def test_split_repos_handles_comma_list_and_blanks():
+    assert pm.split_repos("a/b,c/d") == ["a/b", "c/d"]
+    assert pm.split_repos(" a/b , c/d ") == ["a/b", "c/d"]
+    assert pm.split_repos("") == []
+    assert pm.split_repos(None) == []
+
+
+def test_open_pr_numbers_multi_unions_repos_and_ranks_by_pushed_at():
+    runner = _RepoRunner(
+        {
+            "upstream/market": [
+                {"number": 1257, "pushed_at": "2026-09-10T00:00:00Z"}
+            ],
+            "fork/market": [
+                {"number": 4, "pushed_at": "2026-09-11T00:00:00Z"},
+                {"number": 14, "pushed_at": "2026-09-09T00:00:00Z"},
+            ],
+        }
+    )
+    numbers = pm.open_pr_numbers_multi(
+        ["upstream/market", "fork/market"], runner=runner, log=_quiet()
+    )
+    # Newest pushed_at first, union of both repos.
+    assert numbers == [4, 1257, 14]
+
+
+def test_open_pr_numbers_multi_fail_closed_only_when_every_repo_fails():
+    both_fail = _RepoRunner(
+        {"a/b": [{"number": 7}], "c/d": [{"number": 1}]}, fail={"a/b", "c/d"}
+    )
+    assert (
+        pm.open_pr_numbers_multi(["a/b", "c/d"], runner=both_fail, log=_quiet())
+        is None
+    )
+
+    # One repo answering is enough to keep teardown safe: the failed repo
+    # contributes nothing, so its previews can only be kept, never destroyed.
+    one_fails = _RepoRunner(
+        {"a/b": [{"number": 7}], "c/d": [{"number": 1}]}, fail={"a/b"}
+    )
+    assert pm.open_pr_numbers_multi(
+        ["a/b", "c/d"], runner=one_fails, log=_quiet()
+    ) == [1]
+
+
+def test_open_pr_numbers_multi_malformed_page_is_unusable_not_partial():
+    class _BadRunner(_RepoRunner):
+        def curl_json(self, method, url, headers=(), data=None, timeout=60):
+            if "/repos/a/b/pulls" in url:
+                return '{"message": "API rate limit exceeded"}', 0
+            return json.dumps([{"number": 1}]), 0
+
+    runner = _BadRunner({})
+    assert pm.open_pr_numbers_multi(
+        ["a/b", "c/d"], runner=runner, log=_quiet()
+    ) == [1]
+
+
+def test_run_cycle_multi_repo_keeps_fork_pr_that_upstream_does_not_list(tmp_path):
+    # The observed 2026-09-11 failure: the manager only knew the upstream repo,
+    # so the fork's pr-4 preview was torn down a few minutes after every deploy.
+    root = tmp_path / "previews"
+    root.mkdir()
+    _make_running_tree(root, [4])
+
+    runner = _RepoRunner(
+        {
+            "PlebeianApp/market": [
+                {"number": 1257, "pushed_at": "2026-09-10T00:00:00Z"}
+            ],
+            "felixfelix-bot/market": [
+                {"number": 4, "pushed_at": "2026-09-11T00:00:00Z"}
+            ],
+        }
+    )
+    result = pm.run_cycle(
+        root,
+        now=_ts(12),
+        idle_hours=4,
+        top_k=5,
+        gh_repo="PlebeianApp/market,felixfelix-bot/market",
+        dry_run=True,
+        runner=runner,
+        log=_quiet(),
+    )
+    assert result["torn_down"] == []
+    assert result["skip_reason"] is None
+    # Both repos were queried.
+    assert any("/repos/PlebeianApp/market/pulls" in u for u in runner.urls)
+    assert any("/repos/felixfelix-bot/market/pulls" in u for u in runner.urls)
+
+
+def test_run_cycle_single_upstream_repo_still_tears_down_fork_pr(tmp_path):
+    # Pins the failure mode the multi-repo default exists to prevent (this is
+    # what the live unit did with GITHUB_REPO=PlebeianApp/market alone).
+    root = tmp_path / "previews"
+    root.mkdir()
+    _make_running_tree(root, [4])
+
+    runner = _RepoRunner(
+        {
+            "PlebeianApp/market": [
+                {"number": 1257, "pushed_at": "2026-09-10T00:00:00Z"}
+            ]
+        }
+    )
+    result = pm.run_cycle(
+        root,
+        now=_ts(12),
+        idle_hours=4,
+        top_k=5,
+        gh_repo="PlebeianApp/market",
+        dry_run=True,
+        runner=runner,
+        log=_quiet(),
+    )
+    assert 4 in result["torn_down"]
+
+
+def test_run_cycle_multi_repo_unknown_set_skips_everything(tmp_path):
+    root = tmp_path / "previews"
+    root.mkdir()
+    _make_running_tree(root, [4])
+
+    runner = _RepoRunner(
+        {"a/b": [{"number": 1}], "c/d": [{"number": 2}]}, fail={"a/b", "c/d"}
+    )
+    messages: list[str] = []
+    result = pm.run_cycle(
+        root,
+        now=_ts(12),
+        idle_hours=4,
+        top_k=5,
+        gh_repo="a/b,c/d",
+        dry_run=True,
+        runner=runner,
+        log=messages.append,
+    )
+    assert result["torn_down"] == []
+    assert result["skip_reason"]
+    assert any("a/b, c/d" in m for m in messages)
