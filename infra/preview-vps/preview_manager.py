@@ -103,8 +103,8 @@ def parse_access_log_lines(
 ) -> List[Tuple[int, dt.datetime]]:
     """Extract (pr_number, access_time) from Caddy access-log lines.
 
-    Caddy's JSON access log has a `request.host` field with the subdomain and a
-    `time` field in RFC3339. We accept either that JSON shape or a plain
+    Caddy's JSON access log has a `request.host` field with the subdomain and an
+    epoch-float `ts` field. We also accept a `"time"` RFC3339 field or a plain
     `host <timestamp>` line. Lines that don't mention a preview subdomain are
     ignored. Returns tuples sorted newest-first.
     """
@@ -115,12 +115,25 @@ def parse_access_log_lines(
         if not m:
             continue
         pr_number = int(m.group(1))
-        # Try JSON `"time":"2026-08-27T12:00:00Z"` first.
+        # Caddy's JSON access log (the shape the preview Caddyfile emits) puts
+        # the timestamp in an epoch float field `ts`:
+        #   {"ts":1789139925.66,"request":{"host":"pr4.test-market..."},...}
+        # Those lines have no "time" field, so a parser that understands only
+        # "time"/RFC3339 drops EVERY real line: observed live 2026-09-11, the
+        # access log held 26 entries for pr4 while the manager still logged
+        # "no recorded access (unknown)" and could never idle-stop or rank by
+        # recency. An explicit `"time"` RFC3339 field still wins when present.
         ts: Optional[dt.datetime] = None
         tm = re.search(r'"time"\s*:\s*"([^"]+)"', line)
         if tm:
             ts = _parse_rfc3339(tm.group(1))
-        else:
+        em = re.search(r'"ts"\s*:\s*([0-9]+(?:\.[0-9]+)?)', line)
+        if ts is None and em:
+            epoch = float(em.group(1))
+            if epoch > 1e11:  # milliseconds (defensive; Caddy logs seconds)
+                epoch /= 1000.0
+            ts = dt.datetime.fromtimestamp(epoch, dt.timezone.utc)
+        if ts is None:
             # Fall back to a bare RFC3339 token anywhere in the line.
             bm = re.search(
                 r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})",
@@ -816,7 +829,15 @@ def run_cycle(
         )
     else:
         open_set = set(open_prs)
-        keep_running = set(open_prs[:top_k])  # newest first
+        # Recency ranking may only choose among previews that EXIST on disk. The
+        # open-PR union spans several repos (upstream + this fork), so ranking
+        # the whole set against top_k stops this repo's own preview whenever
+        # `top_k` foreign/newer PRs outrank it: observed live 2026-09-11, only
+        # pr-4 existed locally while the upstream repo listed >5 newer open PRs,
+        # so the manager stopped pr-4 on every 10-minute cycle ("stopped=1") and
+        # CI's health check always met a stopped preview.
+        local_prs = {p.pr_number for p in previews}
+        keep_running = set([n for n in open_prs if n in local_prs][:top_k])  # newest first
     can_destruct = open_prs is not None
 
     to_stop: List[int] = []

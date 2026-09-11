@@ -1138,6 +1138,92 @@ def test_run_cycle_multi_repo_keeps_fork_pr_that_upstream_does_not_list(tmp_path
     assert any("/repos/felixfelix-bot/market/pulls" in u for u in runner.urls)
 
 
+def test_parse_caddy_json_access_log_uses_ts_epoch():
+    # The preview Caddyfile logs JSON lines shaped
+    #   {"ts":1789139925.66,"request":{"host":"pr4.test-market.orangesync.tech"},...}
+    # i.e. the timestamp is an epoch float in `ts` — there is no `"time"` field.
+    # Parsing only `"time"`/RFC3339 dropped every real line, so last_access was
+    # always "unknown" and the manager logged "no recorded access" for a preview
+    # that was actively being hit (observed live 2026-09-11).
+    line = (
+        '{"level":"info","ts":1789139925.6621785,"logger":"http.log.access.log2",'
+        '"msg":"handled request","request":{"remote_ip":"1.2.3.4","proto":"HTTP/2.0",'
+        '"method":"GET","host":"pr4.test-market.orangesync.tech","uri":"/",'
+        '"headers":{"User-Agent":["curl/8.5.0"]}},"status":200,"size":0}'
+    )
+    result = pm.parse_access_log_lines([line])
+    assert [p for p, _ in result] == [4]
+    assert result[0][1] == dt.datetime.fromtimestamp(
+        1789139925.6621785, dt.timezone.utc
+    )
+
+
+def test_run_cycle_recency_only_ranks_previews_that_exist(tmp_path):
+    # Only pr-4 has a preview directory, but the upstream repo lists more than
+    # top_k newer open PRs. Ranking the WHOLE open set stopped the single
+    # preview that exists, every cycle (observed live: stopped=1 every 10
+    # minutes, so the CI health check always met a stopped preview).
+    root = tmp_path / "previews"
+    root.mkdir()
+    _make_running_tree(root, [4])
+
+    runner = _RepoRunner(
+        {
+            "PlebeianApp/market": [
+                {"number": n, "pushed_at": f"2026-09-12T0{i}:00:00Z"}
+                for i, n in enumerate([1257, 1258, 1259, 1260, 1261, 1262], start=1)
+            ],
+            "felixfelix-bot/market": [
+                {"number": 4, "pushed_at": "2026-09-11T00:00:00Z"}
+            ],
+        }
+    )
+    result = pm.run_cycle(
+        root,
+        now=_ts(12),
+        idle_hours=4,
+        top_k=5,
+        gh_repo="PlebeianApp/market,felixfelix-bot/market",
+        dry_run=True,
+        runner=runner,
+        log=_quiet(),
+    )
+    assert result["stopped"] == []
+    assert result["torn_down"] == []
+
+
+def test_run_cycle_recency_still_stops_extra_local_previews(tmp_path):
+    # The top-K cap must still work on the previews that actually exist.
+    root = tmp_path / "previews"
+    root.mkdir()
+    _make_running_tree(root, [4, 7])
+
+    runner = _RepoRunner(
+        {
+            "PlebeianApp/market": [
+                {"number": n, "pushed_at": f"2026-09-12T0{i}:00:00Z"}
+                for i, n in enumerate([1257, 1258, 1259, 1260, 1261, 1262], start=1)
+            ],
+            "felixfelix-bot/market": [
+                {"number": 4, "pushed_at": "2026-09-11T00:00:00Z"},
+                {"number": 7, "pushed_at": "2026-09-10T00:00:00Z"},
+            ],
+        }
+    )
+    result = pm.run_cycle(
+        root,
+        now=_ts(12),
+        idle_hours=4,
+        top_k=1,
+        gh_repo="PlebeianApp/market,felixfelix-bot/market",
+        dry_run=True,
+        runner=runner,
+        log=_quiet(),
+    )
+    assert result["stopped"] == [7]
+    assert result["torn_down"] == []
+
+
 def test_run_cycle_single_upstream_repo_still_tears_down_fork_pr(tmp_path):
     # Pins the failure mode the multi-repo default exists to prevent (this is
     # what the live unit did with GITHUB_REPO=PlebeianApp/market alone).
