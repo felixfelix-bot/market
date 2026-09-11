@@ -322,16 +322,28 @@ jobs:
       - name: Health check
         id: health
         if: steps.secrets.outputs.previews_ready == 'true'
-        continue-on-error: true
         run: |
           PREVIEW_URL="https://${{ steps.ports.outputs.subdomain }}"
           BODY="$(mktemp)"
           # Individual failed attempts inside this loop are TRANSIENT warm-up
           # (preview booting, DNS propagating, Caddy issuing the cert). Only
           # after all 12 attempts (~3 min) are exhausted is this a FINAL
-          # failure — at that point exit nonzero (continue-on-error keeps
-          # the job green) so the comment step posts the explicit degraded
-          # state instead of an open-ended "give it a minute".
+          # failure. A final failure is a REAL failure and must be visible: this
+          # step has NO continue-on-error, so the "Deploy preview" check turns
+          # red instead of reporting a green check next to a dead preview
+          # (run 34605660792 failed 12/12 and still showed `pass`).
+          #
+          # The degraded PR comment is not lost by failing here: the comment
+          # step below is guarded with the cancelled() negation in its if:
+          # condition, so it runs after this step fails and posts the explicit
+          # 🔴 degraded state.
+          #
+          # PITFALL: never put a GitHub expression delimiter (the two braces)
+          # inside a run-block comment. GitHub parses expressions even in
+          # comments, and if-only functions — the cancelled() negation, say —
+          # are rejected there, which makes the whole workflow file "Invalid
+          # workflow file" and NO check runs at all (that is how the first
+          # attempt at this fix was rejected before it executed).
           #
           # On the final failure the log names WHAT answered (status, headers,
           # body excerpt) instead of only that the loop timed out: a preview

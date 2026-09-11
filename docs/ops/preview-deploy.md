@@ -245,10 +245,30 @@ conclusion to `success` while an individual step still reported a red FAIL check
 all VPS/DNS steps skip with a visible annotation and a "skipped" PR comment;
 secrets present → steps run and a real failure surfaces as a red check.
 
-**Health-check reporting.** The health check retries for ~3 minutes; individual
-failed attempts inside that loop are transient warm-up (preview booting, DNS
-propagating, certificate issuance). If the check fails after all attempts, the
-step exits nonzero and the PR comment flips to an explicit 🔴 degraded/failed
-state with a link to the workflow run — never an open-ended "still warming up"
-message. A deploy-step failure before the health check (e.g. a port-offset
-collision) posts the same explicit 🔴 failed state.
+**Health-check reporting (the check is never green next to a dead preview).**
+The health check retries for ~3 minutes; individual failed attempts inside that
+loop are transient warm-up (preview booting, DNS propagating, certificate
+issuance). If the check fails after all attempts the step exits nonzero and the
+**`Deploy preview` check turns red**. A green check next to a dead preview was
+the last masked failure in this workflow: in run 34605660792 the preview was
+deployed, the health check failed 12/12, and the check still reported `pass`
+(the step carried `continue-on-error: true`). The PR comment is not lost by
+failing there — the comment step is guarded with `if: ${{ !cancelled() }}`, so
+it still runs after a failed health/deploy step and flips to the explicit
+🔴 degraded/failed state with a link to the run — never an open-ended "still
+warming up" message. A deploy-step failure before the health check (e.g. a
+port-offset collision) posts the same explicit 🔴 failed state.
+
+The failure log names **what answered** instead of only that the loop timed out:
+the last HTTP status, the resolved address(es), the response's
+`server`/`via`/`content-type` headers and a body excerpt. A preview shadowed by
+another route on the same hostname (observed: the nsite gateway's `Invalid
+address` page) is otherwise indistinguishable from a preview that never booted.
+
+**Expected result during a provider outage.** `23.182.128.0/24` has had provider
+outages; when the target host is unreachable the run is red with an explicit
+target problem, never a secret problem: `ssh-keyscan could not reach <host>` /
+`UNREACHABLE` from `ssh-pin.sh` in the Bootstrap step, or — when the box accepts
+SSH but nothing serves the hostname — a red Health check naming the status,
+resolved IPs, headers and body it got. Re-run the workflow once the host
+answers; nothing needs reconfiguring.

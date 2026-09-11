@@ -330,5 +330,45 @@ else
   no "only ${cf_headers:-0} Cloudflare headers interpolate \$CF_TOKEN (want >= 5)"
 fi
 
+# ── health-check status honesty ────────────────────────────────────────────
+# A step-level `continue-on-error: true` on the Health check made a FINAL
+# health failure (all 12 attempts exhausted, exit 1) report as a green
+# "Deploy preview" check — run 34605660792 deployed the preview, failed the
+# health check 12/12 and still showed `Deploy preview  pass`. The comment step
+# keeps the PR in the loop because it is guarded with `if: ${{ !cancelled() }}`,
+# so it runs after a failed health step WITHOUT masking the failure.
+echo "== health-check status honesty =="
+HEALTH_BLOCK="$(awk '/^      - name: Health check$/,/^      - name: Post \/ update preview URL PR comment$/' "${WORKFLOW}")"
+if [ -z "${HEALTH_BLOCK}" ]; then
+  no "could not locate the Health check step in the preview workflow"
+else
+  if grep -q 'continue-on-error: true' <<<"${HEALTH_BLOCK}"; then
+    no "the Health check step still masks a final failure with continue-on-error: true"
+  else
+    ok "the Health check step is not masked (a final failure turns the check red)"
+  fi
+  if grep -qE '^ *exit 1$' <<<"${HEALTH_BLOCK}"; then
+    ok "the Health check step exits nonzero on a final failure"
+  else
+    no "the Health check step never exits nonzero — a dead preview reports green"
+  fi
+fi
+if grep -q 'if: \${{ !cancelled() }}' "${WORKFLOW}"; then
+  ok "reporting steps are guarded with if: \${{ !cancelled() }} (they run after a failed deploy step)"
+else
+  no "no if: \${{ !cancelled() }} guard — a failed health step would suppress the degraded PR comment"
+fi
+
+# GitHub parses workflow expressions even inside a `run:` block's comments, so
+# an if-only function hidden in a comment makes the whole FILE invalid and no
+# check runs at all — the failure surfaces as "Invalid workflow file: …#L1"
+# with the run named after the path (the first attempt at this fix, 5491914e,
+# never executed for exactly that reason).
+if grep -nE '^[[:space:]]*#.*\$\{\{[^}]*\b(always|success|failure|cancelled)\(\)' "${WORKFLOW}" >/dev/null; then
+  no "a workflow comment hides an if-only function expression — the workflow file is invalid"
+else
+  ok "no if-only function expressions hidden in workflow comments"
+fi
+
 printf '\n%d passed, %d failed\n' "${PASS}" "${FAIL}"
 [ "${FAIL}" -eq 0 ]
