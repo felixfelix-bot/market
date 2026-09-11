@@ -1,0 +1,85 @@
+name: Diag preview probe
+
+# Throwaway diagnostic: prints the live preview-VPS state (Caddy config, docker
+# services, preview dirs, HTTP probes) so a red Deploy preview health check can
+# be attributed to a concrete cause instead of guessed at. Deleted after use.
+
+on:
+  push:
+    paths:
+      - '.github/workflows/diag-preview-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe preview VPS state
+        env:
+          PREVIEW_VPS_HOST: ${{ secrets.PREVIEW_VPS_HOST }}
+          PREVIEW_VPS_USER: ${{ secrets.PREVIEW_VPS_USER }}
+          PREVIEW_VPS_SSH_KEY: ${{ secrets.PREVIEW_VPS_SSH_KEY }}
+          PREVIEW_VPS_HOST_FINGERPRINT: ${{ secrets.PREVIEW_VPS_HOST_FINGERPRINT }}
+        run: |
+          set -euo pipefail
+          source infra/preview-vps/ssh-pin.sh
+          ssh_pin_init
+          echo "== VPS_HOST resolves to =="
+          getent ahostsv4 "$PREVIEW_VPS_HOST" | awk '{print $1}' | sort -u || true
+          ssh_pin_ssh bash -s <<'REMOTE'
+
+          set -u
+          echo "=== identity ==="
+          hostname
+          whoami
+          echo "=== public ipv4 ==="
+          ip -4 -o addr show scope global || true
+          echo "=== docker ps ==="
+          docker ps || true
+          echo "=== listeners ==="
+          sudo ss -ltnp | grep -E ':(80|443|3002|3040|6799|10587) ' || sudo ss -ltn | head -30 || true
+          echo "=== caddy service ==="
+          systemctl is-active caddy || true
+          sudo systemctl cat caddy 2>/dev/null | grep -E 'ExecStart|ExecReload|Environment' || true
+          echo "=== /etc/caddy ==="
+          sudo ls -la /etc/caddy/ || true
+          echo "=== Caddyfile line count ==="
+          sudo wc -l /etc/caddy/Caddyfile || true
+          echo "=== Caddyfile raw (1..200) ==="
+          sudo sed -n '1,200p' /etc/caddy/Caddyfile || true
+          echo "=== Caddyfile site blocks ==="
+          sudo awk '/^[^ \t#].*\{/ {print NR": "$0}' /etc/caddy/Caddyfile || true
+          echo "=== adapted host matchers ==="
+          sudo caddy adapt --config /etc/caddy/Caddyfile 2>/dev/null | grep -oE '"host":\[[^]]*\]' | sort -u | head -40 || true
+          echo "=== caddy journal (last 25) ==="
+          sudo journalctl -u caddy -n 25 --no-pager || true
+          echo "=== preview-manager journal (last 40) ==="
+          sudo journalctl -u preview-manager -n 40 --no-pager || true
+          echo "=== preview dirs ==="
+          ls -la "$HOME/previews" || true
+          ls -la "$HOME/previews/pr-4" 2>/dev/null | head -20 || true
+          echo "=== pr-4 compose ps ==="
+          (cd "$HOME/previews/pr-4" && docker compose ps) 2>&1 | head -15 || true
+          echo "=== direct app port 3040 ==="
+          curl -sS -o /tmp/app.txt -w 'app_http=%{http_code}\n' --max-time 8 http://127.0.0.1:3040/ || true
+          head -c 200 /tmp/app.txt 2>/dev/null || true
+          echo
+          echo "=== preview gateway 6799 with Host pr4 ==="
+          curl -sS -o /tmp/gw.txt -w 'gateway_http=%{http_code}\n' --max-time 20 -H 'Host: pr4.test-market.orangesync.tech' http://127.0.0.1:6799/ || true
+          head -c 300 /tmp/gw.txt 2>/dev/null || true
+          echo
+          echo "=== local TLS through Caddy ==="
+          curl -skS -o /tmp/tls.txt -w 'caddy_https=%{http_code}\n' --max-time 20 --resolve pr4.test-market.orangesync.tech:443:127.0.0.1 https://pr4.test-market.orangesync.tech/ || true
+          head -c 200 /tmp/tls.txt 2>/dev/null || true
+          echo
+          echo "=== dns seen from the vps ==="
+          dig +short pr4.test-market.orangesync.tech A || true
+          echo "=== ask endpoint ==="
+          curl -sS -o /tmp/ask.txt -w 'ask_http=%{http_code}\n' --max-time 8 'http://127.0.0.1:6799/ask?domain=pr4.test-market.orangesync.tech' || true
+          head -c 200 /tmp/ask.txt 2>/dev/null || true
+          echo
+          REMOTE
