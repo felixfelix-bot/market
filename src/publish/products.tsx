@@ -1,9 +1,8 @@
 import { SHIPPING_KIND } from '@/lib/schemas/shippingOption'
-import { ndkActions } from '@/lib/stores/ndk'
 import { normalizeProductShippingSelections, type ProductShippingSelectionInput } from '@/lib/utils/productShippingSelections'
 import { productKeys } from '@/queries/queryKeyFactory'
 import { markProductAsDeleted } from '@/queries/products'
-import NDK, { NDKEvent, type NDKSigner, type NDKTag } from '@nostr-dev-kit/ndk'
+import { getUser, publish, sign, type EventTemplate } from '@/lib/nostr/io'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { createClientTag } from './nip89'
@@ -29,36 +28,34 @@ export interface ProductFormData {
 }
 
 /**
- * Creates a new product event (kind 30402)
+ * Creates a new product event template (kind 30402).
+ *
+ * Returns a raw nostr-tools `EventTemplate` (no wrapper class). Signing and
+ * publishing are handled by the io.ts seam (`sign` / `publish`), which route
+ * through the active adapter.
  */
 export const createProductEvent = (
 	formData: ProductFormData,
-	signer: NDKSigner,
-	ndk: NDK,
 	productId?: string, // Optional for updates
 	appPubkey?: string, // Optional app pubkey for client tag
 	handlerId?: string, // Optional handler ID for client tag
-): NDKEvent => {
-	const event = new NDKEvent(ndk)
-	event.kind = 30402 // Product listings kind
-	event.content = formData.description
-
+): EventTemplate => {
 	// Generate a unique ID if not provided (for new products)
 	const id = productId || `product_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
 
 	// Build tags
-	const imagesTags = formData.images.map((img) => ['image', img.imageUrl, '800x600', img.imageOrder.toString()] as NDKTag)
+	const imagesTags = formData.images.map((img) => ['image', img.imageUrl, '800x600', img.imageOrder.toString()])
 
-	const categoryTags: NDKTag[] = []
-	categoryTags.push(['t', formData.mainCategory] as NDKTag)
+	const categoryTags: string[][] = []
+	categoryTags.push(['t', formData.mainCategory])
 
 	formData.categories
 		.filter((cat) => cat.checked && cat.name.trim() !== '')
 		.forEach((cat) => {
-			categoryTags.push(['t', cat.name] as NDKTag)
+			categoryTags.push(['t', cat.name])
 		})
 
-	const specTags = formData.specs.map((spec) => ['spec', spec.key, spec.value] as NDKTag)
+	const specTags = formData.specs.map((spec) => ['spec', spec.key, spec.value])
 
 	const normalizedShippings = normalizeProductShippingSelections(formData.shippings)
 
@@ -66,31 +63,31 @@ export const createProductEvent = (
 		.filter((ship) => ship.shippingRef)
 		.map((ship) => {
 			return ship.extraCost
-				? (['shipping_option', ship.shippingRef, ship.extraCost] as NDKTag)
-				: (['shipping_option', ship.shippingRef] as NDKTag)
+				? (['shipping_option', ship.shippingRef, ship.extraCost] as string[])
+				: (['shipping_option', ship.shippingRef] as string[])
 		})
 
-	const weightTag = formData.weight ? [['weight', formData.weight.value, formData.weight.unit] as NDKTag] : []
+	const weightTag = formData.weight ? [['weight', formData.weight.value, formData.weight.unit] as string[]] : []
 
-	const dimensionsTag = formData.dimensions ? [['dim', formData.dimensions.value, formData.dimensions.unit] as NDKTag] : []
+	const dimensionsTag = formData.dimensions ? [['dim', formData.dimensions.value, formData.dimensions.unit] as string[]] : []
 
-	const collectionTag = formData.selectedCollection ? [['collection', formData.selectedCollection] as NDKTag] : []
+	const collectionTag = formData.selectedCollection ? [['collection', formData.selectedCollection] as string[]] : []
 
 	// Add client tag if app pubkey and handler ID are provided (NIP-89)
 	const clientTag = appPubkey && handlerId ? [createClientTag(appPubkey, handlerId)] : []
 
 	// Add content warning tag for NSFW products
-	const contentWarningTag = formData.isNSFW ? [['content-warning', 'nsfw'] as NDKTag] : []
+	const contentWarningTag = formData.isNSFW ? [['content-warning', 'nsfw'] as string[]] : []
 
 	// Required tags
-	event.tags = [
+	const tags: string[][] = [
 		['d', id], // Product identifier - this is the key for updates!
 		['title', formData.name],
 		['price', formData.price, formData.currency],
 		['type', formData.productType === 'single' ? 'simple' : 'variable', 'physical'],
 		['visibility', formData.status],
 		['stock', formData.quantity],
-		...(formData.summary ? [['summary', formData.summary] as NDKTag] : []),
+		...(formData.summary ? [['summary', formData.summary] as string[]] : []),
 		...imagesTags,
 		...categoryTags,
 		...specTags,
@@ -102,13 +99,18 @@ export const createProductEvent = (
 		...contentWarningTag,
 	]
 
-	return event
+	return {
+		kind: 30402, // Product listings kind
+		content: formData.description,
+		tags,
+		created_at: Math.floor(Date.now() / 1000),
+	}
 }
 
 /**
  * Publishes a new product
  */
-export const publishProduct = async (formData: ProductFormData, signer: NDKSigner, ndk: NDK): Promise<string> => {
+export const publishProduct = async (formData: ProductFormData): Promise<string> => {
 	// Validation
 	if (!formData.name.trim()) {
 		throw new Error('Product name is required')
@@ -140,10 +142,10 @@ export const publishProduct = async (formData: ProductFormData, signer: NDKSigne
 		throw new Error('At least one shipping option is required')
 	}
 
-	const event = createProductEvent(formData, signer, ndk)
+	const template = createProductEvent(formData)
 
-	await event.sign(signer)
-	await ndkActions.publishEvent(event)
+	const event = await sign(template)
+	await publish(event)
 
 	return event.id
 }
@@ -151,12 +153,7 @@ export const publishProduct = async (formData: ProductFormData, signer: NDKSigne
 /**
  * Updates an existing product by preserving the original d tag
  */
-export const updateProduct = async (
-	productDTag: string, // The 'd' tag value from the original product
-	formData: ProductFormData,
-	signer: NDKSigner,
-	ndk: NDK,
-): Promise<string> => {
+export const updateProduct = async (productDTag: string, formData: ProductFormData): Promise<string> => {
 	// Validation
 	if (!productDTag) {
 		throw new Error('Product d tag is required for updates')
@@ -193,10 +190,10 @@ export const updateProduct = async (
 	}
 
 	// Create event with the same d tag to update the existing product
-	const event = createProductEvent(formData, signer, ndk, productDTag)
+	const template = createProductEvent(formData, productDTag)
 
-	await event.sign(signer)
-	await ndkActions.publishEvent(event)
+	const event = await sign(template)
+	await publish(event)
 
 	return event.id
 }
@@ -204,19 +201,21 @@ export const updateProduct = async (
 /**
  * Deletes a product by publishing a deletion event
  */
-export const deleteProduct = async (productDTag: string, signer: NDKSigner, ndk: NDK): Promise<boolean> => {
+export const deleteProduct = async (productDTag: string): Promise<boolean> => {
 	try {
 		// Create a deletion event (kind 5)
-		const deleteEvent = new NDKEvent(ndk)
-		deleteEvent.kind = 5
-		deleteEvent.content = 'Product deleted'
+		const user = await getUser()
+		if (!user?.pubkey) throw new Error('No active user')
 
-		// Reference the product to delete
-		const pubkey = await signer.user().then((user) => user.pubkey)
-		deleteEvent.tags = [['a', `30402:${pubkey}:${productDTag}`]]
+		const template: EventTemplate = {
+			kind: 5,
+			content: 'Product deleted',
+			tags: [['a', `30402:${user.pubkey}:${productDTag}`]],
+			created_at: Math.floor(Date.now() / 1000),
+		}
 
-		await deleteEvent.sign(signer)
-		await ndkActions.publishEvent(deleteEvent)
+		const deleteEvent = await sign(template)
+		await publish(deleteEvent)
 
 		return true
 	} catch (error) {
@@ -230,26 +229,16 @@ export const deleteProduct = async (productDTag: string, signer: NDKSigner, ndk:
  */
 export const usePublishProductMutation = () => {
 	const queryClient = useQueryClient()
-	const ndk = ndkActions.getNDK()
-	const signer = ndkActions.getSigner()
 
 	return useMutation({
 		mutationFn: async (formData: ProductFormData) => {
-			if (!ndk) throw new Error('NDK not initialized')
-			if (!signer) throw new Error('No signer available')
-
-			return publishProduct(formData, signer, ndk)
+			return publishProduct(formData)
 		},
 
 		onSuccess: async (eventId) => {
 			// Get current user pubkey
-			let userPubkey = ''
-			if (signer) {
-				const user = await signer.user()
-				if (user && user.pubkey) {
-					userPubkey = user.pubkey
-				}
-			}
+			const user = await getUser()
+			const userPubkey = user?.pubkey ?? ''
 
 			// Invalidate relevant queries
 			queryClient.invalidateQueries({ queryKey: productKeys.all })
@@ -273,26 +262,16 @@ export const usePublishProductMutation = () => {
  */
 export const useUpdateProductMutation = () => {
 	const queryClient = useQueryClient()
-	const ndk = ndkActions.getNDK()
-	const signer = ndkActions.getSigner()
 
 	return useMutation({
 		mutationFn: async ({ productDTag, formData }: { productDTag: string; formData: ProductFormData }) => {
-			if (!ndk) throw new Error('NDK not initialized')
-			if (!signer) throw new Error('No signer available')
-
-			return updateProduct(productDTag, formData, signer, ndk)
+			return updateProduct(productDTag, formData)
 		},
 
 		onSuccess: async (eventId, { productDTag }) => {
 			// Get current user pubkey
-			let userPubkey = ''
-			if (signer) {
-				const user = await signer.user()
-				if (user && user.pubkey) {
-					userPubkey = user.pubkey
-				}
-			}
+			const user = await getUser()
+			const userPubkey = user?.pubkey ?? ''
 
 			// Invalidate relevant queries
 			queryClient.invalidateQueries({ queryKey: productKeys.all })
@@ -321,15 +300,10 @@ export const useUpdateProductMutation = () => {
  */
 export const useDeleteProductMutation = () => {
 	const queryClient = useQueryClient()
-	const ndk = ndkActions.getNDK()
-	const signer = ndkActions.getSigner()
 
 	return useMutation({
 		mutationFn: async (productDTag: string) => {
-			if (!ndk) throw new Error('NDK not initialized')
-			if (!signer) throw new Error('No signer available')
-
-			return deleteProduct(productDTag, signer, ndk)
+			return deleteProduct(productDTag)
 		},
 
 		onSuccess: async (success, productDTag) => {
@@ -338,13 +312,8 @@ export const useDeleteProductMutation = () => {
 			markProductAsDeleted(productDTag)
 
 			// Get current user pubkey
-			let userPubkey = ''
-			if (signer) {
-				const user = await signer.user()
-				if (user && user.pubkey) {
-					userPubkey = user.pubkey
-				}
-			}
+			const user = await getUser()
+			const userPubkey = user?.pubkey ?? ''
 
 			// Invalidate relevant queries
 			queryClient.invalidateQueries({ queryKey: productKeys.all })

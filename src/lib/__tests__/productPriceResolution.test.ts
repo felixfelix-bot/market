@@ -211,9 +211,6 @@ describe('resolvePublishPrice (publication boundary)', () => {
 })
 
 describe('productFormActions.continuePublishing price boundary', () => {
-	const signer = {} as Parameters<typeof productFormActions.continuePublishing>[0]
-	const ndk = {} as Parameters<typeof productFormActions.continuePublishing>[1]
-
 	beforeEach(() => {
 		productFormActions.reset()
 		publishMock.mockClear()
@@ -222,6 +219,7 @@ describe('productFormActions.continuePublishing price boundary', () => {
 			name: 'Test product',
 			description: 'A test product',
 			quantity: '10',
+			currency: 'SATS',
 		})
 	})
 
@@ -233,7 +231,7 @@ describe('productFormActions.continuePublishing price boundary', () => {
 			fiatPrice: '25',
 		})
 
-		const result = await productFormActions.continuePublishing(signer, ndk)
+		const result = await productFormActions.continuePublishing()
 
 		expect(result).toBe(false)
 		expect(publishMock.mock.calls.length).toBe(0)
@@ -247,7 +245,7 @@ describe('productFormActions.continuePublishing price boundary', () => {
 			fiatPrice: '25',
 		})
 
-		const result = await productFormActions.continuePublishing(signer, ndk)
+		const result = await productFormActions.continuePublishing()
 
 		expect(result).toBe('test-published-event-id')
 		expect(publishMock.mock.calls.length).toBe(1)
@@ -264,7 +262,7 @@ describe('productFormActions.continuePublishing price boundary', () => {
 			fiatPrice: '25',
 		})
 
-		const result = await productFormActions.continuePublishing(signer, ndk)
+		const result = await productFormActions.continuePublishing()
 
 		expect(result).toBe('test-published-event-id')
 		const formData = publishMock.mock.calls[0][0] as { price: string; currency: string }

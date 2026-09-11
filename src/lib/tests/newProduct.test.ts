@@ -63,7 +63,7 @@ describe('Product Publishing', () => {
 		}))
 
 		// Publish the product
-		const publishResult = await productFormActions.publishProduct(signer, ndk!)
+		const publishResult = await productFormActions.publishProduct()
 		expect(typeof publishResult).toBe('string')
 
 		// Use the event ID from publishResult

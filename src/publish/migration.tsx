@@ -1,6 +1,6 @@
 import { createProductEvent, type ProductFormData } from '@/publish/products'
 import { ndkActions, getWriteRelaySet, getWriteRelays } from '@/lib/stores/ndk'
-import NDK, { type NDKSigner, type NDKTag, type NDKRelay } from '@nostr-dev-kit/ndk'
+import NDK, { NDKEvent, type NDKSigner, type NDKTag, type NDKRelay } from '@nostr-dev-kit/ndk'
 
 export type MigrationStep = 'preparing' | 'signing' | 'publishing' | 'done'
 
@@ -50,8 +50,11 @@ export const publishMigratedProduct = async (
 		throw new Error('Main category is required')
 	}
 
-	// Create the product event
-	const event = createProductEvent(formData, signer, ndk)
+	// Create the product event template
+	const template = createProductEvent(formData)
+
+	// Wrap into an NDKEvent for NDK-based signing + per-relay publish progress
+	const event = new NDKEvent(ndk, template)
 
 	// Add migration tags
 	event.tags.push(['migrated', originalNip15EventId] as NDKTag)

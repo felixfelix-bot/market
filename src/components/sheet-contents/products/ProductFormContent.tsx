@@ -1,6 +1,5 @@
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ndkActions } from '@/lib/stores/ndk'
 import { productFormActions, productFormStore, type ProductFormState, type ProductFormTab } from '@/lib/stores/product'
 
 // Expose store/actions to e2e tests for deterministic state control
@@ -10,6 +9,7 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'test') {
 	;(window as any).__productFormStore = productFormStore
 }
 import { uiActions } from '@/lib/stores/ui'
+import { getUser } from '@/lib/nostr/io'
 import { hasProductFormDraft } from '@/lib/utils/productFormStorage'
 import { resolvePublishPrice } from '@/lib/utils/productPriceResolution'
 import type { ProductWorkflowResolution } from '@/lib/workflow/productWorkflowResolver'
@@ -225,21 +225,15 @@ export function ProductFormContent({
 		onSubmit: async () => {
 			try {
 				setIsPublishing(true)
-				const ndk = ndkActions.getNDK()
-				const signer = ndkActions.getSigner()
 
-				if (!ndk) {
-					toast.error('NDK not initialized')
-					setIsPublishing(false)
-					return
-				}
-				if (!signer) {
+				const user = await getUser()
+				if (!user?.pubkey) {
 					toast.error('You need to connect your wallet first')
 					setIsPublishing(false)
 					return
 				}
 
-				const result = await productFormActions.publishProduct(signer, ndk, queryClient)
+				const result = await productFormActions.publishProduct(queryClient)
 
 				if (result) {
 					toast.success(editingProductId ? 'Product updated successfully!' : 'Product published successfully!')
