@@ -98,14 +98,14 @@ add these as **repository secrets** (the `deploy` job currently has no
 trigger is switched to `pull_request_target`, as secrets scoped to that
 environment:
 
-| Secret                         | Value                                                                                                                                                                                                                                                                                                                                    |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PREVIEW_VPS_HOST`             | Hostname or public IP of the preview VPS                                                                                                                                                                                                                                                                                                 |
-| `PREVIEW_VPS_USER`             | SSH user on that VPS (typically `debian`)                                                                                                                                                                                                                                                                                                |
-| `PREVIEW_VPS_SSH_KEY`          | PEM private key for SSH/scp (multiline; must be a valid, unencrypted key — the byte shape does not matter, see below)                                                                                                                                                                                                                    |
-| `PREVIEW_VPS_HOST_FINGERPRINT` | SSH **host**-key SHA256 fingerprint of the VPS, format `SHA256:…` (from `ssh-keyscan -t ed25519 <host> \| ssh-keygen -lf -`). The same secret verifies the host in the appleboy actions (`fingerprint:` input) and in `provision.sh`, which compares it against the scanned key and aborts before any private-key material is exchanged. |
-| `PREVIEW_CLOUDFLARE_API_TOKEN` | Cloudflare API token (DNS edit on the zone)                                                                                                                                                                                                                                                                                              |
-| `PREVIEW_CLOUDFLARE_ZONE_ID`   | Cloudflare zone id for `test-market.orangesync.tech`                                                                                                                                                                                                                                                                                     |
+| Secret                         | Value                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PREVIEW_VPS_HOST`             | Hostname or public IP of the preview VPS                                                                                                                                                                                                                                                                                                                                                     |
+| `PREVIEW_VPS_USER`             | SSH user on that VPS (typically `debian`)                                                                                                                                                                                                                                                                                                                                                    |
+| `PREVIEW_VPS_SSH_KEY`          | PEM private key for SSH/scp (multiline; must be a valid, unencrypted key — the byte shape does not matter, see below)                                                                                                                                                                                                                                                                        |
+| `PREVIEW_VPS_HOST_FINGERPRINT` | SSH **host**-key SHA256 fingerprint of the VPS, format `SHA256:…` (2nd field of `ssh-keyscan <host> \| ssh-keygen -lf -`). It may name **any** host-key type the VPS offers (ed25519/ecdsa/rsa): `infra/preview-vps/ssh-pin.sh` scans the offered keys once, requires one of them to match, pins the connection to exactly that key and aborts before any private-key material is exchanged. |
+| `PREVIEW_CLOUDFLARE_API_TOKEN` | Cloudflare API token (DNS edit on the zone)                                                                                                                                                                                                                                                                                                                                                  |
+| `PREVIEW_CLOUDFLARE_ZONE_ID`   | Cloudflare zone id for `test-market.orangesync.tech`                                                                                                                                                                                                                                                                                                                                         |
 
 If any required secret is missing the workflow skips loudly instead of failing
 opaque — do not treat a green "skipped" check as proof previews are live.
@@ -144,20 +144,76 @@ Regression coverage: `bash infra/preview-vps/test_write_ssh_key.sh` — accepted
 shapes are real newlines, no trailing newline, literal `\n`, and CRLF; rejected
 shapes are empty, garbage, a public key, and a passphrase-protected key.
 
+## Host-key pinning (`infra/preview-vps/ssh-pin.sh`)
+
+`ssh-pin.sh` is the single implementation used by `provision.sh` and by every
+remote step of the workflow. `ssh_pin_init` (a) materialises
+`PREVIEW_VPS_SSH_KEY` through `write-ssh-key.sh` (the secret may also be a path
+to an existing key file, as `provision.sh` documents), (b) scans the host keys
+once, (c) requires one of them to match `PREVIEW_VPS_HOST_FINGERPRINT`, and
+(d) exports the pinned `ssh`/`scp` option set. `ssh_pin_ssh` / `ssh_pin_scp`
+then run on the verified connection. `StrictHostKeyChecking=yes` +
+`UserKnownHostsFile` (a private `known_hosts` holding only the matched key) +
+`HostKeyAlgorithms` restricted to the matched key's type + `ConnectTimeout=30`.
+
+Failure triage is explicit, so a red check is never ambiguous:
+
+| Symptom in the log                                   | Meaning                                                                                                                      |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `ssh-keyscan could not reach <host>` / `UNREACHABLE` | Network/target problem, **NOT** a secret problem (`23.182.128.0/24` has had provider outages — check the target host first). |
+| `host key fingerprint mismatch`                      | A key was offered but none matched; the log lists the pinned fingerprint and every offered one. Re-set the secret below.     |
+| `PREVIEW_VPS_SSH_KEY …` from `write-ssh-key.sh`      | Unusable key material (empty, public key, encrypted, truncated).                                                             |
+
+Re-set the pin from the key you trust (any type the host offers):
+
+```
+gh secret set PREVIEW_VPS_HOST_FINGERPRINT --repo <owner>/<repo> \
+  --body "$(ssh-keyscan -t ed25519 <host> | ssh-keygen -lf - | awk '{print $2}')"
+```
+
+Regression coverage: `bash infra/preview-vps/test_ssh_pin.sh` — any pinned key
+type is accepted and restricted to, `known_hosts` holds exactly the pinned key,
+an unknown pin fails with every offered fingerprint listed, a whole
+`ssh-keygen -lf` line as the pin fails, an unreachable host is reported as a
+target problem, no private-key bytes reach the log, and the workflow +
+`provision.sh` contain no `appleboy`/`fingerprint:` pinning.
+
 ## Security notes
 
 **SSH host-key verification (no TOFU, no `StrictHostKeyChecking=no`).** Every
-SSH/scp connection — both the appleboy actions (`fingerprint:` input on every
-step) and `provision.sh` — verifies the VPS host key against
-`PREVIEW_VPS_HOST_FINGERPRINT` before the deploy key is used. `provision.sh`
-scans the host key, compares its SHA256 fingerprint to the pinned secret, and
-aborts on mismatch before any authentication, pinning the negotiation to the
-verified ed25519 key. A MITM on the path never receives the private key.
+SSH/scp connection — the Bootstrap step, the deploy steps, the teardown step and
+`provision.sh` — goes through `infra/preview-vps/ssh-pin.sh`, which verifies the
+VPS host key against `PREVIEW_VPS_HOST_FINGERPRINT` before the deploy key is
+used (see the pinning section above). A MITM on the path never receives the
+private key.
 
-**Pinned third-party actions.** The `appleboy/ssh-action` and
-`appleboy/scp-action` steps — which handle the VPS private key — are pinned by
-commit SHA (with the version in a trailing comment), so a mutated upstream tag
-cannot exfiltrate the key. Audit the SHA when bumping the version.
+**Why the pin is no longer delegated to `appleboy/ssh-action` (do not re-add
+it).** `ssh-action`/`scp-action` run `drone-ssh` → `easyssh-proxy`, whose check
+is a bare string equality against `ssh.FingerprintSHA256()` of the host key the
+**Go** ssh client negotiated:
+
+```
+if ssh.FingerprintSHA256(publicKey) != config.Fingerprint {
+        return ErrFingerprintMismatch   // "ssh: host key fingerprint mismatch"
+}
+```
+
+A Go client chooses the host-key type by its own preference order, not by the
+secret's. This VPS offers `ssh-ed25519`, `ecdsa-sha2-nistp256` and `ssh-rsa`,
+and an `x/crypto/ssh` client negotiates the **ECDSA** key — while the secret
+holds the ed25519 fingerprint. The two can never agree, so every deploy died in
+"Ensure remote preview directory exists" with
+`ssh: handshake failed: ssh: host key fingerprint mismatch` (run 34599181010,
+2026-09-11) _after_ the secret guard, the key materialisation and
+`provision.sh`'s host-key verification had all passed. `ssh-pin.sh` pins with
+OpenSSH instead, so which key type the secret pins is the secret's decision, not
+a third-party client's.
+
+**Pinned third-party actions.** No deploy step uses a third-party SSH action any
+more — the deploy package is a `tar` stream over the pinned `ssh` connection. The
+remaining actions in the workflow are pinned by commit SHA (with the version in a
+trailing comment), so a mutated upstream tag cannot exfiltrate the key. Audit the
+SHA when bumping the version.
 
 **`pull_request_target` (do not switch blindly).** To get real previews from
 **fork** PR branches you would need the secrets in the runner, which
