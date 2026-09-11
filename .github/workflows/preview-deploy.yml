@@ -325,21 +325,33 @@ jobs:
         continue-on-error: true
         run: |
           PREVIEW_URL="https://${{ steps.ports.outputs.subdomain }}"
+          BODY="$(mktemp)"
           # Individual failed attempts inside this loop are TRANSIENT warm-up
           # (preview booting, DNS propagating, Caddy issuing the cert). Only
           # after all 12 attempts (~3 min) are exhausted is this a FINAL
           # failure — at that point exit nonzero (continue-on-error keeps
           # the job green) so the comment step posts the explicit degraded
           # state instead of an open-ended "give it a minute".
+          #
+          # On the final failure the log names WHAT answered (status, headers,
+          # body excerpt) instead of only that the loop timed out: a preview
+          # shadowed by another route on the same hostname (observed: the nsite
+          # gateway's "Invalid address" page) is otherwise indistinguishable
+          # from a preview that never booted.
+          STATUS=""
           for _ in $(seq 1 12); do
-            if curl -sf -o /dev/null --max-time 10 "$PREVIEW_URL"; then
+            STATUS="$(curl -s -o "$BODY" -w '%{http_code}' --max-time 10 "$PREVIEW_URL" || true)"
+            if [ "$STATUS" = "200" ]; then
               echo "Preview is live: $PREVIEW_URL"
               echo "url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             sleep 5
           done
-          echo "::error::Preview health check FAILED after 12 attempts (~3 min): $PREVIEW_URL"
+          echo "::error::Preview health check FAILED after 12 attempts (~3 min): $PREVIEW_URL (last HTTP ${STATUS:-no-response})"
+          echo "  resolved: $(getent ahostsv4 "${{ steps.ports.outputs.subdomain }}" | awk '{print $1}' | sort -u | paste -sd, - || echo 'NXDOMAIN')"
+          echo "  headers: $(curl -sSI --max-time 10 "$PREVIEW_URL" 2>/dev/null | tr -d '\r' | grep -iE '^(server|via|content-type|cf-cache-status):' | paste -sd' ' -)"
+          echo "  body: $(head -c 200 "$BODY" | tr '\n' ' ' | tr -s ' ')"
           echo "url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
           exit 1
 
