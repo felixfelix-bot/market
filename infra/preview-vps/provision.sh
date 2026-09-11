@@ -151,10 +151,10 @@ echo "==> Copying preview_manager.py + preview_gateway.py to VPS"
   "${_VPS_USER}@${HOST}:/home/${_VPS_USER}/preview-infra/"
 
 # ── 3. Ensure nsite-gateway Docker container is running ──
-# Uses locally-built image nsite-gateway-nsite:latest (built from
-# the nsite-gateway Dockerfile in the tollgate infra). If the image
-# doesn't exist, clone and build it. If container is already running,
-# skip entirely.
+# Uses locally-built image nsite-gateway-nsite:latest (built from the
+# hzrd149/nsite-gateway Dockerfile, pinned to the v3.6.5 tag so a rebuild is
+# reproducible). If the image doesn't exist, clone and build it. If container
+# is already running, skip entirely.
 echo "==> Checking nsite-gateway container"
 "${SSH_BASE[@]}" "${_VPS_USER}@${HOST}" bash -s <<'REMOTE'
 set -euo pipefail
@@ -169,14 +169,21 @@ fi
 # Check if image exists locally
 if ! docker images --format '{{.Repository}}:{{.Tag}}' | grep -q 'nsite-gateway-nsite:latest'; then
   echo "  Image not found — building from source"
-  cd /tmp
-  if [ -d nsite-gateway ]; then
-    cd nsite-gateway && git pull --quiet
-  else
-    git clone --quiet https://github.com/fiatjaf/nsite.git nsite-gateway
-    cd nsite-gateway
-  fi
-  docker build -t nsite-gateway-nsite:latest .
+  # The previous source (https://github.com/fiatjaf/nsite.git) no longer exists
+  # upstream, so the clone failed here as `fatal: could not read Username for
+  # 'https://github.com': No such device or address` — git asks for credentials
+  # when a repository is not found, which reads like an auth problem rather than
+  # a dead URL. hzrd149/nsite-gateway is the current home of the gateway, pinned
+  # to v3.6.5 so rebuilding the cached image is reproducible, and
+  # GIT_TERMINAL_PROMPT=0 makes a future rename/removal fail with an explicit
+  # "repository not found" instead of a credential prompt.
+  NSITE_GATEWAY_REPO=https://github.com/hzrd149/nsite-gateway.git
+  NSITE_GATEWAY_REV=558326ae5bbaf209e63d5a3e53b6bbad508b336a # v3.6.5
+  NSITE_SRC=/tmp/nsite-gateway
+  rm -rf "${NSITE_SRC}"
+  GIT_TERMINAL_PROMPT=0 git clone --quiet "${NSITE_GATEWAY_REPO}" "${NSITE_SRC}"
+  git -C "${NSITE_SRC}" checkout --quiet "${NSITE_GATEWAY_REV}"
+  docker build -t nsite-gateway-nsite:latest "${NSITE_SRC}"
   echo "  Image built"
 fi
 
