@@ -18,9 +18,10 @@ fronts it for the public internet. It serves two roles:
      the lazy-start manager (`preview_manager.py --wake <N>`) so stopped
      previews boot — including repeat visits where Caddy already holds the
      cached certificate (m3). The poke is non-fatal: errors are logged and the
-     request still proceeds to a bounded-connect-retry proxy (~up to 15 s while
-     the preview boots). If the preview never comes up, the client gets a 503
-     with a JSON error body.
+     request still proceeds to a bounded-retry proxy (up to WAKE_TIMEOUT_SECONDS
+     while the preview boots — the app container needs tens of seconds on a cold
+     start). If the preview never answers, the client gets a 503 with a JSON
+     error body; it never gets an empty reply.
 
 Everything is a small pure function over `dataclass RouteDecision` so the
 routing logic is unit-testable without sockets (test_preview_gateway.py).
@@ -30,13 +31,14 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import http.client
 import json
 import re
 import socket
 import subprocess
 import sys
+import time
 import urllib.parse
-import urllib.request
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -46,9 +48,37 @@ DEFAULT_BASE_DOMAIN = "test-market.orangesync.tech"
 DEFAULT_GATEWAY_PORT = 6799
 PREVIEW_APP_BASE_PORT = 3000
 PREVIEW_PORT_OFFSET = 10  # mirrors the workflow: offset = (PR % 100) * 10
-WAKE_TIMEOUT_SECONDS = 15.0
-ASK_PATH = "/ask"
+WAKE_TIMEOUT_SECONDS = 90.0
 WAKE_POLL_SECONDS = 0.3
+# Poll interval while retrying a proxied request inside that budget.
+PROXY_RETRY_POLL_SECONDS = 1.0
+# Per-request upstream timeouts.
+UPSTREAM_CONNECT_TIMEOUT_SECONDS = 10.0
+UPSTREAM_READ_TIMEOUT_SECONDS = 30.0
+# A warm-up 5xx is retried, but never for the whole boot budget: a preview that
+# answers 500 forever must not make a visitor wait 90 s for it.
+UPSTREAM_5XX_RETRY_SECONDS = 30.0
+# Headers never forwarded to the upstream app:
+#   host             — http.client writes the upstream Host itself
+#   connection       — see the Connection: close pitfall in http_proxy
+#   accept-encoding  — the app would compress, but the router forwards only
+#                      status/body/content-type, so an encoded body would reach
+#                      the client with no Content-Encoding header
+HOP_BY_HOP_HEADERS = frozenset(
+    {
+        "host",
+        "content-length",
+        "connection",
+        "proxy-connection",
+        "keep-alive",
+        "te",
+        "trailer",
+        "transfer-encoding",
+        "upgrade",
+        "accept-encoding",
+    }
+)
+ASK_PATH = "/ask"
 
 # Subdomains Caddy may obtain on-demand certificates for.
 TLS_ASK_ALLOWED_SUFFIXES = (
@@ -147,11 +177,53 @@ def poke_wake(pr_number: int, manager_path: Path, python_bin: str) -> bool:
 
 
 def probe_port(port: int, timeout: float = 1.0) -> bool:
-    """True when something is listening on the local port (used with retries
-    while a preview boots)."""
+    """True when something is listening on the local port.
+
+    NOTE: a TCP accept is NOT readiness. docker-proxy accepts on the published
+    port while the container's app is still installing/starting and then closes
+    the connection with no bytes; `probe_http` is what the router waits for.
+    """
     try:
         with socket.create_connection(("127.0.0.1", port), timeout=timeout):
             return True
+    except OSError:
+        return False
+
+
+class UpstreamProtocolError(OSError):
+    """Upstream accepted the connection but never produced an HTTP response.
+
+    It deliberately subclasses OSError: the router maps OSError to a 503 JSON
+    error, whereas an exception escaping the handler makes
+    BaseHTTPRequestHandler close the socket with NO reply at all — Caddy then
+    reports a bare 502 (observed on every request to a booting preview,
+    2026-09-11: `http.client.BadStatusLine`).
+    """
+
+
+def upstream_headers(headers: Dict[str, str]) -> Dict[str, str]:
+    """Drop hop-by-hop / transport-rewritten headers before proxying (pure)."""
+    return {k: v for k, v in headers.items() if k.lower() not in HOP_BY_HOP_HEADERS}
+
+
+def probe_http(port: int, timeout: float = 5.0) -> bool:
+    """True when the app ANSWERS HTTP on the local port (readiness probe).
+
+    Uses the same curl-shaped request as the proxy, so a warm-up 5xx counts as
+    ready (the router retries those) while an accepted-but-silent connection
+    does not.
+    """
+    try:
+        http_proxy(
+            "GET",
+            "/",
+            {"User-Agent": "preview-gateway-probe/1.0"},
+            b"",
+            port,
+            connect_timeout=timeout,
+            read_timeout=timeout,
+        )
+        return True
     except OSError:
         return False
 
@@ -181,27 +253,48 @@ def http_proxy(
     headers: Dict[str, str],
     body: bytes,
     port: int,
-    connect_timeout: float = 10.0,
-    read_timeout: float = 30.0,
+    connect_timeout: float = UPSTREAM_CONNECT_TIMEOUT_SECONDS,
+    read_timeout: float = UPSTREAM_READ_TIMEOUT_SECONDS,
 ) -> Tuple[int, bytes, str]:
-    """Proxy one request to the local preview app (or health endpoint).
+    """Proxy one request to the local preview app (curl-shaped, not urllib).
 
-    Returns (status, body, content_type). Raises OSError on connect failure —
-    the caller maps that to the retry loop or the 503 JSON error.
+    Returns (status, body, content_type). Raises UpstreamProtocolError (an
+    OSError) when the app closes without an HTTP response, so the caller retries
+    it inside the boot budget or answers a 503.
+
+    PITFALL 1 — root cause of the 2026-09-11 outage: never use urllib here.
+    urllib sends `Connection: close` unconditionally, and the market app replies
+    to exactly that with an EMPTY response (no status line at all), so every
+    gateway request died with `http.client.BadStatusLine` while `curl` — which
+    sends no Connection header — got HTTP 200 from the same URL (verified on the
+    live preview). http.client lets us send the request curl-shaped.
+
+    PITFALL 2: a TCP accept is not readiness (docker-proxy accepts while the app
+    boots), so every failure is retryable inside the boot budget.
     """
-    target = f"http://127.0.0.1:{port}{path}"
-    req = urllib.request.Request(target, data=body if method in ("POST", "PUT", "PATCH") else None, method=method)
-    for key, value in headers.items():
-        if key.lower() in ("host", "content-length", "connection", "transfer-encoding"):
-            continue  # rewritten by urllib for the new upstream
-        req.add_header(key, value)
+    conn = http.client.HTTPConnection(
+        "127.0.0.1", port, timeout=connect_timeout + read_timeout
+    )
     try:
-        with urllib.request.urlopen(req, timeout=connect_timeout + read_timeout) as resp:
-            return resp.status, resp.read(), resp.headers.get("Content-Type", "application/octet-stream")
-    except urllib.error.HTTPError as e:
-        return e.code, e.read(), e.headers.get("Content-Type", "text/plain")
-    except (urllib.error.URLError, OSError) as e:
-        raise OSError(str(e)) from e
+        # skip_accept_encoding: the router forwards status/body/content-type
+        # only, so an encoded body must never be requested upstream.
+        conn.putrequest(method, path, skip_accept_encoding=True)
+        for key, value in upstream_headers(headers).items():
+            conn.putheader(key, value)
+        if body:
+            conn.putheader("Content-Length", str(len(body)))
+        conn.endheaders(body or None)
+        resp = conn.getresponse()
+        payload = resp.read()
+        content_type = resp.getheader("Content-Type") or "application/octet-stream"
+        return resp.status, payload, content_type
+    except http.client.HTTPException as e:
+        # BadStatusLine / RemoteDisconnected / truncated response.
+        raise UpstreamProtocolError(str(e) or type(e).__name__) from e
+    except OSError as e:
+        raise UpstreamProtocolError(str(e) or type(e).__name__) from e
+    finally:
+        conn.close()
 
 
 # ── HTTP server ───────────────────────────────────────────────────────────────
@@ -219,6 +312,7 @@ class GatewayState:
         prober: Optional[callable] = None,
         proxy: Optional[callable] = None,
         boot_budget: float = WAKE_TIMEOUT_SECONDS,
+        retry_poll: float = PROXY_RETRY_POLL_SECONDS,
     ) -> None:
         self.base_domain = base_domain
         self.manager_path = manager_path
@@ -226,10 +320,12 @@ class GatewayState:
         # Injectable effect functions (tests stub these; production uses the
         # module-level ones). The poke fires on EVERY routed request.
         self.poke = poke or poke_wake
-        self.prober = prober or probe_port
+        self.prober = prober or probe_http
         self.proxy_fn = proxy or http_proxy
         # How long the router waits for a booting preview before 503.
         self.boot_budget = boot_budget
+        # Poll interval between upstream retries inside that budget.
+        self.retry_poll = retry_poll
 
 
 def make_handler(state: GatewayState) -> type:
@@ -270,13 +366,30 @@ def make_handler(state: GatewayState) -> type:
             if not wait_for_port(port, budget_seconds=state.boot_budget, probe=state.prober):
                 self._send_503(pr_number)
                 return
-            try:
-                status, resp_body, ctype = state.proxy_fn(
-                    self.command, self.path, headers, body, port
-                )
-            except OSError as e:
-                self._send_503(pr_number, detail=str(e))
-                return
+            # A booting preview answers protocol errors (docker-proxy accepts
+            # before the app has a listener) or warm-up 5xx for tens of seconds.
+            # Retry inside the boot budget instead of failing the first request;
+            # a 5xx that never clears is returned to the client as-is (honest
+            # failure) rather than being masked.
+            retry_deadline = time.monotonic() + state.boot_budget
+            fivexx_deadline = time.monotonic() + min(
+                state.boot_budget, UPSTREAM_5XX_RETRY_SECONDS
+            )
+            while True:
+                try:
+                    status, resp_body, ctype = state.proxy_fn(
+                        self.command, self.path, headers, body, port
+                    )
+                except OSError as e:
+                    if time.monotonic() >= retry_deadline:
+                        self._send_503(pr_number, detail=str(e))
+                        return
+                    time.sleep(state.retry_poll)
+                    continue
+                if status >= 500 and time.monotonic() < fivexx_deadline:
+                    time.sleep(state.retry_poll)
+                    continue
+                break
             self.send_response(status)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(resp_body)))

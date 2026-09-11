@@ -339,3 +339,157 @@ def test_gateway_manager_port_contract():
 
     for pr in (0, 1, 42, 99, 100, 1157, 1257, 12345):
         assert gw.app_port_for_pr(pr) == 3000 + pm.port_offset_for_pr(pr)
+
+
+# ── Cold-start + upstream-protocol regressions (live failure 2026-09-11) ─────
+
+
+def test_http_proxy_never_sends_connection_close():
+    # PITFALL (measured on the live preview 2026-09-11): the preview app answers
+    # an EMPTY reply (no status line at all) to a request carrying
+    # `Connection: close`, while curl — which sends no such header — gets 200.
+    # urllib always adds `Connection: close`, which is why every gateway request
+    # failed with BadStatusLine. The proxy must speak to the app the way curl
+    # does: no `Connection` header of its own.
+    import socket
+    import threading
+
+    srv = socket.socket()
+    srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    srv.bind(("127.0.0.1", 0))
+    srv.listen(1)
+    port = srv.getsockname()[1]
+    seen: dict[str, str] = {}
+
+    def serve():
+        conn, _ = srv.accept()
+        seen["request"] = conn.recv(8192).decode("latin-1")
+        conn.sendall(
+            b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nOK"
+        )
+        conn.close()
+
+    t = threading.Thread(target=serve, daemon=True)
+    t.start()
+    try:
+        status, body, ctype = gw.http_proxy(
+            "GET", "/", {"User-Agent": "curl/8.5.0", "Accept": "*/*"}, b"", port
+        )
+    finally:
+        t.join(timeout=5)
+        srv.close()
+
+    assert status == 200
+    assert body == b"OK"
+    assert ctype == "text/plain"
+    assert "connection:" not in seen["request"].lower(), seen["request"]
+
+
+def test_http_proxy_maps_empty_reply_to_upstream_protocol_error():
+    # A TCP accept is not readiness: docker-proxy accepts the connection while
+    # the app is still installing/starting and then closes it with no bytes
+    # (http.client → BadStatusLine). That must surface as an OSError subclass so
+    # the router's 503 path handles it instead of dying mid-request (which makes
+    # Caddy answer a bare 502).
+    import socket
+    import threading
+
+    srv = socket.socket()
+    srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    srv.bind(("127.0.0.1", 0))
+    srv.listen(1)
+    port = srv.getsockname()[1]
+
+    def serve():
+        conn, _ = srv.accept()
+        conn.recv(8192)
+        conn.close()  # empty reply: no status line
+
+    t = threading.Thread(target=serve, daemon=True)
+    t.start()
+    raised: BaseException | None = None
+    try:
+        gw.http_proxy("GET", "/", {}, b"", port)
+    except BaseException as e:  # noqa: BLE001 - the assertion below inspects it
+        raised = e
+    finally:
+        t.join(timeout=5)
+        srv.close()
+
+    assert isinstance(raised, OSError), f"expected an OSError, got {raised!r}"
+    assert isinstance(raised, gw.UpstreamProtocolError)
+
+
+def test_route_handler_503_on_upstream_protocol_error():
+    # BadStatusLine after a successful probe → diagnosable 503 JSON, never an
+    # empty reply (which is what BaseHTTPRequestHandler does when the exception
+    # escapes the handler).
+    pokes: list[int] = []
+    state = _route_state(pokes, True, gw.UpstreamProtocolError("BadStatusLine: "))
+    FakeHandler = _make_fake_handler(gw.make_handler(state), f"pr42.{BASE}")
+
+    h = FakeHandler()
+    h._answer_route()
+    assert ("status", 503) in h._sent
+    assert "BadStatusLine" in h.wfile.text
+
+
+def test_route_handler_retries_while_the_preview_boots():
+    # A booting preview answers protocol errors / 5xx for tens of seconds
+    # (measured ~60 s for the market app container). The router retries inside
+    # its boot budget instead of failing the first request.
+    pokes: list[int] = []
+    calls = {"n": 0}
+
+    def flaky_proxy(method, path, headers, body, port):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise gw.UpstreamProtocolError("BadStatusLine: ")
+        return (200, b"OK", "text/plain")
+
+    state = gw.GatewayState(
+        base_domain=BASE,
+        manager_path=Path("/mgr.py"),
+        python_bin="/usr/bin/python3",
+        poke=lambda pr, path, py: pokes.append(pr) or True,
+        prober=lambda port: True,
+        proxy=flaky_proxy,
+        boot_budget=5.0,
+        retry_poll=0.01,
+    )
+    FakeHandler = _make_fake_handler(gw.make_handler(state), f"pr42.{BASE}")
+
+    h = FakeHandler()
+    h._answer_route()
+    assert calls["n"] == 3
+    assert ("status", 200) in h._sent
+    assert h.wfile.text == "OK"
+
+
+def test_route_handler_retries_5xx_until_budget_expires():
+    # A warm-up 5xx is retried; if the upstream never recovers the client gets
+    # the upstream's real status (honest failure), not a silent success.
+    pokes: list[int] = []
+    calls = {"n": 0}
+
+    def always_500(method, path, headers, body, port):
+        calls["n"] += 1
+        return (500, b"Build Failed", "text/html")
+
+    state = gw.GatewayState(
+        base_domain=BASE,
+        manager_path=Path("/mgr.py"),
+        python_bin="/usr/bin/python3",
+        poke=lambda pr, path, py: pokes.append(pr) or True,
+        prober=lambda port: True,
+        proxy=always_500,
+        boot_budget=0.05,
+        retry_poll=0.01,
+    )
+    FakeHandler = _make_fake_handler(gw.make_handler(state), f"pr42.{BASE}")
+
+    h = FakeHandler()
+    h._answer_route()
+    assert calls["n"] > 1
+    assert ("status", 500) in h._sent
+    assert h.wfile.text == "Build Failed"
