@@ -178,6 +178,33 @@ jobs:
           target: '/home/${{ secrets.PREVIEW_VPS_USER }}/previews/pr-${{ github.event.pull_request.number }}/deploy-package'
           strip_components: 1
 
+      # Upstream (PlebeianApp/market) abandoned the ghcr.io/fiatjaf/nak image:
+      # the registry now denies pulls (anonymous manifest GET returns 401).
+      # Build nak from source on the VPS, pinned to the same commit upstream's
+      # e2e workflow uses (b6568388), and tag it market-nak:b6568388 for
+      # docker-compose. Cached via `docker image inspect` so repeat deploys on
+      # the same host skip the build.
+      - name: Build nak image on VPS (registry image is gone)
+        if: steps.secrets.outputs.previews_ready == 'true'
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
+        with:
+          host: ${{ secrets.PREVIEW_VPS_HOST }}
+          username: ${{ secrets.PREVIEW_VPS_USER }}
+          key: ${{ secrets.PREVIEW_VPS_SSH_KEY }}
+          fingerprint: ${{ secrets.PREVIEW_VPS_HOST_FINGERPRINT }}
+          script: |
+            set -euo pipefail
+            if docker image inspect market-nak:b6568388 >/dev/null 2>&1; then
+              echo "nak image already built"
+              exit 0
+            fi
+            cd /tmp
+            rm -rf nak-build
+            git clone https://github.com/fiatjaf/nak.git nak-build
+            cd nak-build
+            git checkout b65683886b58382890888fbdda90e5c2129df488
+            docker build -t market-nak:b6568388 .
+
       - name: Claim host-port offset (M6) then bring up services
         if: steps.secrets.outputs.previews_ready == 'true'
         uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
@@ -225,7 +252,7 @@ jobs:
                 depends_on:
                   - nak-relay
               nak-relay:
-                image: ghcr.io/fiatjaf/nak:latest
+                image: market-nak:b6568388
                 command: serve --hostname 0.0.0.0
                 ports:
                   - "${RELAY_PORT}:10547"
