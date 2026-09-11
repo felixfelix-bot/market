@@ -131,54 +131,50 @@ jobs:
           PREVIEW_CLOUDFLARE_ZONE_ID: ${{ secrets.PREVIEW_CLOUDFLARE_ZONE_ID }}
         run: |
           set -euo pipefail
-          # Materialise the deploy key. The byte shape of a GitHub secret
-          # depends on how it was stored (`gh secret set NAME < keyfile` keeps
-          # the trailing newline, a `--body "$(cat keyfile)"` store strips it),
-          # and a key whose last line is not newline-terminated makes ssh fail
-          # with the opaque `Load key "/tmp/tmp.XXXX": error in libcrypto`.
-          # write-ssh-key.sh owns the normalisation (real newlines, literal
-          # "\n" escapes, CRLF) and validates the result with ssh-keygen before
-          # the key is used, so the deploy never depends on the stored shape.
+          # provision.sh sources infra/preview-vps/ssh-pin.sh, which owns
+          # both the key materialisation (write-ssh-key.sh: the stored
+          # secret byte shape must not matter) and the pinned host-key
+          # verification, so this step no longer materialises the key
+          # itself.
           # See docs/ops/preview-deploy.md.
-          KEY_FILE=$(mktemp)
-          # Clean up the key file on exit (success OR failure — a bare rm at
-          # the end would be skipped under set -e if provisioning fails).
-          trap 'rm -f "$KEY_FILE"' EXIT
-          bash infra/preview-vps/write-ssh-key.sh "$KEY_FILE" <<<"${PREVIEW_VPS_SSH_KEY}"
-          export PREVIEW_VPS_SSH_KEY="$KEY_FILE"
-          # Run the idempotent provision script. It verifies the VPS host
-          # key against PREVIEW_VPS_HOST_FINGERPRINT before any key
-          # exchange, ships preview_manager.py + preview_gateway.py, writes
-          # manager.env (Cloudflare creds for DNS cleanup, chmod 600),
-          # installs the gateway + manager systemd units, and ensures
-          # Caddy has the on-demand-TLS ask endpoint, the JSON access log,
-          # and the *.test-market.orangesync.tech route → gateway router.
           bash infra/preview-vps/provision.sh
-          # $KEY_FILE is removed by the EXIT trap above, including after
-          # successful completion.
-
       - name: Ensure remote preview directory exists
         if: steps.secrets.outputs.previews_ready == 'true'
-        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
-        with:
-          host: ${{ secrets.PREVIEW_VPS_HOST }}
-          username: ${{ secrets.PREVIEW_VPS_USER }}
-          key: ${{ secrets.PREVIEW_VPS_SSH_KEY }}
-          fingerprint: ${{ secrets.PREVIEW_VPS_HOST_FINGERPRINT }}
-          script: |
-            mkdir -p "$HOME/previews/pr-${{ github.event.pull_request.number }}"
+        env:
+          PREVIEW_VPS_HOST: ${{ secrets.PREVIEW_VPS_HOST }}
+          PREVIEW_VPS_USER: ${{ secrets.PREVIEW_VPS_USER }}
+          PREVIEW_VPS_SSH_KEY: ${{ secrets.PREVIEW_VPS_SSH_KEY }}
+          PREVIEW_VPS_HOST_FINGERPRINT: ${{ secrets.PREVIEW_VPS_HOST_FINGERPRINT }}
+        run: |
+          set -euo pipefail
+          source infra/preview-vps/ssh-pin.sh
+          ssh_pin_init
+          ssh_pin_ssh 'mkdir -p "$HOME/previews/pr-${{ github.event.pull_request.number }}"'
 
+      # The appleboy ssh/scp actions are gone from this workflow: drone-ssh
+      # pins the host key by comparing the secret against the key the *Go*
+      # client happened to negotiate, and that client prefers ECDSA while this
+      # pipeline pins the ed25519 fingerprint — every run died with "ssh:host
+      # key fingerprint mismatch". ssh-pin.sh pins with OpenSSH instead
+      # (StrictHostKeyChecking=yes + HostKeyAlgorithms), the same way
+      # provision.sh always did. See infra/preview-vps/ssh-pin.sh.
       - name: Upload deploy package to VPS
         if: steps.secrets.outputs.previews_ready == 'true'
-        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634 # v0.1.7
-        with:
-          host: ${{ secrets.PREVIEW_VPS_HOST }}
-          username: ${{ secrets.PREVIEW_VPS_USER }}
-          key: ${{ secrets.PREVIEW_VPS_SSH_KEY }}
-          fingerprint: ${{ secrets.PREVIEW_VPS_HOST_FINGERPRINT }}
-          source: 'deploy-package/*'
-          target: '/home/${{ secrets.PREVIEW_VPS_USER }}/previews/pr-${{ github.event.pull_request.number }}/deploy-package'
-          strip_components: 1
+        env:
+          PREVIEW_VPS_HOST: ${{ secrets.PREVIEW_VPS_HOST }}
+          PREVIEW_VPS_USER: ${{ secrets.PREVIEW_VPS_USER }}
+          PREVIEW_VPS_SSH_KEY: ${{ secrets.PREVIEW_VPS_SSH_KEY }}
+          PREVIEW_VPS_HOST_FINGERPRINT: ${{ secrets.PREVIEW_VPS_HOST_FINGERPRINT }}
+        run: |
+          set -euo pipefail
+          source infra/preview-vps/ssh-pin.sh
+          ssh_pin_init
+          TARGET='previews/pr-${{ github.event.pull_request.number }}/deploy-package'
+          ssh_pin_ssh "mkdir -p \"\$HOME/${TARGET}\""
+          # tar over the pinned ssh connection == scp-action's contents-of-
+          # deploy-package upload (scp-action used source 'deploy-package/*'
+          # with strip_components: 1), without the third-party pinning.
+          tar -czf - -C deploy-package . | ssh_pin_ssh "tar -xzf - -C \"\$HOME/${TARGET}\""
 
       # Upstream (PlebeianApp/market) abandoned the ghcr.io/fiatjaf/nak image:
       # the registry now denies pulls (anonymous manifest GET returns 401).
@@ -188,80 +184,88 @@ jobs:
       # the same host skip the build.
       - name: Build nak image on VPS (registry image is gone)
         if: steps.secrets.outputs.previews_ready == 'true'
-        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
-        with:
-          host: ${{ secrets.PREVIEW_VPS_HOST }}
-          username: ${{ secrets.PREVIEW_VPS_USER }}
-          key: ${{ secrets.PREVIEW_VPS_SSH_KEY }}
-          fingerprint: ${{ secrets.PREVIEW_VPS_HOST_FINGERPRINT }}
-          script: |
-            set -euo pipefail
-            if docker image inspect market-nak:b6568388 >/dev/null 2>&1; then
-              echo "nak image already built"
-              exit 0
-            fi
-            cd /tmp
-            rm -rf nak-build
-            git clone https://github.com/fiatjaf/nak.git nak-build
-            cd nak-build
-            git checkout b65683886b58382890888fbdda90e5c2129df488
-            docker build -t market-nak:b6568388 .
+        env:
+          PREVIEW_VPS_HOST: ${{ secrets.PREVIEW_VPS_HOST }}
+          PREVIEW_VPS_USER: ${{ secrets.PREVIEW_VPS_USER }}
+          PREVIEW_VPS_SSH_KEY: ${{ secrets.PREVIEW_VPS_SSH_KEY }}
+          PREVIEW_VPS_HOST_FINGERPRINT: ${{ secrets.PREVIEW_VPS_HOST_FINGERPRINT }}
+        run: |
+          set -euo pipefail
+          source infra/preview-vps/ssh-pin.sh
+          ssh_pin_init
+          ssh_pin_ssh bash -s <<'REMOTE_NAK'
+          set -euo pipefail
+          if docker image inspect market-nak:b6568388 >/dev/null 2>&1; then
+            echo "nak image already built"
+            exit 0
+          fi
+          cd /tmp
+          rm -rf nak-build
+          git clone https://github.com/fiatjaf/nak.git nak-build
+          cd nak-build
+          git checkout b65683886b58382890888fbdda90e5c2129df488
+          docker build -t market-nak:b6568388 .
+          REMOTE_NAK
 
       - name: Claim host-port offset (M6) then bring up services
         if: steps.secrets.outputs.previews_ready == 'true'
-        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
-        with:
-          host: ${{ secrets.PREVIEW_VPS_HOST }}
-          username: ${{ secrets.PREVIEW_VPS_USER }}
-          key: ${{ secrets.PREVIEW_VPS_SSH_KEY }}
-          fingerprint: ${{ secrets.PREVIEW_VPS_HOST_FINGERPRINT }}
-          script: |
-            set -euo pipefail
-            PR_NUMBER="${{ github.event.pull_request.number }}"
-            APP_PORT="${{ steps.ports.outputs.app_port }}"
-            RELAY_PORT="${{ steps.ports.outputs.relay_port }}"
-            APP_DIR="$HOME/previews/pr-$PR_NUMBER"
-            cd "$APP_DIR"
+        env:
+          PREVIEW_VPS_HOST: ${{ secrets.PREVIEW_VPS_HOST }}
+          PREVIEW_VPS_USER: ${{ secrets.PREVIEW_VPS_USER }}
+          PREVIEW_VPS_SSH_KEY: ${{ secrets.PREVIEW_VPS_SSH_KEY }}
+          PREVIEW_VPS_HOST_FINGERPRINT: ${{ secrets.PREVIEW_VPS_HOST_FINGERPRINT }}
+        run: |
+          set -euo pipefail
+          source infra/preview-vps/ssh-pin.sh
+          ssh_pin_init
+          ssh_pin_ssh bash -s <<'REMOTE_UP'
+          set -euo pipefail
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          APP_PORT="${{ steps.ports.outputs.app_port }}"
+          RELAY_PORT="${{ steps.ports.outputs.relay_port }}"
+          APP_DIR="$HOME/previews/pr-$PR_NUMBER"
+          cd "$APP_DIR"
 
-            # ── Port-offset claim (M6) ──
-            # PRs congruent mod 100 (e.g. 1257 and 1357) share the same host
-            # port offset. Claim the marker in ~/previews/ports/<offset> BEFORE
-            # compose up; if another PR's preview holds the offset, the claim
-            # fails loudly and this step aborts instead of two deploy jobs
-            # racing on the same host ports (one compose up silently fails).
-            if ! python3 "$HOME/preview-infra/preview_manager.py" --claim-port-offset "$PR_NUMBER" --preview-root "$HOME/previews"; then
-              echo "FATAL: Port-offset collision — another preview holds offset ${{ steps.ports.outputs.pr_offset }} (PR congruent mod 100). Close that PR or wait for its preview to be torn down." >&2
-              exit 1
-            fi
+          # ── Port-offset claim (M6) ──
+          # PRs congruent mod 100 (e.g. 1257 and 1357) share the same host
+          # port offset. Claim the marker in ~/previews/ports/<offset> BEFORE
+          # compose up; if another PR's preview holds the offset, the claim
+          # fails loudly and this step aborts instead of two deploy jobs
+          # racing on the same host ports (one compose up silently fails).
+          if ! python3 "$HOME/preview-infra/preview_manager.py" --claim-port-offset "$PR_NUMBER" --preview-root "$HOME/previews"; then
+            echo "FATAL: Port-offset collision — another preview holds offset ${{ steps.ports.outputs.pr_offset }} (PR congruent mod 100). Close that PR or wait for its preview to be torn down." >&2
+            exit 1
+          fi
 
-            cat > docker-compose.yml <<EOF
-            services:
-              market-app:
-                image: oven/bun:latest
-                working_dir: /app
-                volumes:
-                  - ./deploy-package:/app
-                command: sh -c "bun install --production && bun run start:production"
-                ports:
-                  - "${APP_PORT}:3000"
-                environment:
-                  - NODE_ENV=production
-                  - PORT=3000
-                  - APP_RELAY_URL=ws://nak-relay:10547
-                  - APP_PRIVATE_KEY=e2e0000000000000000000000000000000000000000000000000000000000001
-                  - CVM_SERVER_KEY=e2e2222222222222222222222222222222222222222222222222222222222222
-                restart: unless-stopped
-                depends_on:
-                  - nak-relay
-              nak-relay:
-                image: market-nak:b6568388
-                command: serve --hostname 0.0.0.0
-                ports:
-                  - "${RELAY_PORT}:10547"
-                restart: unless-stopped
-            EOF
-            docker compose up -d --remove-orphans
-            docker compose ps
+          cat > docker-compose.yml <<EOF
+          services:
+            market-app:
+              image: oven/bun:latest
+              working_dir: /app
+              volumes:
+                - ./deploy-package:/app
+              command: sh -c "bun install --production && bun run start:production"
+              ports:
+                - "${APP_PORT}:3000"
+              environment:
+                - NODE_ENV=production
+                - PORT=3000
+                - APP_RELAY_URL=ws://nak-relay:10547
+                - APP_PRIVATE_KEY=e2e0000000000000000000000000000000000000000000000000000000000001
+                - CVM_SERVER_KEY=e2e2222222222222222222222222222222222222222222222222222222222222
+              restart: unless-stopped
+              depends_on:
+                - nak-relay
+            nak-relay:
+              image: market-nak:b6568388
+              command: serve --hostname 0.0.0.0
+              ports:
+                - "${RELAY_PORT}:10547"
+              restart: unless-stopped
+          EOF
+          docker compose up -d --remove-orphans
+          docker compose ps
+          REMOTE_UP
 
       # B1: The systemd timer on the VPS owns the preview lifecycle (idle
       # stop, recency ranking, closed-PR cleanup). CI must never run the
@@ -294,19 +298,19 @@ jobs:
           # GitHub Actions log redaction masks $CF_TOKEN automatically.
           LIST_RESPONSE=$(curl -sS -X GET \
             "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/dns_records?type=A&name=$SUBDOMAIN" \
-            -H "Authorization: Bearer $CF_TOKEN" \
+            -H "Authorization: Bearer ***" \
             -H "Content-Type: application/json")
           EXISTING_IDS=$(echo "$LIST_RESPONSE" | jq -r '.result[].id // empty')
           for rid in $EXISTING_IDS; do
             echo "Deleting existing A record $rid for $SUBDOMAIN"
             curl -sS -X DELETE \
               "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/dns_records/$rid" \
-              -H "Authorization: Bearer $CF_TOKEN" >/dev/null
+              -H "Authorization: Bearer ***" >/dev/null
           done
           echo "Creating A record $SUBDOMAIN → $VPS_IP"
           curl -sS -X POST \
             "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/dns_records" \
-            -H "Authorization: Bearer $CF_TOKEN" \
+            -H "Authorization: Bearer ***" \
             -H "Content-Type: application/json" \
             --data "{\"type\":\"A\",\"name\":\"$SUBDOMAIN\",\"content\":\"$VPS_IP\",\"ttl\":60,\"proxied\":false}" \
             | jq .
@@ -404,6 +408,9 @@ jobs:
       pull-requests: write
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Compute subdomain
         id: ports
         run: |
@@ -411,25 +418,29 @@ jobs:
           echo "subdomain=pr${PR_NUMBER}.test-market.orangesync.tech" >> "$GITHUB_OUTPUT"
 
       - name: Release port offset, stop containers, clean up VPS directory
-        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
-        with:
-          host: ${{ secrets.PREVIEW_VPS_HOST }}
-          username: ${{ secrets.PREVIEW_VPS_USER }}
-          key: ${{ secrets.PREVIEW_VPS_SSH_KEY }}
-          fingerprint: ${{ secrets.PREVIEW_VPS_HOST_FINGERPRINT }}
-          script: |
-            set -uo pipefail
-            PR_NUMBER="${{ github.event.pull_request.number }}"
-            APP_DIR="$HOME/previews/pr-$PR_NUMBER"
-            # Release the shared host-port offset marker (M6) so a future PR
-            # congruent mod 100 can claim it. Owner-checked: a marker held by
-            # a different PR is left alone (and logged) rather than deleted.
-            python3 "$HOME/preview-infra/preview_manager.py" --release-port-offset "$PR_NUMBER" --preview-root "$HOME/previews" || true
-            if [ -f "$APP_DIR/docker-compose.yml" ]; then
-              cd "$APP_DIR"
-              docker compose down --remove-orphans --volumes || true
-            fi
-            rm -rf "$APP_DIR"
+        env:
+          PREVIEW_VPS_HOST: ${{ secrets.PREVIEW_VPS_HOST }}
+          PREVIEW_VPS_USER: ${{ secrets.PREVIEW_VPS_USER }}
+          PREVIEW_VPS_SSH_KEY: ${{ secrets.PREVIEW_VPS_SSH_KEY }}
+          PREVIEW_VPS_HOST_FINGERPRINT: ${{ secrets.PREVIEW_VPS_HOST_FINGERPRINT }}
+        run: |
+          set -euo pipefail
+          source infra/preview-vps/ssh-pin.sh
+          ssh_pin_init
+          ssh_pin_ssh bash -s <<'REMOTE_TEARDOWN'
+          set -uo pipefail
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          APP_DIR="$HOME/previews/pr-$PR_NUMBER"
+          # Release the shared host-port offset marker (M6) so a future PR
+          # congruent mod 100 can claim it. Owner-checked: a marker held by
+          # a different PR is left alone (and logged) rather than deleted.
+          python3 "$HOME/preview-infra/preview_manager.py" --release-port-offset "$PR_NUMBER" --preview-root "$HOME/previews" || true
+          if [ -f "$APP_DIR/docker-compose.yml" ]; then
+            cd "$APP_DIR"
+            docker compose down --remove-orphans --volumes || true
+          fi
+          rm -rf "$APP_DIR"
+          REMOTE_TEARDOWN
 
       - name: Delete Cloudflare DNS record
         env:
@@ -440,14 +451,14 @@ jobs:
           set -uo pipefail
           LIST_RESPONSE=$(curl -sS -X GET \
             "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/dns_records?type=A&name=$SUBDOMAIN" \
-            -H "Authorization: Bearer $CF_TOKEN" \
+            -H "Authorization: Bearer ***" \
             -H "Content-Type: application/json")
           EXISTING_IDS=$(echo "$LIST_RESPONSE" | jq -r '.result[].id // empty')
           for rid in $EXISTING_IDS; do
             echo "Deleting DNS record $rid for $SUBDOMAIN"
             curl -sS -X DELETE \
               "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/dns_records/$rid" \
-              -H "Authorization: Bearer $CF_TOKEN" >/dev/null
+              -H "Authorization: Bearer ***" >/dev/null
           done
 
       - name: Update PR comment (torn down)
