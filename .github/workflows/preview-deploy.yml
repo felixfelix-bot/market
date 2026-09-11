@@ -131,18 +131,20 @@ jobs:
           PREVIEW_CLOUDFLARE_ZONE_ID: ${{ secrets.PREVIEW_CLOUDFLARE_ZONE_ID }}
         run: |
           set -euo pipefail
-          # Write the SSH key to a temp file for scp/ssh.
-          # Use printf (not echo) to avoid trailing newline which corrupts
-          # the PEM key format and causes "hostname contains invalid
-          # characters" errors from ssh.
+          # Materialise the deploy key. The byte shape of a GitHub secret
+          # depends on how it was stored (`gh secret set NAME < keyfile` keeps
+          # the trailing newline, a `--body "$(cat keyfile)"` store strips it),
+          # and a key whose last line is not newline-terminated makes ssh fail
+          # with the opaque `Load key "/tmp/tmp.XXXX": error in libcrypto`.
+          # write-ssh-key.sh owns the normalisation (real newlines, literal
+          # "\n" escapes, CRLF) and validates the result with ssh-keygen before
+          # the key is used, so the deploy never depends on the stored shape.
+          # See docs/ops/preview-deploy.md.
           KEY_FILE=$(mktemp)
           # Clean up the key file on exit (success OR failure — a bare rm at
           # the end would be skipped under set -e if provisioning fails).
           trap 'rm -f "$KEY_FILE"' EXIT
-          printf '%s' "$PREVIEW_VPS_SSH_KEY" > "$KEY_FILE"
-          # Convert literal \n to real newlines (GitHub secrets may escape them)
-          sed -i 's/\\n/\n/g' "$KEY_FILE"
-          chmod 600 "$KEY_FILE"
+          bash infra/preview-vps/write-ssh-key.sh "$KEY_FILE" <<<"${PREVIEW_VPS_SSH_KEY}"
           export PREVIEW_VPS_SSH_KEY="$KEY_FILE"
           # Run the idempotent provision script. It verifies the VPS host
           # key against PREVIEW_VPS_HOST_FINGERPRINT before any key
