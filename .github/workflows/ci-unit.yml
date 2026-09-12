@@ -46,6 +46,33 @@ jobs:
       - name: Run unit tests
         run: bun run test:unit
 
+      # Hermetic shell regressions for the preview-deploy infrastructure: they
+      # stub ssh/ssh-keyscan and only use local ssh-keygen, so they never touch
+      # the network or the VPS. preview-request.sh + require-secrets.sh guard
+      # the workflow_run hand-off (fork-PR secret isolation) and the
+      # early-fail missing-secret path.
+      - name: Run preview-infra shell tests
+        run: |
+          bash infra/preview-vps/test_write_ssh_key.sh
+          bash infra/preview-vps/test_ssh_pin.sh
+          bash infra/preview-vps/test_preview_request.sh
+          bash infra/preview-vps/test_require_secrets.sh
+          bash infra/preview-vps/test_workflow_pattern.sh
+
+      # Hermetic python regressions for the preview-deploy infrastructure
+      # (pure functions + injected fakes: no network, no docker, no VPS).
+      # Includes reconcile_caddyfile.py, which owns the preview route in the
+      # shared VPS Caddyfile.
+      - name: Run preview-infra python tests
+        run: |
+          set -euo pipefail
+          python3 -m venv /tmp/preview-infra-venv
+          /tmp/preview-infra-venv/bin/pip install --quiet --disable-pip-version-check pytest
+          /tmp/preview-infra-venv/bin/python -m pytest -q \
+            infra/preview-vps/test_reconcile_caddyfile.py \
+            infra/preview-vps/test_preview_manager.py \
+            infra/preview-vps/test_preview_gateway.py
+
       - name: Run integration tests with local relay and currency server
         run: |
           set -euo pipefail
