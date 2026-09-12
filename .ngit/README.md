@@ -1,4 +1,3 @@
-
 ## Deliberately not run
 
 `tsc --noEmit` is not part of this workflow: it reports
