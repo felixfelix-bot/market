@@ -39,6 +39,18 @@ build completes, and the PR check list shows **Preview Collect** as the
 check — the deploy run reports on the Actions tab and via the PR
 comment, not as a second PR check.
 
+**Dormancy until merge (GitHub rule).** A `workflow_run` trigger only
+fires when the workflow file exists on the **default branch**. Until
+this two-workflow stack merges, **Preview Deploy does not run at all**
+for PRs — there is no deploy run on the Actions tab and no PR comment;
+the only PR-visible half is Preview Collect. That absence is expected
+and masks nothing: the privileged half simply cannot execute until its
+file lands on the default branch. The first live exercise of the
+deploy/teardown path is the first `pull_request` activity against the
+default branch after this stack merges (the PR that carries the change
+itself gets collector runs only — including its own `closed` run, which
+surfaces to the merged workflow as a teardown request).
+
 **Trust boundary (security-critical).** The privileged workflow executes
 ONLY default-branch code — its checkout is the workflow_run default (the
 default-branch commit), never `github.event.workflow_run.head_sha` (the
@@ -389,3 +401,14 @@ resolved IPs, headers and body it got. Re-run the workflow once the host
 answers; nothing needs reconfiguring. A red Health check whose body is the nsite
 gateway's `Invalid address` page is **not** an outage: it is the shared-Caddyfile
 routing defect described above, repaired by the reconcile step on the next run.
+
+**Third outcome before merge: no deploy run at all.** While
+`preview-deploy.yml` exists only on a PR branch (see "Dormancy until
+merge" above), the deploy job's expected state is _dormant_ — distinct
+from both a graceful skip and an explicit failure, and impossible to
+mask with `continue-on-error` because the privileged workflow never
+executes. Diagnose it as: Preview Collect completed green (a
+`preview-bundle` artifact exists) yet no Preview Deploy run appears on
+the Actions tab for that head. Do not read dormancy as an outage signal;
+outage evidence (unreachable vs missing secret vs red health) can only
+come from a run that actually started, i.e. after merge.
