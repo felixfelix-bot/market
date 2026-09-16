@@ -65,8 +65,14 @@ export function mergeNdkEventSets(...eventCollections: Array<ReadonlyArray<NDKEv
 	return new Set(eventsByKey.values())
 }
 
-/** Signature-verify raw events, then collapse them by coordinate (latest wins). */
-function rehydrateAndMergeNdkEvents(ndk: NdkEventContext, rawEvents: NostrEvent[]): Set<NDKEvent> {
+/**
+ * Signature-verify raw events, then collapse them by coordinate (latest wins).
+ *
+ * Raw events collected through a transport other than `fetchNdkEventSet` (the
+ * loader-backed bounded transport in `authorRelayLoader.ts`) MUST merge through this
+ * helper, so verification and ordering semantics do not fork per transport.
+ */
+export function rehydrateAndMergeNdkEvents(ndk: NdkEventContext, rawEvents: NostrEvent[]): Set<NDKEvent> {
 	const verified: NDKEvent[] = []
 	for (const event of rawEvents) {
 		const ndkEvent = rehydrateVerifiedNdkEvent(ndk, event)

@@ -37,6 +37,13 @@
  * - **merge**: per-relay results collapse through the seam's coordinate-level
  *   latest-wins rule (`mergeNdkEventSets`), so ordering semantics do not fork
  *   per relay class.
+ * - **transport**: the per-relay fetches run through the loader-backed transport in
+ *   `authorRelayLoader.ts`. A read an address pointer can express (the kind-0
+ *   profile read, the kind-17375 wallet read) goes through the loader, which derives
+ *   the filter from the pointer and drops an event a relay returns for a *different*
+ *   coordinate; a `#p` inbox read, which no pointer can express, uses the same pool
+ *   directly. The bounds above stay hand-rolled there — no `applesauce-loaders`
+ *   loader can express the cap, the serial rule or the per-relay deadline.
  *
  * No new egress happens when the flag is OFF, when the purpose is an authority
  * read, or when the author declared no usable relays: the pinned result stands.
@@ -47,10 +54,18 @@
  * disclosure finite and legible.
  */
 import { applesauceIo } from './io'
-import { fetchNdkEventSet, mergeNdkEventSets, type NDKEvent, type NDKFilter } from './ndk-events'
+import { fetchNdkEventSet, mergeNdkEventSets, rehydrateAndMergeNdkEvents, type NDKEvent, type NDKFilter } from './ndk-events'
 import { isAuthorRelayReadAllowed, isExternalAuthorReadsEnabledFromConfig, type AuthorRelayReadPurpose } from './authorRelayPolicy'
 import { configStore } from '@/lib/stores/config'
-import type { NostrIo } from './io'
+import {
+	addressPointerForRead,
+	boundedRunDeadlineMs,
+	createBoundedRelayPool,
+	loadAddressPointerEvents,
+	loadFilterEvents,
+	withDeadline,
+} from './authorRelayLoader'
+import type { NostrFilter, NostrIo } from './io'
 
 /** Hard cap on author relays contacted for a single read. */
 export const MAX_AUTHOR_RELAYS_PER_READ = 3
@@ -64,9 +79,6 @@ export const AUTHOR_RELAY_TIMEOUT_MS = 3_000
 export const MAX_DISTINCT_AUTHOR_RELAYS_PER_SESSION = 12
 /** TTL for session relay admissions and cached read results. */
 export const AUTHOR_RELAY_SESSION_TTL_MS = 10 * 60 * 1000
-
-// Bound to Node's timer type so the module does not depend on DOM lib types.
-type TimerHandle = ReturnType<typeof setTimeout>
 
 /** Structural shape of a NIP-65 declaration (see `src/publish/relay-list.tsx`). */
 export interface AuthorRelayPreference {
@@ -353,23 +365,6 @@ function authorRelayReadCacheKey(request: AuthorRelayReadRequest): string {
 	return `${request.purpose}:${request.authorPubkey}:${serialized}`
 }
 
-/** Resolve `null` when a relay fetch exceeds its deadline or rejects. */
-function withDeadline<T>(promise: Promise<T>, timeoutMs: number): Promise<T | null> {
-	return new Promise<T | null>((resolve) => {
-		const timer: TimerHandle = setTimeout(() => resolve(null), timeoutMs)
-		promise.then(
-			(value) => {
-				clearTimeout(timer)
-				resolve(value)
-			},
-			() => {
-				clearTimeout(timer)
-				resolve(null)
-			},
-		)
-	})
-}
-
 const noEvents = () => new Set<NDKEvent>()
 
 /**
@@ -453,19 +448,30 @@ async function runBoundedRead(
 		return { events: noEvents(), source: 'session-cap', consultedRelays: [] }
 	}
 
-	// Serial, bounded execution: one relay at a time, each with its own deadline.
-	const collected: NDKEvent[][] = []
+	// Transport: every author-relay connection this run opens goes through the pool —
+	// serial, one deadline per relay, clamped to the relays the session admitted. A
+	// read the address pointer can express goes through the loader, which derives the
+	// filter from that pointer and drops an event a relay returns for another
+	// coordinate; a `#p` filter read is not pointer-expressible and uses the pool
+	// directly. Neither replaces a bound: see `authorRelayLoader.ts` for what each
+	// loader family cannot express.
 	const consultedRelays: string[] = []
-	for (const relayUrl of admitted) {
-		consultedRelays.push(relayUrl)
-		const events = await withDeadline(
-			fetchNdkEventSet(deps.io, deps.ndk, request.filter, { relayUrls: [relayUrl], timeoutMs: perRelayTimeoutMs }),
-			perRelayTimeoutMs,
-		)
-		if (events && events.size > 0) collected.push(Array.from(events))
-	}
+	const pool = createBoundedRelayPool({
+		admittedRelays: admitted,
+		perRelayTimeoutMs,
+		fetchRawEvents: (relayUrls, filters) => deps.io.fetchEvents(filters, { relayUrls, timeoutMs: perRelayTimeoutMs }),
+		onRelayContacted: (relayUrl) => consultedRelays.push(relayUrl),
+	})
 
-	const merged = mergeNdkEventSets(...collected)
+	const pointer = addressPointerForRead(request.filter)
+	const rawEvents = await withDeadline(
+		pointer ? loadAddressPointerEvents(pool, pointer, { extraRelays: admitted }) : loadFilterEvents(pool, admitted, request.filter),
+		boundedRunDeadlineMs(perRelayTimeoutMs, admitted.length),
+	)
+
+	// The loader path returns raw events: verification and the coordinate-level
+	// latest-wins merge stay at the seam, exactly as on the pinned read.
+	const merged = rehydrateAndMergeNdkEvents(deps.ndk, rawEvents ?? [])
 	session.setCached(cacheKey, Array.from(merged), now())
 	return { events: merged, source: 'author-relays', consultedRelays }
 }

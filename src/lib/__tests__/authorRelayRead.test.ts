@@ -17,13 +17,13 @@
  *    read again does not stay resident holding its events;
  *  - authority reads NEVER consult author relays, flag ON or not.
  *
- * Every event here is a real `finalizeEvent`-signed event; the seam port is a
- * local recorder (no network) and the NDK context is a minimal stub, so this
- * file carries no `nostr-dev-kit` import and does not perturb the NDK
- * footprint guard.
+ * Every event here is a real `finalizeEvent`-signed event, signed by the author the
+ * read names; the seam port is a local recorder (no network) and the NDK context is a
+ * minimal stub, so this file carries no `nostr-dev-kit` import and does not perturb
+ * the NDK footprint guard.
  */
 import { describe, expect, test } from 'bun:test'
-import { finalizeEvent } from 'nostr-tools'
+import { finalizeEvent, getPublicKey } from 'nostr-tools'
 import type { NostrEvent } from 'nostr-tools/pure'
 
 import type { FetchOptions, NostrFilter } from '@/lib/nostr/io'
@@ -39,8 +39,14 @@ import {
 	type AuthorRelayReadOutcome,
 } from '@/lib/nostr/authorRelayRead'
 
-const AUTHOR_PUBKEY = 'a1'.repeat(32)
 const TEST_SECRET_KEY = new Uint8Array(32).fill(7)
+/**
+ * The author every fixture is signed by — a relay that answers a read naming author
+ * X with an event signed by someone else has not answered that read. The
+ * address-pointer transport (`authorRelayLoader.ts`) drops such an event on the
+ * pointer match, so the fixtures sign with the requested author's key.
+ */
+const AUTHOR_PUBKEY = getPublicKey(TEST_SECRET_KEY)
 
 const PROFILE_FILTER: NostrFilter = { kinds: [0], authors: [AUTHOR_PUBKEY] }
 
