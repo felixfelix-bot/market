@@ -227,11 +227,12 @@ export const fetchCollectionById = async (id: string): Promise<NDKEvent | null> 
 }
 
 /**
- * Gets the collection title from an event
- * Returns empty string if no title tag exists
+ * Gets the collection title from an event.
+ * Falls back to 'Untitled Collection' when no (non-empty) title tag exists —
+ * every caller renders the value directly, so it must never be empty.
  */
 export const getCollectionTitle = (event: NDKEvent | null): z.infer<typeof CollectionTitleTagSchema>[1] =>
-	event?.tags.find((t) => t[0] === 'title')?.[1] || ''
+	event?.tags.find((t) => t[0] === 'title')?.[1] || 'Untitled Collection'
 
 /**
  * Get the collection summary from an event
