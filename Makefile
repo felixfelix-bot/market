@@ -2,7 +2,10 @@
         dev build start format test test-local check-deploy-env help \
         test-headed test-ui test-debug
 
-include deploy.env
+# deploy.env is gitignored (copy deploy.env.example). Optional here so that
+# local/test targets work without it; deploy targets still require it via
+# check-deploy-env.
+-include deploy.env
 export
 
 # ---------------------------------------------------------------------------
