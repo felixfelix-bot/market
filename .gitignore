@@ -10,6 +10,9 @@ out
 dist
 *.tgz
 
+# local nak binary (install from https://github.com/fiatjaf/nak)
+nak-real
+
 # code coverage
 coverage
 *.lcov
