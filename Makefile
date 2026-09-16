@@ -42,7 +42,7 @@ test:
 	@echo "==> Waiting for relay on port 10547..."
 	@while ! lsof -i :10547 > /dev/null 2>&1; do sleep 0.5; done
 	@sleep 1
-	PATH="/home/jq/.bun/bin:$$PATH" NODE_OPTIONS='--dns-result-order=ipv4first' bunx playwright test --config=e2e-new/playwright.config.ts; \
+	PATH="$$HOME/.bun/bin:$$PATH" NODE_OPTIONS='--dns-result-order=ipv4first' bunx playwright test --config=e2e-new/playwright.config.ts; \
 		EXIT=$$?; \
 		kill $$(lsof -t -i :10547) 2>/dev/null || true; \
 		exit $$EXIT
@@ -53,16 +53,16 @@ test-headed:
 	@echo "==> Waiting for relay on port 10547..."
 	@while ! lsof -i :10547 > /dev/null 2>&1; do sleep 0.5; done
 	@sleep 1
-	PATH="/home/jq/.bun/bin:$$PATH" NODE_OPTIONS='--dns-result-order=ipv4first' bunx playwright test --config=e2e-new/playwright.config.ts --headed; \
+	PATH="$$HOME/.bun/bin:$$PATH" NODE_OPTIONS='--dns-result-order=ipv4first' bunx playwright test --config=e2e-new/playwright.config.ts --headed; \
 		EXIT=$$?; \
 		kill $$(lsof -t -i :10547) 2>/dev/null || true; \
 		exit $$EXIT
 
 test-ui:
-	PATH="/home/jq/.bun/bin:$$PATH" NODE_OPTIONS='--dns-result-order=ipv4first' bunx playwright test --config=e2e-new/playwright.config.ts --ui
+	PATH="$$HOME/.bun/bin:$$PATH" NODE_OPTIONS='--dns-result-order=ipv4first' bunx playwright test --config=e2e-new/playwright.config.ts --ui
 
 test-debug:
-	PATH="/home/jq/.bun/bin:$$PATH" NODE_OPTIONS='--dns-result-order=ipv4first' bunx playwright test --config=e2e-new/playwright.config.ts --debug
+	PATH="$$HOME/.bun/bin:$$PATH" NODE_OPTIONS='--dns-result-order=ipv4first' bunx playwright test --config=e2e-new/playwright.config.ts --debug
 
 # ---------------------------------------------------------------------------
 # Deployment: localhost
@@ -108,12 +108,12 @@ test-local: check-deploy-env
 	@sleep 1
 	@echo "==> Running E2E tests on localhost..."
 	@echo "    Seeding relay..."
-	@PATH="/home/jq/.bun/bin:$$PATH" bun e2e-new/seed-relay.ts
+	@PATH="$$HOME/.bun/bin:$$PATH" bun e2e-new/seed-relay.ts
 	@echo "    Clearing port 34567..."
 	@fuser -k 34567/tcp 2>/dev/null || true
 	@sleep 1
 	@echo "    Starting app server..."
-	@bash -c 'export PATH="/home/jq/.bun/bin:$PATH" && export APP_RELAY_URL=ws://localhost:10547 && export APP_PRIVATE_KEY=e2e0000000000000000000000000000000000000000000000000000000000001 && export PORT=34567 && bun dev' & \
+	@bash -c 'export PATH="$$HOME/.bun/bin:$PATH" && export APP_RELAY_URL=ws://localhost:10547 && export APP_PRIVATE_KEY=e2e0000000000000000000000000000000000000000000000000000000000001 && export PORT=34567 && bun dev' & \
 	APP_PID=$$!; \
 	echo "    Waiting for app settings to load..."; \
 	for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do \
@@ -125,7 +125,7 @@ test-local: check-deploy-env
 		echo "    Waiting for app initialization... ($$i/15)"; \
 		sleep 2; \
 	done; \
-	PATH="/home/jq/.bun/bin:$$PATH" NODE_OPTIONS='--dns-result-order=ipv4first' bunx playwright test --config=e2e-new/playwright.config.ts; \
+	PATH="$$HOME/.bun/bin:$$PATH" NODE_OPTIONS='--dns-result-order=ipv4first' bunx playwright test --config=e2e-new/playwright.config.ts; \
 	EXIT=$$?; \
 	kill $$APP_PID 2>/dev/null || true; \
 	kill $$(lsof -t -i :10547) 2>/dev/null || true; \
