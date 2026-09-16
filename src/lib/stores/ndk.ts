@@ -634,7 +634,10 @@ export const ndkActions = {
 		const relaySet = getWriteRelaySet()
 
 		const kind = event.kind
-		const isReplaceable = (kind >= 10000 && kind < 20000) || (kind >= 30000 && kind < 40000)
+		// NIP-16 replaceable kinds: 0 (metadata), 3 (contacts), 10000-19999, 30000-39999.
+		// Must match NDKEvent#isReplaceable() so relay-side last-wins/dedup applies.
+		const isReplaceable =
+			typeof kind === 'number' && (kind === 0 || kind === 3 || (kind >= 10000 && kind < 20000) || (kind >= 30000 && kind < 40000))
 
 		if (isReplaceable) {
 			return event.publishReplaceable(relaySet)
