@@ -35,7 +35,6 @@ import {
 	AUCTION_MIN_BID_LEG_SATS,
 	AUCTION_MIN_BID_SATS,
 	AUCTION_PATH_RELEASE_KIND,
-	requiresDleqForAuction,
 	type PathReleaseReason,
 	type Nut7ProofState,
 } from '@/lib/auction/constants'
@@ -168,18 +167,6 @@ export interface AuctionBidFormData {
 	 * bidder actually had any sats there.
 	 */
 	mintCandidates: string[]
-	/**
-	 * ADR-0011 Blocker 3/4: the auction's CANONICAL DLEQ requirement, read
-	 * from the signed `dleq_required` tag on the kind-30408 auction event
-	 * (`parseAuctionEvent(...).value.dleqRequired`). This is the protocol
-	 * truth the bidder must honor: when true the bid locks with a DLEQ
-	 * requirement on the locked outputs and publishes `dleq_proof` tags.
-	 *
-	 * Left optional for legacy callers that predate the tag; when absent the
-	 * publish path falls back to the `start_at` rollout boundary
-	 * (`requiresDleqForAuction`) as an explicit compatibility rule.
-	 */
-	dleqRequired?: boolean
 }
 
 // `AuctionPathGrantResponse`, `openAuctionPathOracleClient`,
@@ -336,13 +323,6 @@ export const createAuctionEvent = async (formData: AuctionFormData, signer: NDKS
 		['p2pk_xpub', p2pkXpub],
 		['settlement_policy', AUCTION_SETTLEMENT_POLICY],
 		['schema', 'auction_v1'],
-		// Canonical DLEQ activation (ADR-0011 Blocker 4). The signed
-		// `dleq_required` tag is the protocol truth — two clients reading
-		// the same event derive the same requirement regardless of their
-		// deploy-time boundary config, and a seller cannot backdate
-		// `start_at` to change it. Emitted at publish time from the same
-		// boundary decision the publish gate enforces.
-		['dleq_required', requiresDleqForAuction(validated.startAt) ? '1' : '0'],
 		...imageTags,
 		...categoryTags,
 		...specTags,
@@ -360,7 +340,7 @@ export const publishAuction = async (formData: AuctionFormData, signer: NDKSigne
 	// ADR-0011 Decision 6 — reject post-rollout auctions whose allowlisted
 	// mints do not advertise NUT-12 DLEQ support (Decision 4). Runs before any
 	// event is built or signed so a non-DLEQ auction is never published.
-	await assertAuctionMintsSupportDleq(validated.startAt, validated.trustedMints)
+	await assertAuctionMintsSupportDleq(validated.trustedMints)
 
 	const event = await createAuctionEvent(formData, signer, ndk, auctionId)
 	await event.sign(signer)
@@ -514,13 +494,6 @@ export const publishAuctionBid = async (formData: AuctionBidFormData, signer: ND
 	if (now >= formData.auctionEffectiveEndAt) throw new Error('Auction already ended')
 	if (now >= formData.auctionLocktimeAt) throw new Error('Auction has reached its hard bidding cutoff')
 
-	// ADR-0011 Blocker 3/4 — the DLEQ requirement is the auction's CANONICAL
-	// signed `dleq_required` tag, NOT a deployment-controlled `start_at`
-	// boundary. `formData.dleqRequired` is set by the bidder UI from the
-	// parsed auction event. Only legacy callers that predate the tag fall back
-	// to the boundary as an explicit compatibility rule.
-	const dleqRequired = formData.dleqRequired ?? requiresDleqForAuction(formData.auctionStartAt)
-
 	const bidderUser = await signer.user()
 	const bidderPubkey = bidderUser.pubkey
 
@@ -637,11 +610,6 @@ export const publishAuctionBid = async (formData: AuctionBidFormData, signer: ND
 			locktime,
 			refundPubkey,
 			lockPubkey: childPubkey,
-			// ADR-0011 Blocker 3 — thread the auction's canonical DLEQ
-			// requirement into the lock boundary so a legacy non-DLEQ balance
-			// can still bid on a grandfathered auction, while a DLEQ-required
-			// auction validates the freshly issued P2PK outputs carry DLEQ.
-			dleqRequired,
 			auctionEventId: formData.auctionEventId,
 			auctionCoordinates: formData.auctionCoordinates,
 			sellerPubkey: formData.sellerPubkey,
@@ -701,17 +669,9 @@ export const publishAuctionBid = async (formData: AuctionBidFormData, signer: ND
 		// `dleq_proof` tags (one per locked proof, parallel to lock_secret/
 		// proof_y). Build them from the locked proofs' DLEQ metadata;
 		// `buildDleqProofs` is fail-closed and throws if any locked proof
-		// lacks a DLEQ proof (or its blinding factor `r`), so a DLEQ-required
-		// bid can never be published with unverifiable collateral.
-		// PR #1280 round 3: this MUST consume the SAME canonical signed
-		// `dleq_required` decision the lock above consumed (`dleqRequired`),
-		// NOT a fresh `start_at` boundary lookup — otherwise the lock and the
-		// published bid can disagree (a grandfathered auction would lock
-		// legacy non-DLEQ outputs and then throw here; a signed-required
-		// pre-boundary auction would lock DLEQ outputs but omit the tags).
-		// Grandfathered (non-required) auctions omit the field entirely,
-		// preserving the legacy non-DLEQ path.
-		const dleqProofs = dleqRequired ? buildDleqProofs(proofs) : undefined
+		// lacks a DLEQ proof (or its blinding factor `r`). DLEQ is required
+		// for every bid, so this always runs.
+		const dleqProofs = buildDleqProofs(proofs)
 
 		// Step 7 — publish kind-1023. `amount` is the cumulative bid value
 		// (what the validator uses for the min-increment check); the lock
@@ -1670,10 +1630,9 @@ export const publishAuctionSettlement = async (formData: AuctionSettlementFormDa
 			.map((r) => r.value)
 
 		const rnmNut7States = await fetchNut7StatesForBids(rnmParsedBids)
-		// ADR-0011 Blocker 1: the reserve_not_met path must also feed DLEQ
-		// evidence — otherwise DLEQ-required bids are all pending and the
-		// shortcut is never reached.
-		const rnmDleqKeysets = parsedAuction.dleqRequired ? await fetchDleqKeysetsForBids(rnmParsedBids, parsedAuction.mints) : undefined
+		// ADR-0011: DLEQ is unconditional, so the reserve_not_met path always
+		// gathers keyset evidence — otherwise every bid stays pending.
+		const rnmDleqKeysets = await fetchDleqKeysetsForBids(rnmParsedBids, parsedAuction.mints)
 		const rnmValidated = computeValidatedBids({
 			auction: parsedAuction,
 			bids: rnmParsedBids,
@@ -1760,11 +1719,10 @@ export const publishAuctionSettlement = async (formData: AuctionSettlementFormDa
 		.map((r) => r.value)
 
 	const nut7States = await fetchNut7StatesForBids(parsedBids)
-	// ADR-0011 Blocker 1: the settlement path is a high-sensitivity publish
-	// action — it must independently gather the DLEQ keysets for DLEQ-required
-	// auctions. Without the evidence, `computeValidatedBids` treats every bid
-	// as pending and the seller cannot settle (fail-safe, not fail-open).
-	const settlementDleqKeysets = parsedAuction.dleqRequired ? await fetchDleqKeysetsForBids(parsedBids, parsedAuction.mints) : undefined
+	// ADR-0011: the settlement path always gathers the DLEQ keysets — without
+	// the evidence, `computeValidatedBids` treats every bid as pending and the
+	// seller cannot settle (fail-safe, not fail-open).
+	const settlementDleqKeysets = await fetchDleqKeysetsForBids(parsedBids, parsedAuction.mints)
 	const validatedBids = computeValidatedBids({
 		auction: parsedAuction,
 		bids: parsedBids,
