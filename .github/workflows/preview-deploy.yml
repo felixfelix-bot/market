@@ -448,6 +448,49 @@ jobs:
         if: steps.secrets.outputs.previews_ready == 'true'
         run: sleep 15
 
+      # The preview's nak relay starts EMPTY, so the app served
+      # "/setup — no app settings found" and had no products or orders to
+      # exercise. Seed the minimum settings (kinds 31990/30000/10002) so the
+      # preview boots configured, then restart the app: it caches app settings
+      # and the admin list at startup (the same reason e2e/seed-relay.ts runs
+      # before the dev server). Full dev fixture data is opt-in via the
+      # repository variable PREVIEW_SEED_FULL.
+      - name: Seed preview relay (app settings, optional dev data)
+        if: steps.secrets.outputs.previews_ready == 'true'
+        env:
+          APP_RELAY_URL: wss://${{ steps.ports.outputs.subdomain }}/relay
+          APP_PRIVATE_KEY: e2e0000000000000000000000000000000000000000000000000000000000001
+        run: |
+          set -uo pipefail
+          # DNS + Caddy converge over the 15s wait above, but a cold cert issue
+          # can still race this step; retry the seed before giving up.
+          SEED_OUTPUT=""
+          for attempt in $(seq 1 6); do
+            if SEED_OUTPUT="$(bun run scripts/seed-preview-settings.ts 2>&1)"; then
+              echo "$SEED_OUTPUT"
+              break
+            fi
+            echo "seed attempt $attempt failed:"
+            echo "$SEED_OUTPUT"
+            if [ "$attempt" = "6" ]; then
+              echo "::error::Could not seed the preview relay after 6 attempts."
+              exit 1
+            fi
+            sleep 10
+          done
+          # Idempotent: only publish the (heavier) dev fixtures on the first
+          # seed of this relay, not on every redeploy.
+          if [ "${{ vars.PREVIEW_SEED_FULL }}" = "true" ] && echo "$SEED_OUTPUT" | grep -q '^seeded$'; then
+            echo "PREVIEW_SEED_FULL=true — publishing full dev fixture data (scripts/seed.ts)"
+            bun run scripts/seed.ts
+          fi
+          # Restart so the app's startup cache picks up the seeded settings.
+          bash infra/preview-vps/remote-ssh.sh bash -s <<'REMOTE_EOF'
+          set -euo pipefail
+          cd "$HOME/previews/pr-${{ github.event.pull_request.number }}"
+          docker compose restart market-app
+          REMOTE_EOF
+
       - name: Health check
         id: health
         if: steps.secrets.outputs.previews_ready == 'true'
