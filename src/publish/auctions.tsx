@@ -18,7 +18,7 @@ import { evaluateReserveNotMetGuard } from '@/lib/auction/reserveGuard'
 import { generateAuctionDerivationPath } from '@/lib/auctionPathOracle'
 import { deriveAuctionChildP2pkPubkeyFromXpub } from '@/lib/auctionP2pk'
 import { hashToCurveHexFromString } from '@/lib/cashu/hashToCurve'
-import { buildDleqProofs, fetchDleqKeysetsForBids } from '@/lib/cashu/dleq'
+import { buildDleqProofs, fetchDleqKeysetsForBidsDetailed } from '@/lib/cashu/dleq'
 import { buildBidEventTags, buildPathReleaseTags } from '@/lib/auction/tagBuilders'
 import { buildAuctionClaimPublicMarkerTags, createPrivateAuctionClaimMessageWithSigner } from '@/lib/auctions/privateAuctionClaimMessage'
 import {
@@ -45,6 +45,7 @@ import { getPublicKey } from '@noble/secp256k1'
 import { auctionKeys, orderKeys } from '@/queries/queryKeyFactory'
 import NDK, { NDKEvent, NDKRelaySet, NDKUser, type NDKFilter, type NDKSigner, type NDKTag } from '@nostr-dev-kit/ndk'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useRef } from 'react'
 import { toast } from 'sonner'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -188,6 +189,16 @@ export interface AuctionSettlementFormData {
 	status?: 'settled' | 'reserve_not_met'
 	winningBidEventId?: string
 	reason?: string
+	/**
+	 * ADR-0011 review R3 — seller escape hatch. When `reserve_not_met` is
+	 * blocked ONLY because a reserve-meeting bid's DLEQ keyset evidence is
+	 * unavailable (a transient mint outage, or a crafted bid naming a keyset the
+	 * mint does not advertise), the seller may set this to publish the terminal
+	 * state anyway. The unavailability is recorded in the settlement's `reason`
+	 * tag so the override is auditable on the relay. It never overrides the
+	 * `blocked` case (a validated reserve-meeting winner already exists).
+	 */
+	dlequEvidenceOverride?: boolean
 }
 
 const HEX_PUBKEY_RE = /^[0-9a-f]{64}$/i
@@ -1283,7 +1294,22 @@ export const publishBidderPathRelease = async (
 			.map((event) => parseValidatorVerdictEvent(toRawEvent(event)))
 			.filter((result): result is { ok: true; value: import('@/lib/auction/events').ParsedValidatorVerdictEvent } => result.ok)
 			.map((result) => result.value)
-		const validated = computeValidatedBids({ auction: parsedAuction, bids: parsedBids, verdicts: parsedVerdicts, postSettlement: false })
+		// ADR-0011 review R2: thread the DLEQ keysets here too. DLEQ is
+		// unconditional, so without evidence `computeValidatedBids` classifies
+		// every published bid as pending, `canonicalWinner` is null, and this
+		// guard throws "Auction winner changed" for every DLEQ-bearing bid —
+		// making the bidder's half of settlement (the path release the seller
+		// needs to derive `seller_child_privkey`) impossible. The settlement and
+		// reserve_not_met siblings already gather the same map.
+		const releaseAcq = await fetchDleqKeysetsForBidsDetailed(parsedBids, parsedAuction.mints)
+		const validated = computeValidatedBids({
+			auction: parsedAuction,
+			bids: parsedBids,
+			verdicts: parsedVerdicts,
+			postSettlement: false,
+			dleqKeysets: releaseAcq.keysets,
+			dleqUnknownKeysets: releaseAcq.unknownKeysets,
+		})
 		if (!validated.canonicalWinner || validated.canonicalWinner.id !== input.bidEventId) {
 			throw new Error('Auction winner changed. Refresh and try again.')
 		}
@@ -1632,14 +1658,15 @@ export const publishAuctionSettlement = async (formData: AuctionSettlementFormDa
 		const rnmNut7States = await fetchNut7StatesForBids(rnmParsedBids)
 		// ADR-0011: DLEQ is unconditional, so the reserve_not_met path always
 		// gathers keyset evidence — otherwise every bid stays pending.
-		const rnmDleqKeysets = await fetchDleqKeysetsForBids(rnmParsedBids, parsedAuction.mints)
+		const rnmAcq = await fetchDleqKeysetsForBidsDetailed(rnmParsedBids, parsedAuction.mints)
 		const rnmValidated = computeValidatedBids({
 			auction: parsedAuction,
 			bids: rnmParsedBids,
 			verdicts: rnmParsedVerdicts,
 			nut7States: rnmNut7States,
 			postSettlement: false,
-			dleqKeysets: rnmDleqKeysets,
+			dleqKeysets: rnmAcq.keysets,
+			dleqUnknownKeysets: rnmAcq.unknownKeysets,
 		})
 
 		// ADR-0011 review A2 (PR #1280 discussion_r3999446834): the guard must
@@ -1658,12 +1685,23 @@ export const publishAuctionSettlement = async (formData: AuctionSettlementFormDa
 					`(${rnmGuard.winnerAmount} sats).`,
 			)
 		}
+		// ADR-0011 review R3: a permanently-`pending` reserve-meeting bid (mint
+		// outage, or a crafted bid naming an unadvertised keyset) must not hold
+		// the seller hostage forever. The seller can opt into publishing the
+		// terminal state; the reason is recorded on the event so the override is
+		// auditable. This never bypasses the `blocked` case above (a validated
+		// reserve-meeting winner), only `evidence-unavailable`.
+		let rnmOverrideReason: string | undefined
 		if (rnmGuard.kind === 'evidence-unavailable') {
-			throw new Error(
-				'Cannot publish reserve_not_met: DLEQ evidence is unavailable for reserve-meeting ' +
-					`bid(s) ${rnmGuard.bidIds.join(', ')} (up to ${rnmGuard.maxPendingAmount} sats). ` +
-					'Retry once the mint keyset fetch succeeds — publishing now would contradict a bid that may still be valid.',
-			)
+			if (formData.dlequEvidenceOverride !== true) {
+				throw new Error(
+					'Cannot publish reserve_not_met: DLEQ evidence is unavailable for reserve-meeting ' +
+						`bid(s) ${rnmGuard.bidIds.join(', ')} (up to ${rnmGuard.maxPendingAmount} sats). ` +
+						'Retry once the mint keyset fetch succeeds, or publish anyway with the seller override ' +
+						'(dlequEvidenceOverride) to record the unresolved evidence on the terminal event.',
+				)
+			}
+			rnmOverrideReason = `dlequ_evidence_unavailable:${rnmGuard.bidIds.join(',')}`
 		}
 
 		// Terminal-event consistency: refuse reserve_not_met when a
@@ -1690,7 +1728,7 @@ export const publishAuctionSettlement = async (formData: AuctionSettlementFormDa
 			status: 'reserve_not_met',
 			closeAt,
 			finalAmount: 0,
-			reason: formData.reason ?? 'reserve_not_met',
+			reason: formData.reason ?? rnmOverrideReason ?? 'reserve_not_met',
 		}) as NDKTag[]
 		await event.sign(signer)
 		await ndkActions.publishEvent(event)
@@ -1722,14 +1760,15 @@ export const publishAuctionSettlement = async (formData: AuctionSettlementFormDa
 	// ADR-0011: the settlement path always gathers the DLEQ keysets — without
 	// the evidence, `computeValidatedBids` treats every bid as pending and the
 	// seller cannot settle (fail-safe, not fail-open).
-	const settlementDleqKeysets = await fetchDleqKeysetsForBids(parsedBids, parsedAuction.mints)
+	const settlementAcq = await fetchDleqKeysetsForBidsDetailed(parsedBids, parsedAuction.mints)
 	const validatedBids = computeValidatedBids({
 		auction: parsedAuction,
 		bids: parsedBids,
 		verdicts: parsedVerdicts,
 		nut7States,
 		postSettlement: false,
-		dleqKeysets: settlementDleqKeysets,
+		dleqKeysets: settlementAcq.keysets,
+		dleqUnknownKeysets: settlementAcq.unknownKeysets,
 	})
 
 	if (!validatedBids.canonicalWinner) {
@@ -2098,7 +2137,13 @@ export const usePublishAuctionSettlementMutation = () => {
 	const ndk = ndkActions.getNDK()
 	const signer = ndkActions.getSigner()
 
-	return useMutation({
+	// ADR-0011 review R3: capture the mutate fn so the error toast's
+	// "Publish anyway" action can re-run the SAME settlement with the seller
+	// override (`dlequEvidenceOverride`), which records the unresolved DLEQ
+	// evidence on the terminal event instead of leaving the seller stuck.
+	const overrideRef = useRef<((variables: AuctionSettlementFormData) => void) | null>(null)
+
+	const mutation = useMutation({
 		mutationFn: async (formData: AuctionSettlementFormData) => {
 			if (!ndk) throw new Error('NDK not initialized')
 			if (!signer) throw new Error('No signer available')
@@ -2111,11 +2156,23 @@ export const usePublishAuctionSettlementMutation = () => {
 			await queryClient.invalidateQueries({ queryKey: auctionKeys.all })
 			toast.success('Auction settlement published')
 		},
-		onError: (error) => {
+		onError: (error, variables) => {
 			console.error('Failed to publish auction settlement:', error)
-			toast.error(`Failed to publish settlement: ${error instanceof Error ? error.message : String(error)}`)
+			const message = error instanceof Error ? error.message : String(error)
+			if (message.includes('DLEQ evidence is unavailable')) {
+				toast.error(`Failed to publish settlement: ${message}`, {
+					action: {
+						label: 'Publish anyway',
+						onClick: () => overrideRef.current?.({ ...variables, dlequEvidenceOverride: true }),
+					},
+				})
+				return
+			}
+			toast.error(`Failed to publish settlement: ${message}`)
 		},
 	})
+	overrideRef.current = mutation.mutate
+	return mutation
 }
 
 // ---------------------------------------------------------------------------
