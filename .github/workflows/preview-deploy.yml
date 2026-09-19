@@ -455,28 +455,98 @@ jobs:
         if: steps.secrets.outputs.previews_ready == 'true'
         run: sleep 15
 
-      # CONTENT, not settings. A preview relay seeded only with app settings
-      # boots (`needsSetup:false`) but renders an EMPTY feed: the operator's
-      # "the relay should be seeded with CONTENT" is not satisfied by settings.
-      # Seed the fixture defined in src/lib/preview/previewContentFixtures.ts —
-      # kind 30402 product listings, kind 0 seller profiles, and the app-owned
-      # kind 30405 `featured_products` list — every kind and tag justified there
-      # against the app's own read paths.
+      # ── PREVIEW SEED ORDER: settings → app restart → content ────────────
+      # A preview relay on this branch line needs BOTH halves, and both now ship
+      # in THIS branch so a preview never depends on another open PR:
       #
-      # PREVIEW-ONLY BY CONSTRUCTION: this step lives in preview-deploy.yml,
-      # which runs solely for a per-PR preview, and the seeder refuses any relay
-      # host outside the preview domain (`PREVIEW_SEED_ALLOWED_HOST_SUFFIX`,
-      # default `.test-market.orangesync.tech`). Production/staging/auctionsdev
-      # never run this workflow. src/lib/__tests__/preview-content-fixtures.test.ts
-      # pins both facts (wiring + interlock), so neither can drift silently.
+      #   * SETTINGS (`scripts/seed-preview-settings.ts`) take the preview OUT
+      #     of `setup` mode: kind 31990 app settings (`d=plebeian-market-handler`),
+      #     kind 30000 admin list, kind 10002 relay list.
+      #   * CONTENT (`scripts/seed-preview-content.ts`, fixture in
+      #     `src/lib/preview/previewContentFixtures.ts`) gives it something to
+      #     RENDER: kind 30402 listings, kind 0 seller profiles, and the
+      #     app-owned kind 30405 `featured_products` list — every kind and tag
+      #     justified there against the app's own read paths.
       #
-      # ORDERING: content is read per request, NOT cached at boot, so it does not
-      # need the app restart that app settings do. The step sits after the
-      # settings seeding step and therefore after that restart. When PR #1356
-      # (scripts/seed-preview-settings.ts) lands, its step anchors at this same
-      # spot; keep the settings step first — the only correct resolution of that
-      # trivial conflict, since a preview with content but no settings is still
-      # stuck in /setup.
+      # Settings alone boot an EMPTY feed; content alone is still stuck in
+      # /setup. Both seeders are idempotent — a re-run prints `already-seeded` on
+      # its own line and publishes nothing — so redeploys and retries never
+      # duplicate state.
+      #
+      # PREVIEW-ONLY BY CONSTRUCTION: these steps live in preview-deploy.yml,
+      # which runs solely for a per-PR preview, and the content seeder refuses
+      # any relay host outside the preview domain
+      # (`PREVIEW_SEED_ALLOWED_HOST_SUFFIX`, default
+      # `.test-market.orangesync.tech`). Production/staging/auctionsdev never run
+      # this workflow.
+      # src/lib/__tests__/preview-settings-seeder.test.ts pins this file's
+      # wiring (one invoking workflow, preview-gated, settings → restart →
+      # content) and src/lib/__tests__/preview-content-fixtures.test.ts pins the
+      # content seeder's wiring + interlock, so neither can drift silently.
+      #
+      # PROVENANCE: `scripts/seed-preview-settings.ts` is adopted VERBATIM from
+      # PR #1356 (`feat(preview): seed the per-PR relay with app settings and
+      # optional dev data`, commit 93e8a8ba) and credited to its author. Its base
+      # (`feat/preview-deployments`) is not an ancestor of this branch, and
+      # #1356 is still OPEN, so this branch carries the file instead of waiting
+      # for a merge that cannot reach it. If #1356 merges first, that step simply
+      # no-ops on a preview relay it has already seeded.
+      - name: Seed preview relay with app settings (app handler, admins, relay list)
+        if: steps.secrets.outputs.previews_ready == 'true'
+        env:
+          APP_RELAY_URL: wss://${{ steps.ports.outputs.subdomain }}/relay
+          APP_PRIVATE_KEY: e2e0000000000000000000000000000000000000000000000000000000000001
+        run: |
+          set -uo pipefail
+          # Same DNS + Caddy convergence race as the content step below: this
+          # connects to the preview hostname over wss, not to localhost, so retry
+          # before giving up. The seeder is idempotent — a repeat run prints
+          # `already-seeded` on its own line and publishes nothing.
+          SEED_OUTPUT=""
+          for attempt in $(seq 1 6); do
+            if SEED_OUTPUT="$(bun run scripts/seed-preview-settings.ts 2>&1)"; then
+              echo "$SEED_OUTPUT"
+              break
+            fi
+            echo "settings seed attempt $attempt failed:"
+            echo "$SEED_OUTPUT"
+            if [ "$attempt" = "6" ]; then
+              echo "::error::Could not seed preview app settings after 6 attempts (see scripts/seed-preview-settings.ts)."
+              exit 1
+            fi
+            sleep 10
+          done
+
+      # The app reads app settings and the admin list ONCE at boot and caches
+      # them, so the running container cannot observe what the previous step
+      # published. Restart it before the content step (content is queried per
+      # request and needs no restart of its own).
+      - name: Restart market-app so it re-reads the seeded app settings
+        if: steps.secrets.outputs.previews_ready == 'true'
+        run: |
+          set -uo pipefail
+          bash infra/preview-vps/remote-ssh.sh bash -s <<'REMOTE_EOF'
+          set -uo pipefail
+          APP_DIR="$HOME/previews/pr-${{ github.event.pull_request.number }}"
+          cd "$APP_DIR"
+          docker compose restart market-app
+          # Bounded readiness poll only, so the content step and the health check
+          # do not race a cold boot. A restart that never serves its request-time
+          # HTML bundle warns here and stays a DEGRADED preview reported by the
+          # health check + "Fail the check when the preview did not serve" steps,
+          # rather than a silent success.
+          for _ in $(seq 1 30); do
+            if curl -s --max-time 10 "http://127.0.0.1:${{ steps.ports.outputs.app_port }}/" | grep -qi '<!doctype html'; then
+              echo "market-app served its HTML bundle after the restart"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::warning::market-app did not serve its HTML bundle within 150s of the restart; the health check owns the verdict."
+          REMOTE_EOF
+
+      # CONTENT last: it is read per request, so it only has to come after the
+      # restart above.
       - name: Seed preview relay with content (products, profiles, featured list)
         if: steps.secrets.outputs.previews_ready == 'true'
         env:
