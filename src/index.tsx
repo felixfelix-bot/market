@@ -1,5 +1,4 @@
 import { serve } from 'bun'
-import { config } from 'dotenv'
 import { Relay } from 'nostr-tools'
 import { getPublicKey, verifyEvent, type Event } from 'nostr-tools/pure'
 import NDK from '@nostr-dev-kit/ndk'
@@ -7,6 +6,9 @@ import { bech32 } from '@scure/base'
 import index from './index.html'
 import { fetchAppSettings } from './lib/appSettings'
 import { AppSettingsSchema } from './lib/schemas/app'
+import { resolveCvmServerPubkey } from './lib/cvm-identity'
+import { renderProductPageHtml, resolveServerOrigins, serveProductPageWithOg, type ServerOriginsEnv } from './lib/ogTags'
+import { getProductOgMeta } from './server/ogMeta'
 import { getEventHandler } from './server'
 import { ZapInvoiceError } from './server/ZapPurchaseManager'
 import type { ZapPurchaseInvoiceRequestBody } from './server/ZapPurchaseManager'
@@ -15,14 +17,17 @@ import { file } from 'bun'
 
 import.meta.hot.accept()
 
-config()
-
 const RELAY_URL = process.env.APP_RELAY_URL
+// Build identity baked into the preview image (see
+// infra/preview-vps/app.Dockerfile); surfaced on /api/config so the deploy
+// health check can prove the running preview is the commit it built.
+const COMMIT_SHA = process.env.APP_COMMIT_SHA || ''
 const NIP46_RELAY_URL = process.env.NIP46_RELAY_URL || 'wss://relay.nsec.app'
 const APP_PRIVATE_KEY = process.env.APP_PRIVATE_KEY
 
 let appSettings: Awaited<ReturnType<typeof fetchAppSettings>> = null
 let APP_PUBLIC_KEY: string
+let CVM_SERVER_PUBKEY: string
 
 let invoiceNdk: NDK | null = null
 let invoiceNdkConnectPromise: Promise<void> | null = null
@@ -39,6 +44,12 @@ function getAppPublicKeyOrThrow(): string {
 	const privateKeyBytes = new Uint8Array(Buffer.from(APP_PRIVATE_KEY, 'hex'))
 	APP_PUBLIC_KEY = getPublicKey(privateKeyBytes)
 	return APP_PUBLIC_KEY
+}
+
+function getCvmServerPublicKey(): string {
+	if (CVM_SERVER_PUBKEY) return CVM_SERVER_PUBKEY
+	CVM_SERVER_PUBKEY = resolveCvmServerPubkey()
+	return CVM_SERVER_PUBKEY
 }
 
 function decodeLnurlBech32(lnurl: string): string | null {
@@ -225,7 +236,41 @@ function determineStage(): 'production' | 'staging' | 'development' {
 	return 'development'
 }
 
+const PORT = Number(process.env.PORT || 3000)
+
+console.log(`App port: ${PORT}`)
+
+/**
+ * Serve the SPA shell for /products/:productId with og: meta tags injected
+ * into the initial HTML, so crawlers and link unfurlers see the product's
+ * title/description/image without executing JavaScript (issue #459).
+ *
+ * The shell is obtained by fetching `/` from a SERVER-CONTROLLED origin
+ * (`APP_SHELL_ORIGIN` / fixed loopback — never the request Host), which runs
+ * it through Bun's HTML import pipeline (asset rewrites, dev scripts) — so
+ * the injected page stays byte-identical to the catch-all shell apart from
+ * the extra <meta> tags. og:url / og:image use `APP_PUBLIC_ORIGIN`. On any
+ * shell-fetch or lookup failure — unknown id, relay timeout, NSFW product,
+ * rejected lookup, or render error — the untouched module shell is served
+ * with HTTP 200: an SEO-only enrichment failure never reduces product-page
+ * availability.
+ */
+async function productPageWithOg(productId: string): Promise<Response> {
+	const { shellOrigin, publicOrigin } = resolveServerOrigins(
+		{ APP_SHELL_ORIGIN: process.env.APP_SHELL_ORIGIN, APP_PUBLIC_ORIGIN: process.env.APP_PUBLIC_ORIGIN } satisfies ServerOriginsEnv,
+		PORT,
+	)
+	return serveProductPageWithOg(productId, {
+		shellOrigin,
+		publicOrigin,
+		relayUrl: RELAY_URL,
+		indexShell: index,
+		getProductOgMeta,
+	}) as Promise<Response>
+}
+
 export const server = serve({
+	port: PORT,
 	routes: {
 		'/api/config': {
 			GET: () => {
@@ -234,11 +279,14 @@ export const server = serve({
 				return Response.json({
 					appRelay: RELAY_URL,
 					stage,
+					commit: COMMIT_SHA,
 					nip46Relay: NIP46_RELAY_URL,
 					appSettings: appSettings,
 					appPublicKey: APP_PUBLIC_KEY,
+					cvmServerPubkey: getCvmServerPublicKey(),
 					needsSetup: !appSettings,
 					serverReady: eventHandlerReady,
+					externalZapRelaysEnabled: stage === 'production' || (stage === 'development' && process.env.LOCAL_RELAY_ONLY !== 'true'),
 				})
 			},
 		},
@@ -292,9 +340,28 @@ export const server = serve({
 			},
 		},
 		'/images/:file': ({ params }) => serveStatic(`images/${params.file}`),
+		'/.well-known/nostr.json': {
+			GET: (req) => {
+				const url = new URL(req.url)
+				const name = url.searchParams.get('name') ?? undefined
+				const nip05Manager = getEventHandler().getNip05Manager()
+				const result = nip05Manager.buildNostrJson(name)
+				return Response.json(result, {
+					headers: {
+						'Access-Control-Allow-Origin': '*',
+						'Cache-Control': 'max-age=300',
+					},
+				})
+			},
+		},
 		'/manifest.json': () => serveStatic('manifest.json'),
 		'/sw.js': () => serveStatic('sw.js'),
 		'/favicon.ico': () => serveStatic('favicon.ico'),
+		// Product pages get og: meta tags server-rendered into the initial
+		// HTML (must beat the catch-all so the crawler response carries them).
+		'/products/:productId': {
+			GET: ({ params }) => productPageWithOg(params.productId),
+		},
 		'/*': index,
 	},
 	development: process.env.NODE_ENV !== 'production',

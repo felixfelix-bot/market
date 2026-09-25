@@ -47,6 +47,9 @@ export const DEFAULT_PUBLIC_RELAYS: string[] = [
 // Keep for backward compatibility (deprecated - use DEFAULT_PUBLIC_RELAYS instead)
 export const defaultRelaysUrls: string[] = DEFAULT_PUBLIC_RELAYS
 
+// Bug reports relay - always writable even in staging
+export const BUG_RELAY = 'wss://bugs.plebeian.market/'
+
 // Dedicated zap detection relays
 export const ZAP_RELAYS = [
 	'wss://relay.damus.io',
@@ -89,6 +92,22 @@ export const CURRENCIES = [
 	'MYR', // Malaysian Ringgit
 	'NGN', // Nigerian Naira
 ] as const
+
+const CURRENCY_CVM_RELAYS = ['wss://relay.contextvm.org']
+
+export function getCurrencyServerRelays(): string[] {
+	const env = process.env.NODE_ENV || 'development'
+	switch (env) {
+		case 'production':
+			return [...CURRENCY_CVM_RELAYS]
+		case 'staging':
+			return [...CURRENCY_CVM_RELAYS]
+		default:
+			return ['ws://localhost:10547', ...CURRENCY_CVM_RELAYS]
+	}
+}
+
+export { resolveCvmServerPubkey as CVM_SERVER_PUBKEY_RESOLVER } from './cvm-identity'
 
 export const DEFAULT_ZAP_AMOUNTS = [
 	{ displayText: '😊 21 sats', amount: 21 },

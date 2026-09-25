@@ -76,6 +76,8 @@ export interface NwcClient {
 	wallet: NDKNWCWallet
 }
 
+export const createWalletNwcNdk = (relayUrl: string): NDK => new NDK({ explicitRelayUrls: [relayUrl], autoConnectUserRelays: false })
+
 const nwcClientCache = new Map<string, Promise<NwcClient>>()
 let cachedSigner: NDKSigner | undefined
 
@@ -319,7 +321,7 @@ export const walletActions = {
 		}
 
 		const createPromise = (async (): Promise<NwcClient> => {
-			const ndk = new NDK({ explicitRelayUrls: [parsed.relay] })
+			const ndk = createWalletNwcNdk(parsed.relay)
 			ndk.signer = signer
 
 			try {
@@ -355,10 +357,10 @@ export const useWallets = () => {
 	const [state, setState] = useState(walletStore.state)
 
 	useEffect(() => {
-		const unsubscribe = walletStore.subscribe(() => {
+		const subscription = walletStore.subscribe(() => {
 			setState(walletStore.state)
 		})
-		return unsubscribe
+		return subscription.unsubscribe
 	}, [])
 
 	return {

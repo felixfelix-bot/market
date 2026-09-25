@@ -1,6 +1,10 @@
 import { ProductFormContent } from '@/components/sheet-contents/NewProductContent'
+import { TestLabelButton } from '@/components/dashboard/TestLabelButton'
+import { TestListingNotice } from '@/components/TestListingNotice'
+import { getATagFromCoords } from '@/lib/utils/coords'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { resolveProductWorkflow } from '@/lib/workflow/productWorkflowResolver'
 import { authStore } from '@/lib/stores/auth'
 import { productFormActions } from '@/lib/stores/product'
 import { hasProductFormDraft } from '@/lib/utils/productFormStorage'
@@ -28,9 +32,10 @@ function EditProductComponent() {
 	useDashboardTitle('Edit Product')
 
 	// Fetch user's products to find the one being edited (including hidden products)
+	const editProductOptions = productsByPubkeyQueryOptions(user?.pubkey ?? '', true)
 	const { data: products = [], isLoading: isLoadingProducts } = useQuery({
-		...productsByPubkeyQueryOptions(user?.pubkey ?? '', true),
-		enabled: !!user?.pubkey,
+		...editProductOptions,
+		enabled: editProductOptions.enabled,
 	})
 
 	// Find the product being edited (productId is the event.id from the URL)
@@ -39,6 +44,11 @@ function EditProductComponent() {
 
 	// Get the d tag value - this is what we use for draft storage (consistent with editingProductId)
 	const productDTag = product ? getProductId(product) : null
+	const workflow = resolveProductWorkflow({
+		mode: 'edit',
+		editingProductId: productDTag,
+		v4vConfigurationState: 'unknown',
+	})
 
 	const initializeForm = useCallback(async () => {
 		if (!productDTag) return
@@ -47,6 +57,10 @@ function EditProductComponent() {
 
 		try {
 			setInitState('checking')
+			productFormActions.reset({
+				activeTab: workflow.initialTab,
+				editingProductId: productDTag,
+			})
 
 			// Use productDTag for draft lookup (same key used for saving)
 			const hasDraft = await hasProductFormDraft(productDTag)
@@ -54,20 +68,21 @@ function EditProductComponent() {
 			if (hasDraft) {
 				// Auto-load the draft instead of prompting
 				setInitState('loading-draft')
-				productFormActions.setEditingProductId(productDTag)
-				await productFormActions.loadDraftForProduct(productDTag)
+				await productFormActions.loadDraftForProduct(productDTag, {
+					activeTab: workflow.initialTab,
+				})
 				setInitState('ready')
 			} else {
 				setInitState('loading-product')
-				productFormActions.reset()
-				productFormActions.setEditingProductId(productDTag)
-				await productFormActions.loadProductForEdit(productId)
+				await productFormActions.loadProductForEdit(productId, {
+					preserveTabState: { activeTab: workflow.initialTab },
+				})
 				setInitState('ready')
 			}
 		} finally {
 			lockRef.current = false
 		}
-	}, [productId, productDTag])
+	}, [productId, productDTag, workflow.initialTab])
 
 	// Effect to reset state when productId changes
 	useEffect(() => {
@@ -126,5 +141,21 @@ function EditProductComponent() {
 	}
 
 	// Ready to show the form - pass productDTag for draft checking and productId for reloading
-	return <ProductFormContent showFooter={true} productDTag={productDTag} productEventId={productId} />
+	return (
+		<div className="space-y-4">
+			{/* ADR-0009: authorized labelers can mark / unmark this item as a test listing */}
+			{productDTag && (
+				<div className="flex justify-end items-center gap-3">
+					{/* ADR-0009: the owner sees the item in their dashboard even when it is
+					    curated out of the public feed — say why. */}
+					<TestListingNotice
+						coordinate={getATagFromCoords({ kind: 30402, pubkey: product.pubkey, identifier: productDTag })}
+						itemLabel="Product"
+					/>
+					<TestLabelButton kind={30402} pubkey={product.pubkey} dTag={productDTag} itemLabel="Product" />
+				</div>
+			)}
+			<ProductFormContent showFooter={true} productDTag={productDTag} productEventId={productId} workflow={workflow} />
+		</div>
+	)
 }

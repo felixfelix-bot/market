@@ -3,8 +3,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { authActions } from '@/lib/stores/auth'
-import { NDKPrivateKeySigner } from '@nostr-dev-kit/ndk'
-import { Loader2, QrCode } from 'lucide-react'
+import { ExternalLink, Loader2, QrCode } from 'lucide-react'
 import { useState, useCallback } from 'react'
 import { Scanner } from '@yudiel/react-qr-scanner'
 import { toast } from 'sonner'
@@ -14,10 +13,38 @@ interface BunkerConnectProps {
 	onSuccess?: () => void
 }
 
+const NOSTR_PUBKEY_HEX_RE = /^[0-9a-fA-F]{64}$/
+const LOOPBACK_AUTH_URL_HOSTS = new Set(['localhost', '127.0.0.1', '::1'])
+
+function normalizeAuthUrlHostname(hostname: string): string {
+	return hostname.toLowerCase().replace(/^\[(.*)\]$/, '$1')
+}
+
+function getSafeAuthUrl(url: string): string | null {
+	try {
+		const parsedUrl = new URL(url)
+		const hostname = normalizeAuthUrlHostname(parsedUrl.hostname)
+
+		if (parsedUrl.protocol === 'https:') {
+			return parsedUrl.href
+		}
+
+		if (process.env.NODE_ENV !== 'production' && parsedUrl.protocol === 'http:' && LOOPBACK_AUTH_URL_HOSTS.has(hostname)) {
+			return parsedUrl.href
+		}
+	} catch {
+		return null
+	}
+
+	return null
+}
+
 export function BunkerConnect({ onError, onSuccess }: BunkerConnectProps) {
 	const [bunkerUrl, setBunkerUrl] = useState('')
+	const [sessionPassphrase, setSessionPassphrase] = useState('')
 	const [isConnecting, setIsConnecting] = useState(false)
 	const [error, setError] = useState<string | null>(null)
+	const [authUrl, setAuthUrl] = useState<string | null>(null)
 	const [showScanner, setShowScanner] = useState(false)
 	const [scanError, setScanError] = useState<string | null>(null)
 
@@ -31,21 +58,15 @@ export function BunkerConnect({ onError, onSuccess }: BunkerConnectProps) {
 
 			const urlObj = new URL(url)
 			const relay = urlObj.searchParams.get('relay')
-			const secret = urlObj.searchParams.get('secret')
 
 			if (!relay) {
 				setError('Bunker URL must contain a relay parameter')
 				return false
 			}
 
-			if (!secret) {
-				setError('Bunker URL must contain a secret parameter')
-				return false
-			}
-
 			// Extract pubkey from bunker://pubkey?...
 			const pubkey = urlObj.hostname
-			if (!pubkey || pubkey.length !== 64) {
+			if (!NOSTR_PUBKEY_HEX_RE.test(pubkey)) {
 				setError('Invalid pubkey in bunker URL')
 				return false
 			}
@@ -61,23 +82,41 @@ export function BunkerConnect({ onError, onSuccess }: BunkerConnectProps) {
 	const handleConnect = async () => {
 		if (!bunkerUrl.trim()) {
 			setError('Please enter a bunker URL')
+			setAuthUrl(null)
 			return
 		}
 
 		if (!validateBunkerUrl(bunkerUrl)) {
+			setAuthUrl(null)
 			return
 		}
 
 		try {
 			setIsConnecting(true)
 			setError(null)
+			setAuthUrl(null)
 
-			// Generate a local signer for the connection
-			const localSigner = NDKPrivateKeySigner.generate()
-			await localSigner.blockUntilReady()
+			// Connect using the bunker URL (the client key is generated and
+			// persisted by loginWithNip46). With a session passphrase the
+			// nbunksec session is persisted encrypted at rest (ADR-0002 amendment B-3);
+			// without one it stays in-memory only.
+			await authActions.loginWithNip46(bunkerUrl, undefined, {
+				sessionPassphrase: sessionPassphrase || undefined,
+				onAuthUrl: (url) => {
+					const safeAuthUrl = getSafeAuthUrl(url)
 
-			// Connect using the bunker URL
-			await authActions.loginWithNip46(bunkerUrl, localSigner)
+					if (!safeAuthUrl) {
+						setAuthUrl(null)
+						setError('Signer returned an unsafe approval URL. Open your signer directly to approve the connection.')
+						toast.error('Signer returned an unsafe approval URL')
+						return
+					}
+
+					setError(null)
+					setAuthUrl(safeAuthUrl)
+					toast.info('Open the signer approval page to finish connecting')
+				},
+			})
 
 			onSuccess?.()
 		} catch (err) {
@@ -102,6 +141,7 @@ export function BunkerConnect({ onError, onSuccess }: BunkerConnectProps) {
 			if (result && result.startsWith('bunker://')) {
 				setBunkerUrl(result)
 				setError(null)
+				setAuthUrl(null)
 				setShowScanner(false)
 				toast.success('Bunker URL scanned successfully')
 			} else if (result) {
@@ -131,6 +171,7 @@ export function BunkerConnect({ onError, onSuccess }: BunkerConnectProps) {
 						onChange={(e) => {
 							setBunkerUrl(e.target.value)
 							setError(null)
+							setAuthUrl(null)
 						}}
 						onKeyDown={(e) => {
 							if (e.key === 'Enter' && bunkerUrl) {
@@ -157,6 +198,34 @@ export function BunkerConnect({ onError, onSuccess }: BunkerConnectProps) {
 					</Button>
 				</div>
 				{error && <p className="text-sm text-red-500">{error}</p>}
+				{authUrl && (
+					<div className="rounded-md border bg-muted/50 p-3 text-sm space-y-2" data-testid="bunker-auth-challenge">
+						<p className="text-muted-foreground">Your signer needs browser approval before this connection can finish.</p>
+						<p className="text-xs text-muted-foreground break-all">{authUrl}</p>
+						<Button asChild variant="outline" size="sm">
+							<a href={authUrl} target="_blank" rel="noreferrer" data-testid="bunker-auth-url-link">
+								<ExternalLink className="h-4 w-4" />
+								Open approval page
+							</a>
+						</Button>
+					</div>
+				)}
+			</div>
+
+			<div className="space-y-2 max-w-full">
+				<Label htmlFor="session-passphrase">Session passphrase (optional)</Label>
+				<p className="text-sm text-muted-foreground">
+					Set a passphrase to save this session encrypted on this device. Leave empty to keep the session in memory only — you will need to
+					reconnect after restarting the app.
+				</p>
+				<Input
+					id="session-passphrase"
+					type="password"
+					placeholder="Encrypt and remember this session"
+					value={sessionPassphrase}
+					onChange={(e) => setSessionPassphrase(e.target.value)}
+					data-testid="session-passphrase-input"
+				/>
 			</div>
 
 			<Button onClick={handleConnect} disabled={isConnecting || !bunkerUrl.trim()} className="w-full" data-testid="connect-bunker-button">

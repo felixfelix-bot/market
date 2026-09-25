@@ -1,5 +1,6 @@
 import { CollectionImageTagSchema, CollectionSummaryTagSchema, CollectionTitleTagSchema } from '@/lib/schemas/productCollection.ts'
 import { ndkActions } from '@/lib/stores/ndk'
+import { isValidHexKey } from '@/lib/utils'
 import type { NDKFilter, NDKKind } from '@nostr-dev-kit/ndk'
 import { NDKEvent } from '@nostr-dev-kit/ndk'
 import { queryOptions, useQuery } from '@tanstack/react-query'
@@ -8,6 +9,12 @@ import { collectionKeys, collectionsKeys } from './queryKeyFactory'
 import { filterBlacklistedEvents } from '@/lib/utils/blacklistFilters'
 import { FEATURED_ITEMS_CONFIG } from '@/lib/schemas/featured'
 import { naddrFromAddress } from '@/lib/nostr/naddr'
+import {
+	getNextCommunityQueryFixtureStep,
+	hasCommunityQueryFixture,
+	normalizeCommunityArrayFixture,
+	resolveCommunityQueryFixtureStep,
+} from '@/lib/tests/communityQueryFixtures'
 
 // --- DELETED COLLECTIONS TRACKING ---
 // Track deleted collection d-tags with deletion timestamps to filter them from relay responses.
@@ -79,6 +86,13 @@ const filterDeletedCollections = (events: NDKEvent[]): NDKEvent[] => {
  * @returns Array of collection events sorted by creation date (blacklist filtered)
  */
 export const fetchCollections = async () => {
+	const fixtureStep = getNextCommunityQueryFixtureStep<NDKEvent[]>('collections')
+	if (fixtureStep) {
+		return await resolveCommunityQueryFixtureStep('collections', fixtureStep, (data) =>
+			normalizeCommunityArrayFixture<NDKEvent>('collections', data),
+		)
+	}
+
 	const ndk = ndkActions.getNDK()
 	if (!ndk) {
 		console.warn('NDK not ready, returning empty collections list')
@@ -114,6 +128,10 @@ export const fetchCollectionsByPubkey = async (pubkey: string) => {
 		console.warn('NDK not ready, returning empty collections by pubkey list')
 		return []
 	}
+
+	// A malformed (not just empty) pubkey would build { authors: [...] } that
+	// trips NDK's strict filter validation. Reject before constructing it.
+	if (!isValidHexKey(pubkey)) return []
 
 	const filter: NDKFilter = {
 		kinds: [30405 as NDKKind], // Collections
@@ -315,6 +333,7 @@ export const collectionByATagQueryOptions = (pubkey: string, dTag: string) =>
 export const collectionsQueryOptions = queryOptions({
 	queryKey: collectionsKeys.all,
 	queryFn: fetchCollections,
+	retry: (failureCount) => !hasCommunityQueryFixture('collections') && failureCount < 3,
 	staleTime: 30000, // Consider fresh for 30 seconds
 	refetchOnMount: 'always', // Always refetch to pick up deletions
 })
@@ -327,7 +346,7 @@ export const collectionsByPubkeyQueryOptions = (pubkey: string) =>
 	queryOptions({
 		queryKey: collectionsKeys.byPubkey(pubkey),
 		queryFn: () => fetchCollectionsByPubkey(pubkey),
-		enabled: !!pubkey,
+		enabled: isValidHexKey(pubkey),
 	})
 
 // --- HOOKS ---

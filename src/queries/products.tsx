@@ -21,7 +21,9 @@ import { productKeys } from './queryKeyFactory'
 import { getCoordsFromATag, getATagFromCoords } from '@/lib/utils/coords.ts'
 import { discoverNip50Relays } from '@/lib/relays'
 import { filterBlacklistedEvents, filterBlacklistedPubkeys } from '@/lib/utils/blacklistFilters'
+import { excludeTestLabeledEvents } from '@/queries/testLabels'
 import { naddrFromAddress } from '@/lib/nostr/naddr'
+import { isValidHexKey } from '@/lib/utils'
 
 // Re-export productKeys for use in other query files
 export { productKeys }
@@ -148,12 +150,15 @@ export const fetchProducts = async (limit: number = 500, tag?: string, includeHi
 	// Filter out blacklisted products and authors, then filter out locally-deleted products
 	const filteredEvents = filterDeletedProducts(filterBlacklistedEvents(allEvents))
 
+	// Filter out test-labeled items (ADR-0009: runs beside the delete and blacklist checks)
+	const nonTestLabeledEvents = await excludeTestLabeledEvents(filteredEvents)
+
 	// Filter out hidden products unless explicitly included
 	if (includeHidden) {
-		return filteredEvents
+		return nonTestLabeledEvents
 	}
 
-	return filteredEvents.filter((event) => {
+	return nonTestLabeledEvents.filter((event) => {
 		const visibilityTag = event.tags.find((t) => t[0] === 'visibility')
 		const visibility = visibilityTag?.[1] || 'on-sale' // Default to on-sale if not specified
 		if (visibility === 'hidden') return false
@@ -190,12 +195,15 @@ export const fetchProductsPaginated = async (limit: number = 20, until?: number,
 	// Filter out blacklisted products and authors, then filter out locally-deleted products
 	const filteredEvents = filterDeletedProducts(filterBlacklistedEvents(allEvents))
 
+	// Filter out test-labeled items (ADR-0009: runs beside the delete and blacklist checks)
+	const nonTestLabeledEvents = await excludeTestLabeledEvents(filteredEvents)
+
 	// Filter out hidden products unless explicitly included
 	if (includeHidden) {
-		return filteredEvents
+		return nonTestLabeledEvents
 	}
 
-	return filteredEvents.filter((event) => {
+	return nonTestLabeledEvents.filter((event) => {
 		const visibilityTag = event.tags.find((t) => t[0] === 'visibility')
 		const visibility = visibilityTag?.[1] || 'on-sale' // Default to on-sale if not specified
 		return visibility !== 'hidden'
@@ -227,7 +235,9 @@ export const fetchProduct = async (id: string) => {
 
 	const events = await ndkActions.fetchEventsWithTimeout(filter, { timeoutMs: 8000 })
 	const event = Array.from(events)[0] ?? null
-	if (event) return event
+	if (event) {
+		return event
+	}
 
 	throw new Error('Product not found')
 }
@@ -240,6 +250,8 @@ export const fetchProduct = async (id: string) => {
  * @returns Array of product events sorted by creation date (blacklist filtered, optionally hidden products excluded)
  */
 export const fetchProductsByPubkey = async (pubkey: string, includeHidden: boolean = false, limit: number = 50) => {
+	if (!isValidHexKey(pubkey)) throw new Error('fetchProductsByPubkey: invalid seller pubkey')
+
 	const ndk = ndkActions.getNDK()
 	if (!ndk) {
 		console.warn('NDK not ready, returning empty products by pubkey list')
@@ -277,6 +289,7 @@ export const fetchProductByATag = async (pubkey: string, dTag: string) => {
 	const ndk = ndkActions.getNDK()
 	if (!ndk) throw new Error('NDK not initialized')
 	if (!pubkey || !dTag) return null
+
 	const naddr = naddrFromAddress(30402, pubkey, dTag)
 	return await ndk.fetchEvent(naddr)
 }
@@ -372,6 +385,7 @@ export const productsByPubkeyQueryOptions = (pubkey: string, includeHidden: bool
 	queryOptions({
 		queryKey: includeHidden ? [...productKeys.byPubkey(pubkey), 'includeHidden'] : productKeys.byPubkey(pubkey),
 		queryFn: () => fetchProductsByPubkey(pubkey, includeHidden),
+		enabled: isValidHexKey(pubkey),
 	})
 
 /**
@@ -437,8 +451,11 @@ export const fetchProductsByCollection = async (collectionEvent: NDKEvent): Prom
 	// Filter out blacklisted products and authors, then filter out locally-deleted products
 	const filteredProducts = filterDeletedProducts(filterBlacklistedEvents(allProducts))
 
+	// Filter out test-labeled items (ADR-0009: runs beside the delete and blacklist checks)
+	const nonTestLabeledProducts = await excludeTestLabeledEvents(filteredProducts)
+
 	// Filter out out-of-stock products from collection views
-	return filteredProducts.filter(isProductInStock)
+	return nonTestLabeledProducts.filter(isProductInStock)
 }
 
 /**
@@ -681,6 +698,13 @@ export const getProductCreatedAt = (event: NDKEvent | null): number => event?.cr
  * @returns The pubkey (string)
  */
 export const getProductPubkey = (event: NDKEvent | null): string => event?.pubkey || ''
+
+/**
+ * Gets the location for product from the event tags
+ * @param event The product event or null
+ * @returns The location in string format or empty string
+ */
+export const getProductLocation = (event: NDKEvent | null): string => event?.tags.find((t) => t[0] === 'location')?.[1] || ''
 
 /**
  * Gets the content warning tag from a product event
@@ -1010,6 +1034,7 @@ export const fetchProductsBySearch = async (query: string, limit: number = 20) =
 			.fetchEvents(filter)
 			.then((events) => filterBlacklistedEvents(Array.from(events)))
 			.then((events) => filterDeletedProducts(events)) // Filter out locally-deleted products
+			.then((events) => excludeTestLabeledEvents(events)) // Filter out test-labeled items (ADR-0009)
 			.then((events) => events.filter(isProductInStock)) // Filter out out-of-stock products
 			.catch((err) => {
 				console.error('Product search fetch failed:', err)
@@ -1134,8 +1159,18 @@ export const fetchProductsBySearchWithSellers = async (
 		}
 	}
 
-	// Return up to the limit
-	return mergedResults.slice(0, limit)
+	// ADR-0009: search is a browsing/discovery surface, so the test-label gate
+	// applies to the WHOLE merged set, not just the direct NIP-50 hits.
+	// `fetchProductsBySearch` already gates its own results, but the
+	// seller-expansion half arrives through `fetchProductsByPubkey`, which is
+	// deliberately ungated — that path also serves the seller profile and the
+	// owner's dashboard, where a labeled item MUST stay visible. Re-applying the
+	// gate here is what keeps "hidden from browsing, search and collections"
+	// true for a seller-name match instead of only for a title match.
+	const nonTestLabeledResults = await excludeTestLabeledEvents(mergedResults)
+
+	// Return up to the limit (after gating, so excluded items never consume slots)
+	return nonTestLabeledResults.slice(0, limit)
 }
 
 /** React Query options for searching products by text (includes seller name search) */

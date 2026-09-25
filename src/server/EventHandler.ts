@@ -5,6 +5,7 @@ import { EditorManagerImpl } from './EditorManager'
 import { BootstrapManagerImpl } from './BootstrapManager'
 import { BlacklistManagerImpl } from './BlacklistManager'
 import { VanityManagerImpl } from './VanityManager'
+import { Nip05ManagerImpl } from './Nip05Manager'
 import { EventValidator } from './EventValidator'
 import { EventSigner } from './EventSigner'
 import { NDKService } from './NDKService'
@@ -22,6 +23,7 @@ export class EventHandler {
 	private bootstrapManager: BootstrapManagerImpl
 	private blacklistManager: BlacklistManagerImpl
 	private vanityManager: VanityManagerImpl
+	private nip05Manager: Nip05ManagerImpl
 	private eventValidator: EventValidator
 	private eventSigner: EventSigner
 	private ndkService: NDKService
@@ -43,6 +45,7 @@ export class EventHandler {
 		this.ndkService = null as any
 		this.blacklistManager = null as any
 		this.vanityManager = null as any
+		this.nip05Manager = null as any
 	}
 
 	public static getInstance(): EventHandler {
@@ -66,9 +69,10 @@ export class EventHandler {
 		this.ndkService = new NDKService(this.eventSigner.getAppPubkey(), this.adminManager, this.editorManager, this.bootstrapManager)
 		this.blacklistManager = new BlacklistManagerImpl(this.eventSigner, this.ndkService)
 		this.vanityManager = new VanityManagerImpl(this.eventSigner)
+		this.nip05Manager = new Nip05ManagerImpl(this.eventSigner)
 
 		// Register all zap purchase managers
-		this.purchaseManagers = [this.vanityManager]
+		this.purchaseManagers = [this.vanityManager, this.nip05Manager]
 
 		// Initialize NDK service and load existing data with timeout
 		try {
@@ -89,6 +93,12 @@ export class EventHandler {
 			console.warn('⚠️ Load existing data failed, continuing anyway:', e)
 		}
 
+		try {
+			this.ndkService.startSubscriptions()
+		} catch (e) {
+			console.warn('⚠️ Starting NDK service subscriptions failed, continuing anyway:', e)
+		}
+
 		// Set up NDK for blacklist and vanity managers
 		if (config.relayUrl) {
 			this.ndk = new NDK({ explicitRelayUrls: [config.relayUrl] })
@@ -106,14 +116,27 @@ export class EventHandler {
 				this.vanityManager.setNDK(this.ndk)
 				await this.vanityManager.loadExistingVanityRegistry(this.eventSigner.getAppPubkey())
 
+				// Initialize NIP-05
+				this.nip05Manager.setNDK(this.ndk)
+				await this.nip05Manager.loadExistingNip05Registry(this.eventSigner.getAppPubkey())
+
 				// Subscribe to zap receipts for all purchase managers (app relay)
 				this.subscribeToZapPurchases(this.ndk, 'App relay')
 			} catch (e) {
 				console.warn('⚠️ App relay NDK setup failed, continuing anyway:', e)
 			}
 
-			// Also subscribe on dedicated zap relays; some LSPs do not publish receipts to the app relay.
-			const zapRelayUrls = Array.from(new Set([config.relayUrl, ...ZAP_RELAYS].filter(Boolean)))
+			// Subscribe on dedicated zap relays in production; some LSPs do not
+			// publish receipts to the app relay. Skip external relays in
+			// staging (must not leak events to public relays) and in CI/E2E
+			// (LOCAL_RELAY_ONLY — they waste 15s waiting for connections that
+			// will never succeed and aren't needed locally).
+			const isStaging = process.env.APP_STAGE === 'staging' || process.env.NODE_ENV === 'staging'
+			const isLocalOnly = process.env.LOCAL_RELAY_ONLY === 'true'
+			const skipExternalZapRelays = isStaging || isLocalOnly
+			const zapRelayUrls = skipExternalZapRelays
+				? [config.relayUrl].filter(Boolean)
+				: Array.from(new Set([config.relayUrl, ...ZAP_RELAYS].filter(Boolean)))
 			console.log(`Connecting to zap relays: ${zapRelayUrls.join(', ')}`)
 			this.zapNdk = new NDK({ explicitRelayUrls: zapRelayUrls })
 			try {
@@ -305,6 +328,13 @@ export class EventHandler {
 	 */
 	public getVanityManager(): VanityManagerImpl {
 		return this.vanityManager
+	}
+
+	/**
+	 * Get the NIP-05 purchase manager.
+	 */
+	public getNip05Manager(): Nip05ManagerImpl {
+		return this.nip05Manager
 	}
 
 	public getStats() {

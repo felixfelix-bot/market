@@ -6,12 +6,22 @@ import { DialogRegistry } from '@/components/DialogRegistry'
 import { configStore } from '@/lib/stores/config'
 import { useAmIAdmin } from '@/queries/app-settings'
 import { createRootRoute, Outlet, useNavigate, useLocation } from '@tanstack/react-router'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { DecryptPasswordDialog } from '@/components/auth/DecryptPasswordDialog'
+import { SessionUnlockDialog } from '@/components/auth/SessionUnlockDialog'
 import { Toaster } from 'sonner'
 import { useBlacklistSync } from '@/hooks/useBlacklistSync'
 import { useVanitySync } from '@/hooks/useVanitySync'
+import { useNip05Sync } from '@/hooks/useNip05Sync'
+import { useNotificationMonitor } from '@/hooks/useNotificationMonitor'
+import { usePIIMonitor } from '@/hooks/usePIIMonitor' // Add this import
 import { useStore } from '@tanstack/react-store'
+import { authStore } from '@/lib/stores/auth'
+import { notificationActions } from '@/lib/stores/notifications'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { MigratePrivateKeyDialog } from '@/components/auth/MigratePrivateKeyDialog'
+import { PIIExposureModal } from '@/components/pii/PIIExposureModal' // Add this import
+import type { PIIScanResult } from '@/lib/utils/piiScanner'
 
 export const Route = createRootRoute({
 	component: RootComponent,
@@ -29,15 +39,39 @@ function RootLayout() {
 	const { amIAdmin, isLoading: isLoadingAdmin } = useAmIAdmin(config?.appPublicKey)
 	const location = useLocation()
 	const isAdminRoute = pathname.startsWith('/dashboard/app-settings')
+	const { isAuthenticated } = useStore(authStore)
 	const isSetupPage = location.pathname === '/setup'
 	const isDashboardPage = location.pathname.startsWith('/dashboard')
 	const isCheckoutPage = location.pathname.startsWith('/checkout')
+
+	// Use the new PII monitor hook
+	const { hasPII, scanResult } = usePIIMonitor()
+	const [showPIIModal, setShowPIIModal] = useState(false)
 
 	// Sync blacklist store with backend data
 	useBlacklistSync()
 
 	// Sync vanity store with backend data
 	useVanitySync()
+
+	// Sync NIP-05 store with backend data
+	useNip05Sync()
+
+	// Initialize and monitor notifications globally
+	useEffect(() => {
+		if (isAuthenticated) {
+			notificationActions.initialize()
+		}
+	}, [isAuthenticated])
+
+	useNotificationMonitor()
+
+	// Show PII modal when PII is detected
+	useEffect(() => {
+		if (hasPII && scanResult) {
+			setShowPIIModal(true)
+		}
+	}, [hasPII, scanResult])
 
 	useEffect(() => {
 		if (config?.needsSetup && !isSetupPage) {
@@ -62,20 +96,30 @@ function RootLayout() {
 	}
 
 	return (
-		<div className="relative flex flex-col min-h-screen">
-			<Header />
+		<TooltipProvider>
+			<div className="relative flex flex-col min-h-screen">
+				<Header />
 
-			<main className="flex-grow flex flex-col">
-				<Outlet />
-			</main>
-			<Pattern pattern="page" />
-			{!isDashboardPage && !isCheckoutPage && <Footer />}
-			{/* Having some build error with this rn */}
-			{/* <TanStackRouterDevtools /> */}
-			<DecryptPasswordDialog />
-			<SheetRegistry />
-			<DialogRegistry />
-			<Toaster />
-		</div>
+				<main className="flex flex-col flex-grow">
+					<Outlet />
+				</main>
+				<Pattern pattern="page" />
+				{!isDashboardPage && !isCheckoutPage && <Footer />}
+
+				{/* PII Exposure Modal */}
+				{showPIIModal && scanResult && (
+					<PIIExposureModal isOpen={showPIIModal} onClose={() => setShowPIIModal(false)} scanResult={scanResult} />
+				)}
+
+				{/* Having some build error with this rn */}
+				{/* <TanStackRouterDevtools /> */}
+				<MigratePrivateKeyDialog />
+				<DecryptPasswordDialog />
+				<SessionUnlockDialog />
+				<SheetRegistry />
+				<DialogRegistry />
+				<Toaster />
+			</div>
+		</TooltipProvider>
 	)
 }

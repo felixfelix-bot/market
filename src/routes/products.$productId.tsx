@@ -1,19 +1,20 @@
-import { ShareProductDialog } from '@/components/dialogs/ShareProductDialog'
 import { EntityActionsMenu } from '@/components/EntityActionsMenu'
 import { ImageCarousel } from '@/components/ImageCarousel'
 import { ImageViewerModal } from '@/components/ImageViewerModal'
 import { ItemGrid } from '@/components/ItemGrid'
 import { PriceDisplay } from '@/components/PriceDisplay'
 import { ProductCard } from '@/components/ProductCard'
+import { Comments } from '@/components/Comments'
 import { ShippingSelector } from '@/components/ShippingSelector'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { UserCard } from '@/components/UserCard'
-import { ZapButton } from '@/components/ZapButton'
+import { ZapButton } from '@/components/social/ZapButton'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useEntityPermissions } from '@/hooks/useEntityPermissions'
+import { DEFAULT_DOCUMENT_TITLE, buildOwnedMetaEmissions, removeOwnedOgMetaTags, truncateForMeta } from '@/lib/ogTags'
 import { authStore } from '@/lib/stores/auth'
 import { cartActions, useCart, type RichShippingInfo } from '@/lib/stores/cart'
 import { ndkActions } from '@/lib/stores/ndk'
@@ -23,8 +24,13 @@ import { addToFeaturedProducts, removeFromFeaturedProducts } from '@/publish/fea
 import { useBlacklistSettings } from '@/queries/blacklist'
 import { useConfigQuery } from '@/queries/config'
 import { useFeaturedProducts } from '@/queries/featured'
+import { useAmIAdmin } from '@/queries/app-settings'
+import { useTestLabelForCoordinate } from '@/queries/testLabels'
+import { TestLabelDialog } from '@/components/dashboard/TestLabelDialog'
+import { TestListingNotice } from '@/components/TestListingNotice'
 import {
 	getProductCoordinates,
+	getProductId,
 	getProductCategories,
 	getProductCreatedAt,
 	getProductDescription,
@@ -35,6 +41,7 @@ import {
 	getProductSpecs,
 	getProductStock,
 	getProductSummary,
+	getProductShippingOptions,
 	getProductTitle,
 	getProductType,
 	getProductVisibility,
@@ -42,13 +49,29 @@ import {
 	isNSFWProduct,
 	productQueryOptions,
 	productsByPubkeyQueryOptions,
+	getProductLocation,
 } from '@/queries/products'
+import { createShippingReference, getShippingInfo, useShippingOptionsByPubkey } from '@/queries/shipping'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useStore } from '@tanstack/react-store'
 import { AlertTriangle, ArrowLeft, Edit, Minus, Plus, Truck } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import {
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	type JSXElementConstructor,
+	type ReactElement,
+	type ReactNode,
+	type ReactPortal,
+} from 'react'
 import { toast } from 'sonner'
+import { ShareButton } from '@/components/social/ShareButton'
+import SocialInteractions from '@/components/social/SocialInteractions'
+import type { NDKEvent } from '@nostr-dev-kit/ndk'
+import { scrollToElementWithOffset } from '@/lib/utils/ui'
+import { normalizePublishedProductShippingTags, resolvePublishedProductShippingOptions } from '@/lib/utils/productShippingSelections'
 
 // Hook to inject dynamic CSS
 function useHeroBackground(imageUrl: string, className: string) {
@@ -69,6 +92,94 @@ function useHeroBackground(imageUrl: string, className: string) {
 	}, [imageUrl, className])
 }
 
+// Hook to inject Open Graph and Twitter Card meta tags for social sharing
+interface MetaTagsConfig {
+	title: string
+	description: string
+	image?: string
+	url: string
+	price?: number
+	currency?: string
+	/** When false, skip all meta/title injection (e.g. NSFW-gated products). */
+	enabled?: boolean
+}
+
+function useDocumentMeta(config: MetaTagsConfig) {
+	useEffect(() => {
+		const { title, description, image, url, price, currency, enabled = true } = config
+		if (!enabled) return
+		const createdElements: HTMLElement[] = []
+
+		// Helper to apply a meta tag. Server-side og injection (see
+		// src/index.tsx + src/lib/ogTags.ts) already renders og:/twitter:
+		// tags into the initial HTML for product pages, so reuse those
+		// elements instead of appending duplicates. The product route owns
+		// every such element while mounted and removes them all on cleanup
+		// (selector-based, complete removal — see removeOwnedOgMetaTags).
+		const addMeta = (attributes: Record<string, string>) => {
+			const selector = attributes.property !== undefined ? `meta[property="${attributes.property}"]` : `meta[name="${attributes.name}"]`
+			let meta = document.head.querySelector<HTMLMetaElement>(selector)
+			if (!meta) {
+				meta = document.createElement('meta')
+				createdElements.push(meta)
+			}
+			Object.entries(attributes).forEach(([key, value]) => {
+				meta!.setAttribute(key, value)
+			})
+			if (!meta!.parentNode) document.head.appendChild(meta)
+		}
+
+		// Set document title
+		document.title = `${title} | Plebeian Market`
+
+		// Open Graph tags
+		addMeta({ property: 'og:type', content: 'product' })
+		addMeta({ property: 'og:title', content: title })
+		addMeta({ property: 'og:description', content: description })
+		addMeta({ property: 'og:url', content: url })
+		addMeta({ property: 'og:site_name', content: 'Plebeian Market' })
+		if (image) {
+			addMeta({ property: 'og:image', content: image })
+		}
+		if (price !== undefined && currency) {
+			addMeta({ property: 'product:price:amount', content: String(price) })
+			addMeta({ property: 'product:price:currency', content: currency })
+		}
+
+		// Twitter Card tags
+		addMeta({ name: 'twitter:card', content: image ? 'summary_large_image' : 'summary' })
+		addMeta({ name: 'twitter:title', content: title })
+		addMeta({
+			name: 'twitter:description',
+			content: price !== undefined && currency ? `${description} - ${price} ${currency}` : description,
+		})
+		if (image) {
+			addMeta({ name: 'twitter:image', content: image })
+		}
+
+		// Standard meta description
+		addMeta({ name: 'description', content: description })
+
+		// Cleanup on unmount or when config changes. Ownership semantics: the
+		// product route OWNS every selector in OG_OWNED_META_SELECTORS while
+		// mounted; on unmount it removes them all, sets the static app title,
+		// and never restores any remembered content. This prevents a previous
+		// product's SSR metadata (e.g. A's og:image on B, or A's tags after a
+		// product→non-product nav) from leaking onto the next route.
+		return () => {
+			document.title = DEFAULT_DOCUMENT_TITLE
+			createdElements.forEach((el) => {
+				if (el.parentNode) {
+					el.parentNode.removeChild(el)
+				}
+			})
+			// Selector-based and complete: removes reused SSR elements too, so
+			// duplicates can never survive (A→B→A guard).
+			removeOwnedOgMetaTags(document.head)
+		}
+	}, [config.title, config.description, config.image, config.url, config.price, config.currency, config.enabled])
+}
+
 declare module '@tanstack/react-router' {
 	interface FileRoutesByPath {
 		'/products/$productId': {
@@ -82,12 +193,166 @@ export const Route = createFileRoute('/products/$productId')({
 	loader: ({ params: { productId } }) => ({ productId }),
 })
 
+enum TabProductPage {
+	description = 'Description',
+	spec = 'Spec',
+	shipping = 'Shipping',
+	comments = 'Comments',
+	reviews = 'Reviews',
+}
+
+/** Get whether a tab should be enabled (can navigate to) or not.
+ * Currently only disable reviews as we work on the functionality.
+ */
+const getIsTabDisabled = (tab: TabProductPage) => tab === TabProductPage.reviews
+
+type ProductPageShippingState =
+	| { status: 'no-published-refs' }
+	| { status: 'loading' }
+	| { status: 'unavailable' }
+	| { status: 'resolved-empty' }
+	| { status: 'resolved'; options: RichShippingInfo[] }
+
+const renderProductShippingSelector = (shippingState: ProductPageShippingState, eventProduct: NDKEvent, className: string) => {
+	switch (shippingState.status) {
+		case 'no-published-refs':
+			return <div className="text-sm text-muted-foreground">No shipping options are published for this product.</div>
+		case 'loading':
+			return <div className="text-sm text-muted-foreground">Loading shipping options...</div>
+		case 'unavailable':
+			return <div className="text-sm text-red-500">Shipping options unavailable</div>
+		case 'resolved-empty':
+			return <div className="text-sm text-muted-foreground">No published shipping options could be resolved for this product.</div>
+		case 'resolved':
+			return (
+				<ShippingSelector
+					options={shippingState.options}
+					onSelect={(option: RichShippingInfo) => {
+						void cartActions.setShippingMethod(eventProduct.id, option)
+					}}
+					className={className}
+				/>
+			)
+	}
+}
+
+const getTabContent = (tab: TabProductPage, eventProduct: NDKEvent, isMobileView: boolean, shippingState: ProductPageShippingState) => {
+	const wrapContent = (content: ReactNode) => <div className="bg-white shadow-md p-6 rounded-lg">{content}</div>
+
+	const summary = getProductSummary(eventProduct)
+	const description = getProductDescription(eventProduct)
+	const weightTag = getProductWeight(eventProduct)
+	const location = getProductLocation(eventProduct)
+	const specs = getProductSpecs(eventProduct)
+	const dimensionsTag = getProductDimensions(eventProduct)
+
+	switch (tab) {
+		case TabProductPage.description:
+			return wrapContent(
+				<>
+					{summary && <p className="mb-4 pb-4 border-gray-200 border-b text-gray-600 italic">{summary}</p>}
+					<p className="text-gray-700 break-words whitespace-pre-wrap">{description}</p>
+				</>,
+			)
+		case TabProductPage.spec:
+			const className = isMobileView ? 'grid gap-4 grid-cols-1' : 'grid gap-4 grid-cols-2'
+			return wrapContent(
+				<div className={className}>
+					{weightTag && (
+						<div className="flex flex-col">
+							<span className="font-medium text-gray-500 text-base">Weight</span>
+							<span className="text-gray-900 text-base">
+								{weightTag[1]} {weightTag[2]}
+							</span>
+						</div>
+					)}
+					{dimensionsTag && (
+						<div className="flex flex-col">
+							<span className="font-medium text-gray-500 text-base">Dimensions (L×W×H)</span>
+							<span className="text-gray-900 text-base break-all">
+								{dimensionsTag[1]
+									.split('x')
+									.map((num) => parseFloat(num).toFixed(1))
+									.join('×')}{' '}
+								{dimensionsTag[2]}
+							</span>
+						</div>
+					)}
+					{specs.map((spec, index) => (
+						<div key={index} className="flex flex-col">
+							<span className="font-medium text-gray-500 text-base capitalize">{spec[1]}</span>
+							<span className="text-gray-900 text-base break-all">{spec[2]}</span>
+						</div>
+					))}
+					{specs.length === 0 && !weightTag && !dimensionsTag && <p className="col-span-2 text-gray-700">No specifications available</p>}
+				</div>,
+			)
+		case TabProductPage.shipping:
+			return wrapContent(
+				<div className="flex flex-col gap-6">
+					<div className="flex items-center gap-3">
+						<Truck className="w-6 h-6 text-gray-500" />
+						<h3 className="font-medium text-lg">Shipping Options</h3>
+					</div>
+
+					<div className="flex flex-wrap md:flex-nowrap gap-6">
+						<div className="w-full md:w-1/2 min-w-0">
+							<p className="mb-4 text-gray-500 text-sm">Select a shipping method to see estimated costs and delivery times.</p>
+
+							<div className="w-full">{renderProductShippingSelector(shippingState, eventProduct, 'w-full')}</div>
+
+							<div className="mt-4">
+								<p className="text-gray-500 text-sm">Shipping costs will be added to the final price in the cart.</p>
+							</div>
+						</div>
+
+						<div className="bg-gray-50 p-4 rounded-md w-full md:w-1/2 min-w-0">
+							<h4 className="mb-2 font-medium">Shipping Information</h4>
+
+							{weightTag && (
+								<div className="flex flex-col mb-2">
+									<span className="font-medium text-gray-500 text-base">Weight:</span>
+									<span className="text-gray-900 text-base">
+										{weightTag[1]} {weightTag[2]}
+									</span>
+								</div>
+							)}
+
+							{dimensionsTag && (
+								<div className="flex flex-col mb-2">
+									<span className="font-medium text-gray-500 text-base">Dimensions:</span>
+									<span className="text-gray-900 text-base">
+										<span className="break-all">{dimensionsTag[1]}</span> {dimensionsTag[2]}
+									</span>
+								</div>
+							)}
+
+							{location && (
+								<div className="flex flex-col mb-2">
+									<span className="font-medium text-gray-500 text-base">Ships from:</span>
+									<span className="text-gray-900 text-base">{location}</span>
+								</div>
+							)}
+
+							<div className="mt-3 text-gray-500 text-sm">Delivery times are estimates and may vary based on your location.</div>
+						</div>
+					</div>
+				</div>,
+			)
+		case TabProductPage.comments:
+			return wrapContent(<Comments targetEvent={eventProduct} />)
+		case TabProductPage.reviews:
+			return <p>Product Reviews are not implemented yet.</p>
+	}
+}
+
 function RouteComponent() {
 	const { productId } = Route.useLoaderData()
 	const { cart } = useCart()
 	const { mobileMenuOpen, showNSFWContent, navigation } = useStore(uiStore)
 	const navigate = useNavigate()
 	const queryClient = useQueryClient()
+	const [currentTab, setCurrentTab] = useState<TabProductPage>(TabProductPage.description)
 
 	// Scroll to top when product changes
 	useEffect(() => {
@@ -105,19 +370,59 @@ function RouteComponent() {
 
 	// Derive all product fields from the loaded product event (avoids conditional hook calls / racey dependent queries)
 	const title = getProductTitle(product) || 'Untitled Product'
-	const summary = getProductSummary(product) || ''
-	const description = getProductDescription(product) || ''
+	const description = getProductDescription(product)
 	const images = getProductImages(product) || []
 	const priceTag = getProductPrice(product)
 	const typeTag = getProductType(product)
 	const stockTag = getProductStock(product)
 	const visibilityTag = getProductVisibility(product)
-	const specs = getProductSpecs(product) || []
-	const weightTag = getProductWeight(product)
-	const dimensionsTag = getProductDimensions(product)
-	const categories = getProductCategories(product) || []
-	const createdAt = getProductCreatedAt(product) || 0
 	const pubkey = getProductPubkey(product) || ''
+	const sellerShippingOptionsQuery = useShippingOptionsByPubkey(pubkey)
+
+	const sellerShippingOptions = useMemo<RichShippingInfo[]>(() => {
+		if (!sellerShippingOptionsQuery.data || !pubkey) return []
+
+		return sellerShippingOptionsQuery.data
+			.map((event) => {
+				const info = getShippingInfo(event)
+				if (!info || !info.id || typeof info.id !== 'string' || info.id.trim().length === 0) return null
+
+				return {
+					id: createShippingReference(pubkey, info.id),
+					name: info.title,
+					cost: parseFloat(info.price.amount),
+					currency: info.price.currency,
+					countries: info.countries,
+					service: info.service,
+					carrier: info.carrier,
+				}
+			})
+			.filter((option): option is RichShippingInfo => option !== null)
+	}, [sellerShippingOptionsQuery.data, pubkey])
+
+	const productShippingSelections = useMemo(() => normalizePublishedProductShippingTags(getProductShippingOptions(product)), [product])
+
+	const productShippingOptions = useMemo(
+		() =>
+			resolvePublishedProductShippingOptions({
+				publishedSelections: productShippingSelections,
+				availableOptions: sellerShippingOptions,
+			}),
+		[productShippingSelections, sellerShippingOptions],
+	)
+	const hasResolvedSellerShippingState = sellerShippingOptionsQuery.isSuccess || sellerShippingOptionsQuery.data !== undefined
+
+	const productShippingState = useMemo<ProductPageShippingState>(() => {
+		if (productShippingSelections.length === 0) return { status: 'no-published-refs' }
+		if (!hasResolvedSellerShippingState && sellerShippingOptionsQuery.isError) return { status: 'unavailable' }
+		if (!hasResolvedSellerShippingState) return { status: 'loading' }
+		if (productShippingOptions.length === 0) return { status: 'resolved-empty' }
+
+		return {
+			status: 'resolved',
+			options: productShippingOptions,
+		}
+	}, [hasResolvedSellerShippingState, productShippingOptions, productShippingSelections.length, sellerShippingOptionsQuery.isError])
 
 	const handleBackClick = () => {
 		if (navigation.originalResultsPath) {
@@ -131,19 +436,20 @@ function RouteComponent() {
 		}
 	}
 
+	const sellerProductOptions = productsByPubkeyQueryOptions(pubkey)
 	const sellerProductsQuery = useQuery({
-		...productsByPubkeyQueryOptions(pubkey),
-		enabled: !!pubkey,
+		...sellerProductOptions,
+		enabled: sellerProductOptions.enabled,
 	})
 	const sellerProducts = sellerProductsQuery.data ?? []
 
 	const breakpoint = useBreakpoint()
-	const isSmallScreen = breakpoint === 'sm'
 	const isMobileOrTablet = breakpoint === 'sm' || breakpoint === 'md'
 	const [quantity, setQuantity] = useState(1)
 	const [imageViewerOpen, setImageViewerOpen] = useState(false)
 	const [selectedImageIndex, setSelectedImageIndex] = useState(0)
-	const [shareDialogOpen, setShareDialogOpen] = useState(false)
+	const commentsSectionRef = useRef<HTMLDivElement>(null)
+	const commentInputRef = useRef<HTMLTextAreaElement>(null)
 
 	// Get app config
 	const { data: config } = useConfigQuery()
@@ -160,6 +466,16 @@ function RouteComponent() {
 	const productCoords = product ? getProductCoordinates(product) : ''
 	const isBlacklisted = blacklistSettings?.blacklistedProducts.includes(productCoords) || false
 	const isFeatured = featuredData?.featuredProducts.includes(productCoords) || false
+
+	// ADR-0009 test-label moderation from the public product page, so an
+	// authorized labeler can curate a listing they do not own. The authorized
+	// set is editors UNION admins (ADR-0009), exposed here as
+	// `permissions.canManageTestLabel`. `currentUserPubkey` is only used to
+	// build the appeal contact reference in the label content.
+	const productDTag = product ? getProductId(product) : ''
+	const { currentUserPubkey } = useAmIAdmin(appPubkey)
+	const { isLabeled: hasActiveTestLabel } = useTestLabelForCoordinate(productCoords || undefined)
+	const [testLabelDialogMode, setTestLabelDialogMode] = useState<'mark' | 'unmark' | null>(null)
 
 	// Derived data from tags
 	const price = priceTag ? parseFloat(priceTag[1]) : 0
@@ -184,15 +500,39 @@ function RouteComponent() {
 	// Get first image URL for background
 	const backgroundImageUrl = formattedImages[0]?.url || ''
 
+	// Check if this is an NSFW product and user hasn't enabled viewing.
+	// Must be computed before useHeroBackground/useDocumentMeta (both hooks run
+	// before the gate early-return for React hook-order stability) so a gated
+	// NSFW product never leaks its title, description, or first image into
+	// <head> (og:*, twitter:*, document.title, hero background CSS) before the
+	// content gate renders.
+	const productIsNSFW = isNSFWProduct(product)
+	const nsfwGated = productIsNSFW && !showNSFWContent
+
 	// Use the hook to inject dynamic CSS for the background image
 	const heroClassName = `hero-bg-${productId.replace(/[^a-zA-Z0-9]/g, '')}`
-	useHeroBackground(backgroundImageUrl, heroClassName)
+	useHeroBackground(nsfwGated ? '' : backgroundImageUrl, heroClassName)
+
+	// Build product URL and meta description for social sharing
+	const productUrl = typeof window !== 'undefined' ? `${window.location.origin}/products/${productId}` : `/products/${productId}`
+	const metaDescription = description.length > 160 ? truncateForMeta(description, 157) : description
+
+	// Inject Open Graph and Twitter Card meta tags (no-op while the NSFW gate is active)
+	useDocumentMeta({
+		enabled: !nsfwGated,
+		title,
+		description: metaDescription,
+		image: backgroundImageUrl || undefined,
+		url: productUrl,
+		price,
+		currency: priceTag?.[2] || 'SATS',
+	})
 
 	// Keep this route resilient during relay warmup: don't error-boundary the whole page for transient misses.
 	if (!product && (productQuery.isLoading || productQuery.isFetching)) {
 		return (
-			<div className="flex h-[50vh] flex-col items-center justify-center gap-3 px-4 text-center">
-				<div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+			<div className="flex flex-col justify-center items-center gap-3 px-4 h-[50vh] text-center">
+				<div className="border-4 border-primary border-t-transparent rounded-full w-8 h-8 animate-spin" />
 				<p className="text-muted-foreground">Loading product…</p>
 			</div>
 		)
@@ -200,10 +540,10 @@ function RouteComponent() {
 
 	if (!product && productQuery.isError) {
 		return (
-			<div className="flex h-[50vh] flex-col items-center justify-center gap-4 px-4 text-center">
-				<h1 className="text-2xl font-bold">Still loading product</h1>
+			<div className="flex flex-col justify-center items-center gap-4 px-4 h-[50vh] text-center">
+				<h1 className="font-bold text-2xl">Still loading product</h1>
 				<p className="text-gray-600">{productQuery.error instanceof Error ? productQuery.error.message : 'Please try again.'}</p>
-				<div className="flex flex-wrap items-center justify-center gap-2">
+				<div className="flex flex-wrap justify-center items-center gap-2">
 					<Button
 						variant="secondary"
 						onClick={() => {
@@ -222,8 +562,8 @@ function RouteComponent() {
 
 	if (!product) {
 		return (
-			<div className="flex h-[50vh] flex-col items-center justify-center gap-4 px-4 text-center">
-				<h1 className="text-2xl font-bold">Product Not Found</h1>
+			<div className="flex flex-col justify-center items-center gap-4 px-4 h-[50vh] text-center">
+				<h1 className="font-bold text-2xl">Product Not Found</h1>
 				<p className="text-gray-600">The product you're looking for doesn't exist (or hasn't propagated to relays yet).</p>
 				<Link to="/products" className="inline-flex">
 					<Button variant="outline">Back to products</Button>
@@ -232,30 +572,27 @@ function RouteComponent() {
 		)
 	}
 
-	// Check if this is an NSFW product and user hasn't enabled viewing
-	const productIsNSFW = isNSFWProduct(product)
-	if (productIsNSFW && !showNSFWContent) {
+	// Adult content gate: product is NSFW and the user hasn't enabled viewing.
+	// (productIsNSFW/nsfwGated are computed before the head-injecting hooks above)
+	if (nsfwGated) {
 		return (
-			<div className="flex h-[50vh] flex-col items-center justify-center gap-4 px-4 text-center">
+			<div className="flex flex-col justify-center items-center gap-4 px-4 h-[50vh] text-center">
 				<AlertTriangle className="w-16 h-16 text-amber-500" />
-				<h1 className="text-2xl font-bold">Adult Content</h1>
-				<p className="text-gray-600 max-w-md">
+				<h1 className="font-bold text-2xl">Adult Content</h1>
+				<p className="max-w-md text-gray-600">
 					This product contains adult or sensitive content. To view it, you need to enable adult content viewing in your settings.
 				</p>
 				<div className="flex gap-3">
 					<Link to="/products" className="inline-flex">
 						<Button variant="outline">Back to products</Button>
 					</Link>
-					<Button variant="primary" onClick={() => uiActions.openNSFWConfirmation()} className="bg-amber-600 hover:bg-amber-700">
+					<Button onClick={() => uiActions.openNSFWConfirmation()} className="bg-amber-600 hover:bg-amber-700">
 						Enable adult content
 					</Button>
 				</div>
 			</div>
 		)
 	}
-
-	// Get location from tags if exists
-	const location = product.tags.find((t) => t[0] === 'location')?.[1]
 
 	// Handle adding product to cart
 	const handleAddToCartClick = async () => {
@@ -338,19 +675,42 @@ function RouteComponent() {
 		setImageViewerOpen(true)
 	}
 
+	const handleNavigateToComments = () => {
+		// 1. Open tab view to comments tab
+
+		if (!isMobileOrTablet) {
+			// Desktop: switch to comments tab
+			setCurrentTab(TabProductPage.comments)
+		}
+
+		setTimeout(() => {
+			// 2. Scroll to comments section after short delay (to load comments tab)
+			const commentsSection = document.getElementById('comments-section')
+			if (commentsSection) {
+				scrollToElementWithOffset(commentsSection, isMobileOrTablet ? 220 : 300)
+			}
+
+			// 3. Focus comments input handler
+			const textarea = document.getElementById('comment-input') as HTMLTextAreaElement
+			if (textarea) {
+				textarea.focus({ preventScroll: true })
+			}
+		}, 100)
+	}
+
 	return (
 		<div className="flex flex-col gap-4">
-			<div className="relative z-10">
+			<div className="z-10 relative">
 				<div className={`relative hero-container-product ${backgroundImageUrl ? `bg-hero-image ${heroClassName}` : 'bg-black'}`}>
 					<div className="hero-overlays">
 						<div className="absolute inset-0 bg-radial-overlay" />
-						<div className="absolute inset-0 opacity-30 bg-dots-overlay" />
+						<div className="absolute inset-0 bg-dots-overlay opacity-30" />
 					</div>
 
 					<div className="hero-content-product">
 						{!mobileMenuOpen && (
-							<button onClick={handleBackClick} className="back-button col-span-full">
-								<ArrowLeft className="h-4 w-6" />
+							<button onClick={handleBackClick} className="col-span-full back-button">
+								<ArrowLeft className="w-6 h-4" />
 								<span>Back to results</span>
 							</button>
 						)}
@@ -359,18 +719,10 @@ function RouteComponent() {
 							<ImageCarousel images={formattedImages} title={title} onImageClick={handleImageClick} />
 						</div>
 
-						<div className="flex flex-col gap-4 text-white w-full max-w-[600px] mx-auto lg:max-w-none">
-							<div className="flex items-center justify-between">
-								<h1 className="text-3xl font-semibold lg:pl-0">{title}</h1>
+						<div className="flex flex-col gap-2 mx-auto w-full max-w-[600px] lg:max-w-none text-white">
+							<div className="flex justify-between items-center">
+								<h1 className="lg:pl-0 font-semibold text-3xl">{title}</h1>
 								<div className="flex items-center gap-2">
-									<ZapButton event={product} />
-									<Button
-										variant="primary"
-										size="icon"
-										className="bg-white/10 hover:bg-white/20"
-										icon={<span className="i-sharing w-6 h-6" />}
-										onClick={() => setShareDialogOpen(true)}
-									/>
 									{/* Entity Actions Menu for admins/editors/owners */}
 									<EntityActionsMenu
 										permissions={permissions}
@@ -384,7 +736,32 @@ function RouteComponent() {
 										onUnblacklist={permissions.canBlacklist && isBlacklisted ? handleBlacklistToggle : undefined}
 										onSetFeatured={permissions.canSetFeatured && !isFeatured ? handleFeaturedToggle : undefined}
 										onUnsetFeatured={permissions.canSetFeatured && isFeatured ? handleFeaturedToggle : undefined}
+										canManageTestLabel={permissions.canManageTestLabel && !!productDTag}
+										testLabelActive={hasActiveTestLabel}
+										onMarkTestLabel={
+											permissions.canManageTestLabel && !hasActiveTestLabel ? () => setTestLabelDialogMode('mark') : undefined
+										}
+										onUnmarkTestLabel={
+											permissions.canManageTestLabel && hasActiveTestLabel ? () => setTestLabelDialogMode('unmark') : undefined
+										}
 									/>
+
+									{/* ADR-0009: shared test-label dialog, driven from the actions menu
+									    so an admin can curate a listing they do not own. */}
+									{testLabelDialogMode && productDTag && (
+										<TestLabelDialog
+											kind={30402}
+											pubkey={pubkey}
+											dTag={productDTag}
+											itemLabel="Product"
+											open={true}
+											onOpenChange={(next) => {
+												if (!next) setTestLabelDialogMode(null)
+											}}
+											mode={testLabelDialogMode}
+											contactPubkey={currentUserPubkey}
+										/>
+									)}
 								</div>
 							</div>
 
@@ -398,12 +775,14 @@ function RouteComponent() {
 							/>
 
 							{visibility === 'pre-order' ? (
-								<Badge variant="primary" className="bg-blue-500">
-									Pre-order
-								</Badge>
+								<Badge className="bg-blue-500">Pre-order</Badge>
 							) : (
-								<Badge variant="primary">{stock !== undefined ? `${stock} in stock` : 'Out of stock'}</Badge>
+								<Badge>{stock !== undefined ? `${stock} in stock` : 'Out of stock'}</Badge>
 							)}
+
+							{/* ADR-0009: a curated item is absent from the feed but reachable here
+							    by direct link, so explain the label and offer an appeal path. */}
+							<TestListingNotice coordinate={productCoords} itemLabel="Product" />
 
 							{(() => {
 								switch (productType?.product) {
@@ -430,18 +809,19 @@ function RouteComponent() {
 								<div className="flex items-center gap-4">
 									{/* Show cart controls for non-owners */}
 									{permissions.canAddToCart && (
-										<div className="flex items-center gap-2 flex-wrap">
-											<div className="flex items-center gap-2 flex-shrink-0">
+										<div className="flex flex-wrap items-center gap-2">
+											<div className="flex flex-shrink-0 items-center gap-2">
 												<Button
-													variant="tertiary"
+													variant="outline"
+													className="text-foreground"
 													size="icon"
 													onClick={() => setQuantity(Math.max(1, quantity - 1))}
 													disabled={quantity <= 1}
 												>
-													<Minus className="h-6 w-6" />
+													<Minus className="w-6 h-6" />
 												</Button>
 												<Input
-													className="w-12 text-center font-medium bg-white text-black"
+													className="bg-white w-12 font-medium text-black text-center"
 													value={quantity}
 													onChange={(e) => {
 														const value = parseInt(e.target.value)
@@ -454,12 +834,13 @@ function RouteComponent() {
 													type="number"
 												/>
 												<Button
-													variant="tertiary"
+													variant="outline"
+													className="text-foreground"
 													size="icon"
 													onClick={() => setQuantity(Math.min(stock || quantity + 1, quantity + 1))}
 													disabled={quantity >= (stock || quantity)}
 												>
-													<Plus className="h-6 w-6" />
+													<Plus className="w-6 h-6" />
 												</Button>
 											</div>
 											<Button variant="secondary" onClick={handleAddToCartClick} disabled={isOutOfStock || visibility === 'hidden'}>
@@ -476,7 +857,7 @@ function RouteComponent() {
 									{/* Show edit button for owners */}
 									{permissions.canEdit && (
 										<Button variant="secondary" onClick={handleEdit} className="flex items-center gap-2">
-											<Edit className="h-5 w-5" />
+											<Edit className="w-5 h-5" />
 											<span>Edit Product</span>
 										</Button>
 									)}
@@ -485,264 +866,44 @@ function RouteComponent() {
 
 							<span>Sold by:</span>
 							<UserCard pubkey={pubkey} size="md" />
+
+							<SocialInteractions event={product} onCommentButtonPressed={handleNavigateToComments} className="dark" />
 						</div>
 					</div>
 				</div>
-				<div className="relative z-20 mx-auto max-w-7xl px-4 py-6 -mt-12">
+				<div className="z-20 relative mx-auto -mt-12 px-4 py-6 max-w-7xl">
 					{isMobileOrTablet ? (
 						<div className="flex flex-col gap-6">
-							{/* Description Section */}
-							<div>
-								<div className="bg-secondary text-white px-4 py-2 text-sm font-medium rounded-t-md">Description</div>
-								<div className="rounded-lg bg-white p-6 shadow-md rounded-t-none">
-									{summary && <p className="text-gray-600 italic mb-4 pb-4 border-b border-gray-200">{summary}</p>}
-									<p className="whitespace-pre-wrap break-words text-gray-700">{description}</p>
-								</div>
-							</div>
-
-							{/* Specs Section */}
-							<div>
-								<div className="bg-secondary text-white px-4 py-2 text-sm font-medium rounded-t-md">Spec</div>
-								<div className="rounded-lg bg-white p-6 shadow-md rounded-t-none">
-									<div className="grid grid-cols-1 gap-4">
-										{weightTag && (
-											<div className="flex flex-col">
-												<span className="text-base font-medium text-gray-500">Weight</span>
-												<span className="text-base text-gray-900">
-													{weightTag[1]} {weightTag[2]}
-												</span>
-											</div>
-										)}
-										{dimensionsTag && (
-											<div className="flex flex-col">
-												<span className="text-base font-medium text-gray-500">Dimensions (L×W×H)</span>
-												<span className="text-base text-gray-900 break-all">
-													{dimensionsTag[1]
-														.split('x')
-														.map((num) => parseFloat(num).toFixed(1))
-														.join('×')}{' '}
-													{dimensionsTag[2]}
-												</span>
-											</div>
-										)}
-										{specs.map((spec, index) => (
-											<div key={index} className="flex flex-col">
-												<span className="text-base font-medium text-gray-500 capitalize">{spec[1]}</span>
-												<span className="text-base text-gray-900 break-all">{spec[2]}</span>
-											</div>
-										))}
-										{specs.length === 0 && !weightTag && !dimensionsTag && (
-											<p className="text-gray-700 col-span-2">No specifications available</p>
-										)}
-									</div>
-								</div>
-							</div>
-
-							{/* Shipping Section */}
-							<div>
-								<div className="bg-secondary text-white px-4 py-2 text-sm font-medium rounded-t-md">Shipping</div>
-								<div className="rounded-lg bg-white p-6 shadow-md rounded-t-none">
-									<div className="flex flex-col gap-6">
-										<div className="flex items-center gap-3">
-											<Truck className="h-6 w-6 text-gray-500" />
-											<h3 className="text-lg font-medium">Shipping Options</h3>
+							{Object.values(TabProductPage).map(
+								(tab) =>
+									!getIsTabDisabled(tab) && (
+										<div>
+											<div className="bg-secondary px-4 py-2 rounded-t-md font-medium text-white text-sm">{tab}</div>
+											{getTabContent(tab, product, true, productShippingState)}
 										</div>
-
-										<div className="flex flex-wrap md:flex-nowrap gap-6">
-											<div className="w-full md:w-1/2 min-w-0">
-												<p className="text-sm text-gray-500 mb-4">Select a shipping method to see estimated costs and delivery times.</p>
-
-												<div className="w-full">
-													<ShippingSelector
-														productId={productId}
-														onSelect={(option: RichShippingInfo) => {
-															// Optional notification could go here
-														}}
-														className="w-full"
-													/>
-												</div>
-
-												<div className="mt-4">
-													<p className="text-sm text-gray-500">Shipping costs will be added to the final price in the cart.</p>
-												</div>
-											</div>
-
-											<div className="w-full md:w-1/2 min-w-0 bg-gray-50 p-4 rounded-md">
-												<h4 className="font-medium mb-2">Shipping Information</h4>
-
-												{weightTag && (
-													<div className="flex flex-col mb-2">
-														<span className="text-base font-medium text-gray-500">Weight:</span>
-														<span className="text-base text-gray-900">
-															{weightTag[1]} {weightTag[2]}
-														</span>
-													</div>
-												)}
-
-												{dimensionsTag && (
-													<div className="flex flex-col mb-2">
-														<span className="text-base font-medium text-gray-500">Dimensions:</span>
-														<span className="text-base text-gray-900">
-															<span className="break-all">{dimensionsTag[1]}</span> {dimensionsTag[2]}
-														</span>
-													</div>
-												)}
-
-												{location && (
-													<div className="flex flex-col mb-2">
-														<span className="text-base font-medium text-gray-500">Ships from:</span>
-														<span className="text-base text-gray-900">{location}</span>
-													</div>
-												)}
-
-												<div className="mt-3 text-sm text-gray-500">Delivery times are estimates and may vary based on your location.</div>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
+									),
+							)}
 						</div>
 					) : (
-						<Tabs defaultValue="description" className="w-full">
-							<TabsList className="w-full bg-transparent h-auto p-0 flex flex-wrap gap-2 justify-start">
-								<TabsTrigger
-									value="description"
-									className="px-4 py-2 text-sm font-medium data-[state=active]:bg-secondary data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-black rounded-none"
-								>
-									Description
-								</TabsTrigger>
-								<TabsTrigger
-									value="specs"
-									className="px-4 py-2 text-sm font-medium data-[state=active]:bg-secondary data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-black rounded-none"
-								>
-									Spec
-								</TabsTrigger>
-								<TabsTrigger
-									value="shipping"
-									className="px-4 py-2 text-sm font-medium data-[state=active]:bg-secondary data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-black rounded-none"
-								>
-									Shipping
-								</TabsTrigger>
-								<TabsTrigger
-									value="comments"
-									className="px-4 py-2 text-sm font-medium data-[state=active]:bg-secondary data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-black rounded-none"
-									disabled
-								>
-									Comments
-								</TabsTrigger>
-								<TabsTrigger
-									value="reviews"
-									className="px-4 py-2 text-sm font-medium data-[state=active]:bg-secondary data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-black rounded-none"
-									disabled
-								>
-									Reviews
-								</TabsTrigger>
+						<Tabs defaultValue={TabProductPage.description} value={currentTab} className="w-full">
+							<TabsList className="flex flex-wrap justify-start gap-2 bg-transparent p-0 h-auto">
+								{Object.values(TabProductPage).map((tab) => (
+									<TabsTrigger
+										value={tab}
+										onClick={() => setCurrentTab(tab)}
+										className="data-[state=active]:bg-secondary data-[state=inactive]:bg-gray-100 px-4 py-2 rounded-none font-medium data-[state=active]:text-white data-[state=inactive]:text-black text-sm"
+										disabled={getIsTabDisabled(tab)}
+									>
+										{tab}
+									</TabsTrigger>
+								))}
 							</TabsList>
 
-							<TabsContent value="description" className="mt-4 border-t-3 border-secondary bg-tertiary">
-								<div className="rounded-lg bg-white p-6 shadow-md">
-									{summary && <p className="text-gray-600 italic mb-4 pb-4 border-b border-gray-200">{summary}</p>}
-									<p className="whitespace-pre-wrap break-words text-gray-700">{description}</p>
-								</div>
-							</TabsContent>
-
-							<TabsContent value="specs" className="mt-4 border-t-3 border-secondary bg-tertiary">
-								<div className="rounded-lg bg-white p-6 shadow-md">
-									<div className="grid grid-cols-2 gap-4">
-										{weightTag && (
-											<div className="flex flex-col">
-												<span className="text-base font-medium text-gray-500">Weight</span>
-												<span className="text-base text-gray-900">
-													{weightTag[1]} {weightTag[2]}
-												</span>
-											</div>
-										)}
-										{dimensionsTag && (
-											<div className="flex flex-col">
-												<span className="text-base font-medium text-gray-500">Dimensions (L×W×H)</span>
-												<span className="text-base text-gray-900 break-all">
-													{dimensionsTag[1]
-														.split('x')
-														.map((num) => parseFloat(num).toFixed(1))
-														.join('×')}{' '}
-													{dimensionsTag[2]}
-												</span>
-											</div>
-										)}
-										{specs.map((spec, index) => (
-											<div key={index} className="flex flex-col">
-												<span className="text-base font-medium text-gray-500 capitalize">{spec[1]}</span>
-												<span className="text-base text-gray-900 break-all">{spec[2]}</span>
-											</div>
-										))}
-										{specs.length === 0 && !weightTag && !dimensionsTag && (
-											<p className="text-gray-700 col-span-2">No specifications available</p>
-										)}
-									</div>
-								</div>
-							</TabsContent>
-
-							<TabsContent value="shipping" className="mt-4 border-t-3 border-secondary bg-tertiary">
-								<div className="rounded-lg bg-white p-6 shadow-md">
-									<div className="flex flex-col gap-6">
-										<div className="flex items-center gap-3">
-											<Truck className="h-6 w-6 text-gray-500" />
-											<h3 className="text-lg font-medium">Shipping Options</h3>
-										</div>
-
-										<div className="flex flex-wrap md:flex-nowrap gap-6">
-											<div className="w-full md:w-1/2 min-w-0">
-												<p className="text-sm text-gray-500 mb-4">Select a shipping method to see estimated costs and delivery times.</p>
-
-												<div className="w-full">
-													<ShippingSelector
-														productId={productId}
-														onSelect={(option: RichShippingInfo) => {
-															// Optional notification could go here
-														}}
-														className="w-full"
-													/>
-												</div>
-
-												<div className="mt-4">
-													<p className="text-sm text-gray-500">Shipping costs will be added to the final price in the cart.</p>
-												</div>
-											</div>
-
-											<div className="w-full md:w-1/2 min-w-0 bg-gray-50 p-4 rounded-md">
-												<h4 className="font-medium mb-2">Shipping Information</h4>
-
-												{weightTag && (
-													<div className="flex flex-col mb-2">
-														<span className="text-base font-medium text-gray-500">Weight:</span>
-														<span className="text-base text-gray-900">
-															{weightTag[1]} {weightTag[2]}
-														</span>
-													</div>
-												)}
-
-												{dimensionsTag && (
-													<div className="flex flex-col mb-2">
-														<span className="text-base font-medium text-gray-500">Dimensions:</span>
-														<span className="text-base text-gray-900">
-															<span className="break-all">{dimensionsTag[1]}</span> {dimensionsTag[2]}
-														</span>
-													</div>
-												)}
-
-												{location && (
-													<div className="flex flex-col mb-2">
-														<span className="text-base font-medium text-gray-500">Ships from:</span>
-														<span className="text-base text-gray-900">{location}</span>
-													</div>
-												)}
-
-												<div className="mt-3 text-sm text-gray-500">Delivery times are estimates and may vary based on your location.</div>
-											</div>
-										</div>
-									</div>
-								</div>
-							</TabsContent>
+							{Object.values(TabProductPage).map((tab) => (
+								<TabsContent value={tab} className="bg-tertiary mt-4 border-secondary border-t-3">
+									{getTabContent(tab, product, false, productShippingState)}
+								</TabsContent>
+							))}
 						</Tabs>
 					)}
 				</div>
@@ -751,7 +912,7 @@ function RouteComponent() {
 			{/* More from this seller */}
 			{sellerProducts.filter((p) => p.id !== productId).length > 0 && (
 				<div className="flex flex-col gap-4 p-4">
-					<h2 className="font-heading text-2xl text-center lg:text-left">More from this seller</h2>
+					<h2 className="font-heading text-2xl lg:text-left text-center">More from this seller</h2>
 					<ItemGrid className="gap-4 sm:gap-8">
 						{sellerProducts
 							.filter((p) => p.id !== productId)
@@ -770,9 +931,6 @@ function RouteComponent() {
 				currentIndex={selectedImageIndex}
 				onIndexChange={setSelectedImageIndex}
 			/>
-
-			{/* Share Product Dialog */}
-			<ShareProductDialog open={shareDialogOpen} onOpenChange={setShareDialogOpen} productId={productId} pubkey={pubkey} title={title} />
 		</div>
 	)
 }

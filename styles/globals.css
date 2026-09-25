@@ -127,7 +127,7 @@ button {
 	--focus: #ffd53d;
 	--focus-hover: #0a0a0a;
 	--focus-foreground: #0a0a0a;
-	--focus-foreground-hover: #ffd53e;
+	--focus-foreground-hover: #f4cb34;
 	--focus-border: #ffd53e;
 	--focus-border-hover: #ffd53e;
 	/* muted */
@@ -251,6 +251,46 @@ button {
 	--color-sidebar-primary: var(--sidebar-primary);
 	--color-sidebar-foreground: var(--sidebar-foreground);
 	--color-sidebar: var(--sidebar-background);
+	--color-light-gray: var(--light-gray);
+	--color-neo-purple: var(--neo-purple);
+
+	/* New utilities for the scoped .theme-new token system (ADR-0007 §1a). */
+	/* These map to the same var() names that .theme-new overrides —    */
+	/* they resolve to scoped values inside .theme-new and :root       */
+	/* defaults outside it. Registered here (not in globals-new.css)    */
+	/* because Tailwind v4 requires a single @theme inline contract.  */
+
+	/* UX-state color utilities (bg-info, text-error, border-success) */
+	--color-info: var(--info);
+	--color-info-foreground: var(--info-foreground);
+	--color-info-muted: var(--info-muted);
+	--color-info-border: var(--info-border);
+
+	--color-warning: var(--warning);
+	--color-warning-foreground: var(--warning-foreground);
+	--color-warning-muted: var(--warning-muted);
+	--color-warning-border: var(--warning-border);
+
+	--color-error: var(--error);
+	--color-error-foreground: var(--error-foreground);
+	--color-error-muted: var(--error-muted);
+	--color-error-border: var(--error-border);
+
+	--color-success: var(--success);
+	--color-success-foreground: var(--success-foreground);
+	--color-success-muted: var(--success-muted);
+	--color-success-border: var(--success-border);
+
+	/* Font utilities (font-body, font-header) — semantic rename */
+	--font-body: var(--font-body);
+	--font-header: var(--font-header);
+	--font-theylive: var(--font-theylive);
+
+	/* Additional color utilities for custom colors */
+	--color-neo-blue: var(--neo-blue);
+	--color-neo-gray: var(--neo-gray);
+	--color-off-black: var(--off-black);
+
 	--animate-accordion-down: accordion-down 0.2s ease-out;
 	--animate-accordion-up: accordion-up 0.2s ease-out;
 
@@ -463,6 +503,74 @@ button {
 		max-width: 100%;
 		min-height: 0; /* Fix for Firefox: aspect-ratio in grid requires min-height: 0 */
 		overflow: hidden; /* Required alongside min-height: 0 for aspect-ratio in grid */
+	}
+
+	/* Components e.g. buttons, input */
+
+	button {
+		cursor: pointer;
+	}
+
+	.btn-border-highlight {
+		background-color: var(--primary);
+		color: var(--primary-foreground);
+
+		/* Border */
+		border: 2px solid var(--primary-border);
+		border-radius: 0.25rem;
+
+		/* Padding */
+		padding: 0.5rem; /* Matches 'p-2' (0.5rem) */
+
+		/* Positioning */
+		position: relative;
+
+		& svg {
+			pointer-events: none;
+			flex-shrink: 0; /* Prevents shrinking */
+			/* If the icon doesn't have a size class, force it to 1rem (size-4) */
+			width: 1.5rem; /* Force w-6 (24px) if not set */
+			height: 1.5rem; /* Force h-6 (24px) if not set */
+			stroke-width: 2; /* Ensures "thicker" lines (Lucide default is usually 2) */
+		}
+
+		/* Hover States */
+		&:hover {
+			background-color: transparent;
+			color: var(--primary-foreground-hover);
+			border-color: var(--primary-border-hover);
+
+			/* Nested selector for span inside */
+			& > span {
+				color: var(--secondary);
+			}
+		}
+	}
+
+	.btn-border-highlight.btn-active {
+		background-color: var(--secondary);
+		color: var(--secondary-foreground);
+
+		&:hover {
+			background-color: var(--secondary);
+			color: var(--secondary-foreground);
+		}
+	}
+
+	/* Override focus ring for all inputs and form elements */
+	*:focus-visible {
+		outline: none !important;
+		box-shadow: none !important;
+		border: 1px solid var(--ring) !important;
+	}
+
+	/* Specifically for inputs, textareas, selects */
+	input:focus-visible,
+	textarea:focus-visible,
+	select:focus-visible {
+		outline: none !important;
+		box-shadow: none !important;
+		border: 2px solid var(--ring) !important;
 	}
 
 	/* Custom utility classes */

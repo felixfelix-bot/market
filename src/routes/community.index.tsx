@@ -1,7 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useQueries, useSuspenseQuery } from '@tanstack/react-query'
+import { useQueries, useQuery } from '@tanstack/react-query'
 import { ItemGrid } from '@/components/ItemGrid'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { uiActions } from '@/lib/stores/ui'
 import { authStore } from '@/lib/stores/auth'
 import { useStore } from '@tanstack/react-store'
@@ -67,24 +68,18 @@ function useFeaturedCollectionEvents(featuredCollections: string[] | undefined) 
 
 export const Route = createFileRoute('/community/')({
 	component: CommunityRoute,
-	errorComponent: ({ error }) => (
-		<div className="flex flex-col items-center justify-center min-h-[50vh] gap-4 px-4 text-center">
-			<h2 className="text-xl font-semibold">Unable to load collections</h2>
-			<p className="text-muted-foreground max-w-md">
-				{error instanceof Error ? error.message : 'There was a problem connecting to relays. Please try again.'}
-			</p>
-			<Button variant="secondary" onClick={() => window.location.reload()}>
-				Retry
-			</Button>
-		</div>
-	),
 })
 
 function CommunityRoute() {
-	const collectionsQuery = useSuspenseQuery(collectionsQueryOptions)
-	const collections = collectionsQuery.data
+	const collectionsQuery = useQuery(collectionsQueryOptions)
+	const collections = collectionsQuery.data || []
+	const isLoadingCollections = collectionsQuery.isLoading
+	const collectionsError = collectionsQuery.error
 
-	const { data: merchantPubkeys = [], isLoading: isLoadingMerchants } = useV4VMerchants()
+	const merchantsQuery = useV4VMerchants()
+	const merchantPubkeys = merchantsQuery.data || []
+	const isLoadingMerchants = merchantsQuery.isLoading
+	const merchantsError = merchantsQuery.error
 
 	// Subscribe to blacklist store for reactive updates when blacklist changes
 	useStore(blacklistStore)
@@ -130,13 +125,9 @@ function CommunityRoute() {
 		return () => clearInterval(interval)
 	}, [totalSlides])
 
-	// Current slide data - homepage banner is now at index 1
-	const isHomepageSlide = currentSlideIndex === 1
-	const currentCollection = isHomepageSlide
-		? null
-		: currentSlideIndex === 0
-			? collectionsForSlides[0]
-			: collectionsForSlides[currentSlideIndex - 1]
+	// Current slide data - homepage banner is index 0
+	const isHomepageSlide = currentSlideIndex === 0
+	const currentCollection = isHomepageSlide ? null : collectionsForSlides[currentSlideIndex - 1]
 	const currentCollectionId = currentCollection ? getCollectionId(currentCollection) : undefined
 
 	// Get current collections data (only if not homepage slide)
@@ -205,15 +196,16 @@ function CommunityRoute() {
 
 	// Render homepage hero content
 	const renderHomepageHero = () => (
-		<div className="flex flex-col items-center justify-center text-white text-center lg:col-span-2 relative z-20 mt-16 lg:mt-0">
-			<div className="flex items-center justify-center h-24 lg:h-32">
-				<h1 className="text-4xl lg:text-5xl font-theylive transition-opacity duration-500">Browse Collections</h1>
+		<div className="z-20 relative flex flex-col justify-center items-center lg:col-span-2 mt-16 lg:mt-0 text-white text-center">
+			<div className="flex justify-center items-center h-24 lg:h-32">
+				<h1 className="font-theylive text-4xl lg:text-5xl transition-opacity duration-500">Browse Collections</h1>
 			</div>
 
-			<div className="flex flex-col gap-6">
-				<Button variant="focus" size="lg" onClick={handleStartSelling}>
+			<div className="flex flex-col gap-6 items-center">
+				<Button variant="secondary" size="lg" onClick={handleStartSelling} className="bg-focus rounded hover:bg-focus-foreground-hover">
 					<span className="flex items-center gap-2">
-						<span className="i-nostr w-6 h-6"></span>Start Selling
+						<span className="size-6 i-nostr" />
+						Start Selling
 					</span>
 				</Button>
 
@@ -238,9 +230,9 @@ function CommunityRoute() {
 
 	// Render collections hero content
 	const renderCollectionsHero = () => (
-		<div className="flex flex-col items-center justify-center text-white text-center lg:col-span-2 relative z-20 mt-16 lg:mt-0">
-			<div className="flex items-center justify-center h-24 lg:h-32">
-				<h1 className="text-4xl lg:text-5xl font-theylive transition-opacity duration-500">{displayTitle || 'Loading...'}</h1>
+		<div className="z-20 relative flex flex-col justify-center items-center lg:col-span-2 mt-16 lg:mt-0 text-white text-center">
+			<div className="flex justify-center items-center h-24 lg:h-32">
+				<h1 className="font-theylive text-4xl lg:text-5xl transition-opacity duration-500">{displayTitle || 'Loading...'}</h1>
 			</div>
 
 			<div className="flex flex-col gap-6">
@@ -270,18 +262,19 @@ function CommunityRoute() {
 	)
 
 	return (
-		<div>
+		<div data-testid="community-page">
 			{isHomepageSlide ? (
 				// Homepage hero styling with random collection background
 				<div
+					data-testid="community-hero"
 					className={`relative hero-container ${marketBackgroundImageUrl ? `bg-hero-image ${marketHeroClassName}` : 'bg-gray-700'}`}
 					onTouchStart={handleTouchStart}
 					onTouchMove={handleTouchMove}
 					onTouchEnd={handleTouchEnd}
 				>
 					<div className="hero-overlays">
-						<div className="absolute inset-0 bg-radial-overlay z-10 opacity-40" />
-						<div className="absolute inset-0 opacity-20 bg-dots-overlay z-10" />
+						<div className="z-10 absolute inset-0 bg-radial-overlay opacity-40" />
+						<div className="z-10 absolute inset-0 bg-dots-overlay opacity-20" />
 					</div>
 
 					<div className="hero-content">{renderHomepageHero()}</div>
@@ -289,36 +282,129 @@ function CommunityRoute() {
 			) : (
 				// Collection hero styling (existing collection page style)
 				<div
+					data-testid="community-hero"
 					className={`relative hero-container ${backgroundImageUrl ? `bg-hero-image ${heroClassName}` : 'bg-gray-700'}`}
 					onTouchStart={handleTouchStart}
 					onTouchMove={handleTouchMove}
 					onTouchEnd={handleTouchEnd}
 				>
 					<div className="hero-overlays">
-						<div className="absolute inset-0 bg-radial-overlay z-10 opacity-40" />
-						<div className="absolute inset-0 opacity-20 bg-dots-overlay z-10" />
+						<div className="z-10 absolute inset-0 bg-radial-overlay opacity-40" />
+						<div className="z-10 absolute inset-0 bg-dots-overlay opacity-20" />
 					</div>
 
 					<div className="hero-content">{renderCollectionsHero()}</div>
 				</div>
 			)}
 
-			<div className="px-4 py-4 flex flex-col gap-12">
-				<ItemGrid title="Collections">
-					{collections.map((collection) => (
-						<CollectionCard key={collection.id} collection={collection} />
-					))}
-				</ItemGrid>
-				<ItemGrid title="Merchants" cols={2} smCols={2} lgCols={2} xlCols={3} gap={16}>
-					{isLoadingMerchants ? (
-						<div className="col-span-full text-center py-8 text-gray-500">Loading merchants...</div>
-					) : filteredMerchantPubkeys.length === 0 ? (
-						<div className="col-span-full text-center py-8 text-gray-500">No merchants found</div>
-					) : (
-						filteredMerchantPubkeys.map((pubkey) => <FeaturedUserCard key={pubkey} userPubkey={pubkey} />)
-					)}
-				</ItemGrid>
+			<div className="flex flex-col gap-12 px-4 py-4">
+				<section aria-label="Community collections" data-testid="community-collections-section">
+					<ItemGrid title="Collections">
+						{isLoadingCollections ? (
+							<CollectionSkeletons count={12} />
+						) : collectionsError ? (
+							<CollectionsError error={collectionsError as Error} onRetry={() => collectionsQuery.refetch()} />
+						) : collections.length === 0 ? (
+							<div className="col-span-full py-8 text-gray-500 text-center" data-testid="community-collections-empty">
+								No collections found
+							</div>
+						) : (
+							collections.map((collection) => (
+								<div key={collection.id} data-testid="community-collection-card">
+									<CollectionCard collection={collection} />
+								</div>
+							))
+						)}
+					</ItemGrid>
+				</section>
+				<section aria-label="Community merchants" data-testid="community-merchants-section">
+					<ItemGrid title="Merchants" cols={2} smCols={2} lgCols={2} xlCols={3} gap={16}>
+						{isLoadingMerchants ? (
+							<MerchantSkeletons count={6} />
+						) : merchantsError ? (
+							<MerchantsError error={merchantsError as Error} onRetry={() => merchantsQuery.refetch()} />
+						) : filteredMerchantPubkeys.length === 0 ? (
+							<div className="col-span-full py-8 text-gray-500 text-center" data-testid="community-merchants-empty">
+								No merchants found
+							</div>
+						) : (
+							filteredMerchantPubkeys.map((pubkey) => (
+								<div key={pubkey} data-testid="community-merchant-card">
+									<FeaturedUserCard userPubkey={pubkey} />
+								</div>
+							))
+						)}
+					</ItemGrid>
+				</section>
 			</div>
+		</div>
+	)
+}
+
+// Skeleton loading component for collections grid
+function CollectionSkeletons({ count = 12 }: { count?: number }) {
+	return (
+		<>
+			{Array.from({ length: count }).map((_, i) => (
+				<div key={i} className="flex flex-col gap-3" data-testid="community-collections-skeleton">
+					<Skeleton className="h-40 w-full rounded-lg" />
+					<Skeleton className="h-4 w-full" />
+					<Skeleton className="h-3 w-1/2" />
+				</div>
+			))}
+		</>
+	)
+}
+
+// Skeleton loading component for merchants grid
+function MerchantSkeletons({ count = 6 }: { count?: number }) {
+	return (
+		<>
+			{Array.from({ length: count }).map((_, i) => (
+				<div key={i} className="flex flex-col gap-3" data-testid="community-merchants-skeleton">
+					<Skeleton className="h-40 w-full rounded-lg" />
+					<Skeleton className="h-4 w-full" />
+					<Skeleton className="h-3 w-3/4" />
+				</div>
+			))}
+		</>
+	)
+}
+
+// Render error state for collections
+function CollectionsError({ error, onRetry }: { error: Error | null; onRetry: () => void }) {
+	if (!error) return null
+	return (
+		<div
+			className="col-span-full flex flex-col justify-center items-center gap-4 px-4 py-12 text-center"
+			data-testid="community-collections-error"
+		>
+			<h3 className="font-semibold text-lg">Unable to load collections</h3>
+			<p className="max-w-md text-muted-foreground">
+				{error instanceof Error ? error.message : 'There was a problem connecting to relays.'}
+			</p>
+			<Button variant="secondary" size="sm" onClick={onRetry} data-testid="community-collections-retry">
+				Retry
+			</Button>
+		</div>
+	)
+}
+
+// Render error state for merchants
+function MerchantsError({ error, onRetry }: { error: Error | null; onRetry: () => void }) {
+	if (!error) return null
+	return (
+		<div
+			className="col-span-full flex flex-col justify-center items-center gap-4 px-4 py-12 text-center"
+			data-testid="community-merchants-error"
+		>
+			<h3 className="font-semibold text-lg">Unable to load merchants</h3>
+			<p className="max-w-md text-muted-foreground">
+				{error instanceof Error ? error.message : 'There was a problem connecting to relays.'}
+			</p>
+			<Button variant="secondary" size="sm" onClick={onRetry} data-testid="community-merchants-retry">
+				Retry
+			</Button>
 		</div>
 	)
 }

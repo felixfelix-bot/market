@@ -21,8 +21,9 @@ import {
 } from '@/queries/products'
 import { productKeys } from '@/queries/queryKeyFactory'
 import { clearProductFormDraft, getProductFormDraft, saveProductFormDraft } from '@/lib/utils/productFormStorage'
-import type { RichShippingInfo } from './cart'
-import { uiStore } from '@/lib/stores/ui'
+import { resolvePublishPrice } from '@/lib/utils/productPriceResolution'
+import { normalizeProductShippingSelections, type ProductShippingSelection } from '@/lib/utils/productShippingSelections'
+import { uiActions, uiStore } from '@/lib/stores/ui'
 import NDK, { type NDKSigner } from '@nostr-dev-kit/ndk'
 import { QueryClient } from '@tanstack/react-query'
 import { Store } from '@tanstack/store'
@@ -36,10 +37,7 @@ export type ProductShipping = {
 	cost: string
 }
 
-export type ProductShippingForm = {
-	shipping: Pick<RichShippingInfo, 'id' | 'name'> | null
-	extraCost: string
-}
+export type ProductShippingForm = ProductShippingSelection
 
 export type ProductSpec = {
 	key: string
@@ -133,6 +131,25 @@ const cancelPendingSave = () => {
 	}
 }
 
+const createResetState = (
+	state: ProductFormState,
+	options?: {
+		activeTab?: ProductFormTab
+		editingProductId?: string | null
+	},
+): ProductFormState => {
+	const selectedCurrency = uiStore.state.selectedCurrency
+
+	return {
+		...DEFAULT_FORM_STATE,
+		formSessionId: state.formSessionId + 1,
+		activeTab: options?.activeTab ?? DEFAULT_FORM_STATE.activeTab,
+		editingProductId: options?.editingProductId ?? null,
+		currency: selectedCurrency === 'BTC' ? 'SATS' : selectedCurrency,
+		currencyMode: ['BTC', 'SATS'].includes(selectedCurrency) ? 'sats' : 'fiat',
+	}
+}
+
 const debouncedSave = () => {
 	cancelPendingSave()
 
@@ -147,8 +164,39 @@ const debouncedSave = () => {
 	}, SAVE_DEBOUNCE_MS)
 }
 
+const getFreshSessionState = (state: ProductFormState, overrides: Partial<ProductFormState> = {}): ProductFormState => {
+	const selectedCurrency = uiStore.state.selectedCurrency
+
+	return {
+		...DEFAULT_FORM_STATE,
+		formSessionId: state.formSessionId + 1,
+		currency: selectedCurrency === 'BTC' ? 'SATS' : selectedCurrency,
+		currencyMode: ['BTC', 'SATS'].includes(selectedCurrency) ? 'sats' : 'fiat',
+		...overrides,
+	}
+}
+
 // Create actions object
 export const productFormActions = {
+	startCreateProductSession: () => {
+		// Cancel any pending auto-save to prevent stale data from being written
+		cancelPendingSave()
+
+		productFormStore.setState((state) => getFreshSessionState(state, { editingProductId: null }))
+	},
+
+	startEditProductSession: (productId: string) => {
+		// Cancel any pending auto-save to prevent stale data from being written
+		cancelPendingSave()
+
+		productFormStore.setState((state) => getFreshSessionState(state, { editingProductId: productId }))
+	},
+
+	openCreateProductDrawer: () => {
+		productFormActions.startCreateProductSession()
+		uiActions.openDrawer('createProduct')
+	},
+
 	setEditingProductId: (productId: string | null) => {
 		productFormStore.setState((state) => ({
 			...state,
@@ -201,23 +249,10 @@ export const productFormActions = {
 			}))
 
 			// Parse shipping options
-			const shippingOptions: ProductShippingForm[] = shippingTags.map((tag) => {
-				// tag format: ['shipping_option', 'shipping_reference', 'extra_cost?']
-				const shippingRef = tag[1] // e.g., "30406:pubkey:shippingId"
-				const extraCost = tag[2] || ''
-
-				// Extract shipping name from reference (we'll use a simplified version for now)
-				// In a real app, you'd want to fetch the actual shipping option details
-				const shippingName = `Shipping Option (${shippingRef.split(':')[2] || 'unknown'})`
-
-				return {
-					shipping: {
-						id: shippingRef,
-						name: shippingName,
-					},
-					extraCost,
-				}
-			})
+			const shippingOptions: ProductShippingForm[] = shippingTags.map((tag) => ({
+				shippingRef: tag[1] || '',
+				extraCost: tag[2] || '',
+			}))
 
 			// Use preserved tab state if provided, otherwise default to 'name'
 			const activeTab = options?.preserveTabState?.activeTab ?? 'name'
@@ -227,37 +262,40 @@ export const productFormActions = {
 			const priceValue = priceTag?.[1] || ''
 			const isFiatCurrency = priceCurrency !== 'SATS' && priceCurrency !== 'BTC'
 
-			productFormStore.setState((state) => ({
-				...DEFAULT_FORM_STATE,
-				editingProductId: productDTag, // Use the d tag value, not the event ID!
-				name: title,
-				summary: summary,
-				description: description,
-				price: priceValue,
-				fiatPrice: isFiatCurrency ? priceValue : '', // Set fiatPrice if currency is fiat
-				currency: priceCurrency,
-				currencyMode: isFiatCurrency ? 'fiat' : 'sats',
-				bitcoinUnit: priceCurrency === 'BTC' ? 'BTC' : 'SATS',
-				quantity: stockTag?.[1] || '',
-				status: visibilityTag?.[1] || 'hidden',
-				productType: typeTag?.[1] === 'simple' ? 'single' : 'variable',
-				mainCategory: mainCategoryFromTags || null,
-				selectedCollection: collection,
-				categories: subCategoriesFromTags || [],
-				images: images.map((img, index) => ({
-					imageUrl: img[1],
-					imageOrder: parseInt(img[3] || index.toString(), 10),
-				})),
-				specs: specs.map((spec) => ({ key: spec[1], value: spec[2] })),
-				weight: weightTag ? { value: weightTag[1], unit: weightTag[2] } : null,
-				dimensions: dimensionsTag ? { value: dimensionsTag[1], unit: dimensionsTag[2] } : null,
-				shippings: shippingOptions,
-				activeTab,
-				isNSFW: isNSFWProduct(event),
-			}))
+			productFormStore.setState((state) =>
+				getFreshSessionState(state, {
+					editingProductId: productDTag, // Use the d tag value, not the event ID!
+					name: title,
+					summary: summary,
+					description: description,
+					// For fiat products, price (sats) will be calculated in the UI from fiatPrice
+					// For sats/BTC products, use the stored value directly
+					price: isFiatCurrency ? '' : priceValue,
+					fiatPrice: isFiatCurrency ? priceValue : '', // Set fiatPrice if currency is fiat
+					currency: priceCurrency,
+					currencyMode: isFiatCurrency ? 'fiat' : 'sats',
+					bitcoinUnit: priceCurrency === 'BTC' ? 'BTC' : 'SATS',
+					quantity: stockTag?.[1] || '',
+					status: visibilityTag?.[1] || 'hidden',
+					productType: typeTag?.[1] === 'simple' ? 'single' : 'variable',
+					mainCategory: mainCategoryFromTags || null,
+					selectedCollection: collection,
+					categories: subCategoriesFromTags || [],
+					images: images.map((img, index) => ({
+						imageUrl: img[1],
+						imageOrder: parseInt(img[3] || index.toString(), 10),
+					})),
+					specs: specs.map((spec) => ({ key: spec[1], value: spec[2] })),
+					weight: weightTag ? { value: weightTag[1], unit: weightTag[2] } : null,
+					dimensions: dimensionsTag ? { value: dimensionsTag[1], unit: dimensionsTag[2] } : null,
+					shippings: shippingOptions,
+					activeTab,
+					isNSFW: isNSFWProduct(event),
+				}),
+			)
 		} catch (error) {
 			console.error('Error loading product for edit:', error)
-			productFormActions.reset()
+			productFormActions.startCreateProductSession()
 		}
 	},
 
@@ -291,34 +329,32 @@ export const productFormActions = {
 		})
 	},
 
-	reset: () => {
+	reset: (options?: { activeTab?: ProductFormTab; editingProductId?: string | null }) => {
 		// Cancel any pending auto-save to prevent stale data from being written
 		cancelPendingSave()
 
-		productFormStore.setState((state) => {
-			const selectedCurrency = uiStore.state.selectedCurrency
-
-			return {
-				...DEFAULT_FORM_STATE,
-				// Increment formSessionId to signal new form session
-				formSessionId: state.formSessionId + 1,
-				currency: selectedCurrency === 'BTC' ? 'SATS' : selectedCurrency,
-				currencyMode: ['BTC', 'SATS'].includes(selectedCurrency) ? 'sats' : 'fiat',
-			}
-		})
+		productFormStore.setState((state) => createResetState(state, options))
 	},
 
 	updateValues: (values: Partial<ProductFormState>) => {
+		const normalizedValues =
+			values.shippings !== undefined
+				? {
+						...values,
+						shippings: normalizeProductShippingSelections(values.shippings as ProductShippingForm[]),
+					}
+				: values
+
 		productFormStore.setState((state) => ({
 			...state,
-			...values,
+			...normalizedValues,
 			isDirty: true,
 		}))
 		debouncedSave()
 	},
 
 	// Update tab state without marking as dirty (used for navigation, restore after discard, etc.)
-	setTabState: (activeTab: ProductFormTab) => {
+	setActiveTab: (activeTab: ProductFormTab) => {
 		productFormStore.setState((state) => ({
 			...state,
 			activeTab,
@@ -343,15 +379,28 @@ export const productFormActions = {
 		debouncedSave()
 	},
 
-	loadDraftForProduct: async (productId: string): Promise<boolean> => {
+	loadDraftForProduct: async (productId: string, options?: { activeTab?: ProductFormTab }): Promise<boolean> => {
 		try {
 			const draft = await getProductFormDraft(productId)
 			if (draft) {
+				const {
+					editingProductId: _editingProductId,
+					formSessionId: _formSessionId,
+					activeTab: _activeTab,
+					isDirty: _isDirty,
+					...draftValues
+				} = draft
+
+				const normalizedShippings = normalizeProductShippingSelections((draftValues.shippings as ProductShippingForm[] | undefined) ?? [])
+
 				productFormStore.setState((state) => ({
-					...state,
+					...createResetState(state, {
+						activeTab: options?.activeTab ?? 'name',
+						editingProductId: draft.editingProductId ?? productId,
+					}),
 					...draft,
-					// Restore tab state to defaults since we don't persist them
-					activeTab: 'name',
+					shippings: normalizedShippings,
+					activeTab: options?.activeTab ?? 'name',
 					// Mark as dirty since we're loading unsaved changes
 					isDirty: true,
 				}))
@@ -378,35 +427,17 @@ export const productFormActions = {
 	continuePublishing: async (signer: NDKSigner, ndk: NDK, queryClient?: QueryClient): Promise<boolean | string> => {
 		const state = productFormStore.state
 
-		// Apply currency conversion logic before publishing
-		let finalPrice = state.price
-		let finalCurrency = state.currency
-
-		// If we have a Bitcoin currency selected, always publish in SATS
-		if (state.currency === 'SATS' || state.currency === 'BTC') {
-			const bitcoinValue = parseFloat(state.price || '0')
-			if (state.bitcoinUnit === 'BTC') {
-				// Convert BTC to SATS for publishing
-				finalPrice = (bitcoinValue * 100000000).toString()
-			} else {
-				// Already in SATS
-				finalPrice = state.price || '0'
-			}
-			finalCurrency = 'SATS'
-		} else {
-			// Fiat currency selected - check currency mode
-			if (state.currencyMode === 'fiat') {
-				// Use fiat currency and fiat price
-				finalPrice = state.fiatPrice || state.price
-				finalCurrency = state.currency
-			} else {
-				// Use sats as currency (calculated on spot)
-				const bitcoinValue = parseFloat(state.price || '0')
-				const satsValue = state.bitcoinUnit === 'BTC' ? bitcoinValue * 100000000 : bitcoinValue
-				finalPrice = satsValue.toString()
-				finalCurrency = 'SATS'
-			}
+		// Resolve the price/currency pair to publish from the form's
+		// fiat-fixed/sats-fixed mode. Fails closed while the sats price is
+		// unresolved (exchange rates unavailable) instead of coercing it to
+		// '0' — which would publish the product as free.
+		const priceResolution = resolvePublishPrice(state)
+		if (priceResolution.status === 'error') {
+			console.error(`Cannot publish product: ${priceResolution.reason.replace('-', ' ')}`)
+			return false
 		}
+		const finalPrice = priceResolution.price
+		const finalCurrency = priceResolution.currency
 
 		// Convert state to ProductFormData format
 		const formData: ProductFormData = {
@@ -423,7 +454,7 @@ export const productFormActions = {
 			categories: state.categories,
 			images: state.images,
 			specs: state.specs,
-			shippings: state.shippings,
+			shippings: normalizeProductShippingSelections(state.shippings),
 			weight: state.weight,
 			dimensions: state.dimensions,
 			isNSFW: state.isNSFW,

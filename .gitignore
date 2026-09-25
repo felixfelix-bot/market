@@ -20,16 +20,16 @@ _.log
 report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # dotenv environment variable files
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
+.env*
+!.env*.example
 
 # caches
 .eslintcache
 .cache
 *.tsbuildinfo
+
+# SQLite database for currency server cache
+contextvm/data/
 
 # IntelliJ based IDEs
 .idea
@@ -46,3 +46,13 @@ test-results
 # Claude Code local settings (user-specific)
 .claude/settings.local.json
 __pycache__/
+
+.opencode/
+contextvm/
+
+# Encrypted test wallet material
+scripts/encrypted_test_wallet.json
+e2e/baseline-results/
+
+# pytest
+.pytest_cache/

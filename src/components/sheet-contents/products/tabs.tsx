@@ -10,12 +10,14 @@ import type { RichShippingInfo } from '@/lib/stores/cart'
 import { useNDK } from '@/lib/stores/ndk'
 import { productFormActions, productFormStore, type ProductShippingForm } from '@/lib/stores/product'
 import { uiStore } from '@/lib/stores/ui'
+import { attachShippingOptionByRef } from '@/lib/utils/productShippingQuickCreate'
+import { resolveProductShippingSelections } from '@/lib/utils/productShippingSelections'
+import { applyFiatPriceEdit, deriveSatsPriceFromFiat } from '@/lib/utils/productPriceResolution'
 import { MempoolService } from '@/lib/utils/mempool'
 import { useBtcExchangeRates, type SupportedCurrency } from '@/queries/external'
 import { usePublishShippingOptionMutation, type ShippingFormData } from '@/publish/shipping'
-import { createShippingReference, getShippingInfo, useShippingOptionsByPubkey, shippingKeys } from '@/queries/shipping'
+import { createShippingReference, getShippingInfo, useShippingOptionsByPubkey } from '@/queries/shipping'
 import { useForm } from '@tanstack/react-form'
-import { useQueryClient } from '@tanstack/react-query'
 import { useStore } from '@tanstack/react-store'
 import { Info, ArrowRightLeft, DownloadIcon, Loader2, PackageIcon, PlusIcon, TruckIcon, X, AlertTriangle } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -43,6 +45,11 @@ export function DetailTab() {
 	// Use existing conversion functions from MempoolService
 	const convertSatsToBtc = MempoolService.satoshisToBtc
 	const convertBtcToSats = MempoolService.btcToSatoshis
+
+	// Exchange rates are only usable once loaded and non-empty. When they are
+	// missing, the converters below return 0, so every sats/fiat sync must be
+	// guarded to avoid storing or publishing a 0-derived price.
+	const hasExchangeRates = !!exchangeRates && Object.keys(exchangeRates).length > 0
 
 	const convertSatsToCurrency = (sats: number, targetCurrency: string): number => {
 		if (targetCurrency === 'SATS') return sats
@@ -92,15 +99,21 @@ export function DetailTab() {
 	const handleBitcoinPriceChange = (value: string) => {
 		const numValue = parseFloat(value) || 0
 
-		// Convert to SATS for storage
-		const satsValue = bitcoinUnit === 'SATS' ? numValue : convertBtcToSats(numValue)
+		// Convert to SATS for storage (sats should always be integers)
+		const satsValue = bitcoinUnit === 'SATS' ? Math.round(numValue) : convertBtcToSats(numValue)
 
-		productFormActions.updateValues({ price: satsValue.toString() })
-
-		// Update fiat field if a fiat currency is selected and visible
-		if (currency !== 'SATS' && currency !== 'BTC') {
+		// Update fiat field if a fiat currency is selected and visible.
+		// Requires exchange rates: without them convertSatsToCurrency returns 0 and
+		// we would write fiatPrice: '0.00' into the store, which fiat-mode publish
+		// then emits as the product price. Skip the sats->fiat sync instead.
+		if (currency !== 'SATS' && currency !== 'BTC' && hasExchangeRates) {
 			const fiatValue = convertSatsToCurrency(satsValue, currency)
-			setFiatDisplayValue(fiatValue.toFixed(2))
+			const fiatValueStr = fiatValue.toFixed(2)
+			setFiatDisplayValue(fiatValueStr)
+			// Also update state.fiatPrice so it's used when publishing in fiat mode
+			productFormActions.updateValues({ price: satsValue.toString(), fiatPrice: fiatValueStr })
+		} else {
+			productFormActions.updateValues({ price: satsValue.toString() })
 		}
 	}
 
@@ -109,18 +122,13 @@ export function DetailTab() {
 		// Store the raw input value without formatting
 		setFiatDisplayValue(value)
 
-		// Only convert to sats if we have a valid number
-		const numValue = parseFloat(value)
-		if (!isNaN(numValue) && numValue > 0) {
-			const satsValue = convertCurrencyToSats(numValue, currency)
-			// Store both the sats value (for display) and the fiat value (for publishing)
-			productFormActions.updateValues({ price: satsValue.toString(), fiatPrice: value })
-		} else if (value === '0') {
-			// Set the price to zero if the input is zero
-			productFormActions.updateValues({ price: '0', fiatPrice: '0' })
-		} else if (value === '') {
-			// Clear the price if input is empty
-			productFormActions.updateValues({ price: '', fiatPrice: '' })
+		// Derive the sats price only while exchange rates are available;
+		// otherwise keep the fiat edit and leave the sats price unresolved
+		// until rates arrive (convertCurrencyToSats returns 0 without rates,
+		// and a stored 0 would be published as a real price).
+		const outcome = applyFiatPriceEdit(value, convertCurrencyToSats, { currency, hasExchangeRates })
+		if (outcome) {
+			productFormActions.updateValues(outcome)
 		}
 	}
 
@@ -202,6 +210,20 @@ export function DetailTab() {
 		}
 	}, [storeBitcoinUnit, storeCurrencyMode, fiatPrice])
 
+	// Calculate sats from fiat once exchange rates are available. Covers both
+	// products loaded for edit and fiat edits made while rates were
+	// unavailable (their derived sats price was left unresolved, so this
+	// derives it when rates finally arrive).
+	useEffect(() => {
+		const derivedSats = deriveSatsPriceFromFiat(
+			{ currencyMode: storeCurrencyMode, fiatPrice, price, currency, hasExchangeRates },
+			convertCurrencyToSats,
+		)
+		if (derivedSats !== null) {
+			productFormActions.updateValues({ price: derivedSats })
+		}
+	}, [storeCurrencyMode, fiatPrice, price, currency, hasExchangeRates])
+
 	// Update fiat display when currency or price changes (only for auto-conversion from sats)
 	useEffect(() => {
 		// Skip if we're in fiat mode and already have a fiat price - don't overwrite user input
@@ -209,7 +231,9 @@ export function DetailTab() {
 			return
 		}
 
-		if (showFiatField && price) {
+		// Requires exchange rates: without them the field would display a
+		// placeholder '0.00' which fiat-mode publishing would pick up.
+		if (showFiatField && price && hasExchangeRates) {
 			const satsValue = parseFloat(price) || 0
 			if (satsValue > 0) {
 				const fiatValue = convertSatsToCurrency(satsValue, currency)
@@ -220,7 +244,7 @@ export function DetailTab() {
 				}
 			}
 		}
-	}, [currency, price, showFiatField, storeCurrencyMode, fiatPrice])
+	}, [currency, price, showFiatField, storeCurrencyMode, fiatPrice, hasExchangeRates])
 
 	return (
 		<div className="space-y-6">
@@ -589,7 +613,7 @@ export function ImagesTab() {
 	}
 
 	return (
-		<div className="space-y-4">
+		<div className="space-y-4 overflow-visible" data-testid="product-images-tab-panel">
 			<p className="text-gray-600">We recommend using square images of 1600x1600 and under 2mb.</p>
 
 			<div className="flex flex-col gap-4">
@@ -657,7 +681,6 @@ const QUICK_SHIPPING_TEMPLATES: Array<{
 export function ShippingTab() {
 	const { shippings } = useStore(productFormStore)
 	const { getUser } = useNDK()
-	const queryClient = useQueryClient()
 	const [user, setUser] = useState<any>(null)
 	const [isCreatingShipping, setIsCreatingShipping] = useState(false)
 	const [showPickupForm, setShowPickupForm] = useState(false)
@@ -676,45 +699,6 @@ export function ShippingTab() {
 	}, [getUser])
 
 	const shippingOptionsQuery = useShippingOptionsByPubkey(user?.pubkey || '')
-
-	// Helper to auto-add a shipping option after creation
-	const autoAddShippingOption = async (templateName: string) => {
-		// Wait for the query to refetch and use the result directly
-		const refetchResult = await shippingOptionsQuery.refetch()
-
-		// Find the newly created option by name
-		const refetchedData = refetchResult.data || []
-		const newOption = refetchedData
-			.map((event) => {
-				const info = getShippingInfo(event)
-				if (!info || !info.id || typeof info.id !== 'string' || info.id.trim().length === 0) return null
-				const id = createShippingReference(user.pubkey, info.id)
-				return {
-					id,
-					name: info.title,
-					cost: parseFloat(info.price.amount),
-					currency: info.price.currency,
-					countries: info.countries || [],
-					service: info.service || '',
-					carrier: info.carrier || '',
-				}
-			})
-			.filter(Boolean)
-			.find((opt) => opt && opt.name === templateName) as RichShippingInfo | undefined
-
-		if (newOption && !shippings.some((s) => s.shipping?.id === newOption.id)) {
-			const newShipping: ProductShippingForm = {
-				shipping: {
-					id: newOption.id,
-					name: newOption.name || '',
-				},
-				extraCost: '',
-			}
-			productFormActions.updateValues({
-				shippings: [...shippings, newShipping],
-			})
-		}
-	}
 
 	// Quick-create a shipping option from template
 	const handleQuickCreate = async (template: (typeof QUICK_SHIPPING_TEMPLATES)[number]) => {
@@ -737,14 +721,11 @@ export function ShippingTab() {
 				service: template.service,
 			}
 
-			await publishShippingMutation.mutateAsync(formData)
+			const publishedShipping = await publishShippingMutation.mutateAsync(formData)
 
-			// Invalidate and refetch shipping options with the correct pubkey
-			await queryClient.invalidateQueries({ queryKey: shippingKeys.byPubkey(user.pubkey) })
-			await queryClient.invalidateQueries({ queryKey: shippingKeys.all })
-
-			// Auto-add the newly created shipping option
-			await autoAddShippingOption(template.name)
+			productFormActions.updateValues({
+				shippings: attachShippingOptionByRef(productFormStore.state.shippings, publishedShipping.shippingRef),
+			})
 
 			toast.success(`${template.name} shipping option created and added!`)
 		} catch (error) {
@@ -781,14 +762,11 @@ export function ShippingTab() {
 				pickupAddress: pickupAddress,
 			}
 
-			await publishShippingMutation.mutateAsync(formData)
+			const publishedShipping = await publishShippingMutation.mutateAsync(formData)
 
-			// Invalidate and refetch shipping options with the correct pubkey
-			await queryClient.invalidateQueries({ queryKey: shippingKeys.byPubkey(user.pubkey) })
-			await queryClient.invalidateQueries({ queryKey: shippingKeys.all })
-
-			// Auto-add the newly created shipping option
-			await autoAddShippingOption('Local Pickup')
+			productFormActions.updateValues({
+				shippings: attachShippingOptionByRef(productFormStore.state.shippings, publishedShipping.shippingRef),
+			})
 
 			toast.success('Local Pickup shipping option created and added!')
 			setShowPickupForm(false)
@@ -825,17 +803,14 @@ export function ShippingTab() {
 
 	const addShippingOption = (option: RichShippingInfo) => {
 		// Check if shipping option is already added
-		const isAlreadyAdded = shippings.some((s) => s.shipping?.id === option.id)
+		const isAlreadyAdded = shippings.some((s) => s.shippingRef === option.id)
 		if (isAlreadyAdded) {
 			toast.error('This shipping option is already added')
 			return
 		}
 
 		const newShipping: ProductShippingForm = {
-			shipping: {
-				id: option.id,
-				name: option.name || '',
-			},
+			shippingRef: option.id,
 			extraCost: '',
 		}
 
@@ -873,7 +848,14 @@ export function ShippingTab() {
 		}
 	}
 
-	const hasValidShipping = shippings.some((s) => s.shipping && s.shipping.id)
+	const resolvedSelectedShippings = useMemo(
+		() => resolveProductShippingSelections(shippings, availableShippingOptions),
+		[shippings, availableShippingOptions],
+	)
+
+	const hasValidShipping = shippingOptionsQuery.isFetched
+		? resolvedSelectedShippings.some((shipping) => shipping.isResolved)
+		: shippings.some((shipping) => !!shipping.shippingRef)
 
 	return (
 		<div className="space-y-6">
@@ -891,14 +873,16 @@ export function ShippingTab() {
 				<div className="space-y-4">
 					<h3 className="font-medium">Selected Shipping Options</h3>
 					<div className="space-y-3">
-						{shippings.map((shipping, index) => {
-							const option = availableShippingOptions.find((opt) => opt.id === shipping.shipping?.id)
+						{resolvedSelectedShippings.map((shipping, index) => {
+							const option = shipping.option
 							return (
 								<div key={index} className="flex items-center gap-3 p-3 border rounded-md bg-gray-50">
-									{option && option.service && <ServiceIcon service={option.service} />}
+									{option?.service ? <ServiceIcon service={option.service} /> : <AlertTriangle className="w-4 h-4 text-amber-500" />}
 									<div className="flex-1">
-										<div className="font-medium">{shipping.shipping?.name}</div>
-										{option && (
+										<div className="font-medium">
+											{option?.name || (shippingOptionsQuery.isFetched ? 'Unavailable shipping option' : 'Resolving shipping option...')}
+										</div>
+										{option ? (
 											<div className="text-sm text-gray-500">
 												{option.cost} {option.currency} •{' '}
 												{option.countries && option.countries.length > 1
@@ -906,6 +890,10 @@ export function ShippingTab() {
 													: option.countries?.[0] || 'No countries'}{' '}
 												• {option.service || 'Unknown service'}
 											</div>
+										) : shippingOptionsQuery.isFetched ? (
+											<div className="text-sm text-amber-600">This shipping reference is no longer available: {shipping.shippingRef}</div>
+										) : (
+											<div className="text-sm text-gray-500">Looking up current shipping metadata...</div>
 										)}
 									</div>
 									<div className="flex items-center gap-2">
@@ -1078,7 +1066,7 @@ export function ShippingTab() {
 				) : (
 					<div className="grid gap-3">
 						{availableShippingOptions
-							.filter((option) => !shippings.some((s) => s.shipping?.id === option.id))
+							.filter((option) => !shippings.some((s) => s.shippingRef === option.id))
 							.map((option) => (
 								<div key={option.id} className="flex items-center gap-3 p-3 border rounded-md hover:bg-gray-50">
 									{option.service && <ServiceIcon service={option.service} />}

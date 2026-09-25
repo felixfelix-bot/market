@@ -1,0 +1,413 @@
+/**
+ * NIP-46 remote signer mock for e2e testing.
+ *
+ * Uses a raw WebSocket connection (instead of nostr-tools Relay) to avoid
+ * the "mute: no one was listening" error that nostr-tools throws on
+ * unexpected relay messages.
+ *
+ * Supports both NIP-04 and NIP-44 encryption (NDK defaults to NIP-44).
+ *
+ * Uses a single unified message handler to avoid event-loss race conditions
+ * that occur when multiple handlers are added/removed at different times.
+ *
+ * Implements both the QR-code handshake (nostrconnect:// flow) and the
+ * ongoing signer loop (connect, get_public_key, sign_event) so that
+ * NDKNip46Signer.blockUntilReady() can complete against the local relay.
+ */
+
+import { finalizeEvent, getPublicKey, type EventTemplate } from 'nostr-tools/pure'
+import { hexToBytes } from '@noble/hashes/utils.js'
+import { encrypt as nip04Encrypt, decrypt as nip04Decrypt } from 'nostr-tools/nip04'
+import { v2 as nip44 } from 'nostr-tools/nip44'
+import { parseNostrConnectURI } from 'applesauce-signers/helpers'
+import WebSocket from 'ws'
+import { RELAY_URL } from '../test-config'
+
+interface SignerLoopOptions {
+	requireAuthForSecretless?: boolean
+	authUrl?: string
+	authAckDelayMs?: number
+}
+
+export class Nip46Mock {
+	/**
+	 * Hex secret key of the remote signer (bunker) — the NIP-46 channel identity.
+	 * Encrypts/decrypts RPC messages and signs the kind-24133 transport events,
+	 * but is NEVER the identity returned by get_public_key.
+	 */
+	readonly remoteSignerSk: string
+	/** Remote signer (bunker) hex public key. */
+	readonly remoteSignerPk: string
+	/**
+	 * Hex secret key of the authenticated user the bunker signs for.
+	 * Defaults to the remote-signer key (legacy single-key collapse).
+	 */
+	readonly userSk: string
+	/** Authenticated user hex public key (what get_public_key returns). */
+	readonly userPk: string
+
+	/**
+	 * Legacy read-alias for {@link remoteSignerPk} — the bunker pubkey the client
+	 * addresses (used by the existing e2e bunker-URL fixtures). Remote-signer and
+	 * user identities diverge once the B-2 three-key call sites pass distinct keys.
+	 */
+	get pk(): string {
+		return this.remoteSignerPk
+	}
+
+	private ws: WebSocket | null = null
+	private subId: string | null = null
+	private isClosed = false
+
+	// ─── Unified message dispatch ─────────────────────────────
+	// Single handler attached once — routes messages to the right callback.
+	private eoseResolve: (() => void) | null = null
+	private okCallbacks = new Map<string, (ok: boolean, reason?: string) => void>()
+	private eventHandler: ((event: any) => Promise<void>) | null = null
+	private bufferedEvents: any[] = []
+
+	constructor(remoteSignerSk: string, userSk?: string) {
+		this.remoteSignerSk = remoteSignerSk
+		this.remoteSignerPk = getPublicKey(hexToBytes(remoteSignerSk))
+		this.userSk = userSk ?? remoteSignerSk
+		this.userPk = getPublicKey(hexToBytes(this.userSk))
+	}
+
+	// ─── Encryption helpers ────────────────────────────────────
+
+	/** Auto-detect encryption scheme and decrypt (channel with the remote signer) */
+	private async decryptContent(senderPubkey: string, content: string): Promise<string> {
+		if (content.includes('?iv=')) {
+			return await nip04Decrypt(this.remoteSignerSk, senderPubkey, content)
+		}
+		try {
+			const conversationKey = nip44.utils.getConversationKey(hexToBytes(this.remoteSignerSk), senderPubkey)
+			return nip44.decrypt(content, conversationKey)
+		} catch {
+			return await nip04Decrypt(this.remoteSignerSk, senderPubkey, content)
+		}
+	}
+
+	/** Encrypt with NIP-04 (channel with the remote signer) */
+	private async encryptContent(recipientPubkey: string, plaintext: string): Promise<string> {
+		return await nip04Encrypt(this.remoteSignerSk, recipientPubkey, plaintext)
+	}
+
+	// ─── Single message handler ───────────────────────────────
+
+	/**
+	 * The ONE message handler, attached at WebSocket open and never removed.
+	 * Routes messages to the appropriate callback based on type.
+	 */
+	private handleMessage = (data: WebSocket.RawData) => {
+		const msg = JSON.parse(data.toString())
+
+		switch (msg[0]) {
+			case 'EOSE':
+				if (msg[1] === this.subId && this.eoseResolve) {
+					const resolve = this.eoseResolve
+					this.eoseResolve = null
+					resolve()
+				}
+				break
+
+			case 'OK': {
+				const eventId = msg[1]
+				const cb = this.okCallbacks.get(eventId)
+				if (cb) {
+					this.okCallbacks.delete(eventId)
+					cb(!!msg[2], msg[3])
+				}
+				break
+			}
+
+			case 'EVENT':
+				if (msg[1] === this.subId) {
+					const event = msg[2]
+					if (this.eventHandler && !this.isClosed) {
+						void this.dispatchEventHandler(event)
+					} else {
+						// Buffer events that arrive before the handler is set
+						this.bufferedEvents.push(event)
+					}
+				}
+				break
+		}
+	}
+
+	// ─── Connection helpers ────────────────────────────────────
+
+	/** Open WebSocket, attach unified handler, subscribe, wait for EOSE */
+	private async connectAndSubscribe(relayUrl: string): Promise<void> {
+		return new Promise((resolve, reject) => {
+			const ws = new WebSocket(relayUrl)
+			this.ws = ws
+			this.subId = 'nip46_mock_' + Date.now()
+
+			ws.on('error', (err) => {
+				reject(new Error(`WebSocket error: ${err.message}`))
+			})
+
+			ws.on('open', () => {
+				// Attach the single unified handler
+				ws.on('message', this.handleMessage)
+
+				// Set up EOSE callback
+				this.eoseResolve = resolve as () => void
+
+				// Subscribe to Kind 24133 events addressed to our pubkey
+				ws.send(JSON.stringify(['REQ', this.subId, { kinds: [24133], '#p': [this.remoteSignerPk] }]))
+			})
+
+			setTimeout(() => reject(new Error('Timeout connecting to relay')), 10_000)
+		})
+	}
+
+	/** Set the event handler and drain any buffered events */
+	private setEventHandler(handler: (event: any) => Promise<void>): void {
+		this.eventHandler = handler
+		// Process any events that arrived before the handler was set
+		const buffered = this.bufferedEvents.splice(0)
+		for (const event of buffered) {
+			void this.dispatchEventHandler(event)
+		}
+	}
+
+	private async dispatchEventHandler(event: any): Promise<void> {
+		if (this.isClosed || !this.eventHandler) {
+			return
+		}
+
+		try {
+			await this.eventHandler(event)
+		} catch (e) {
+			if (!this.isClosed) {
+				console.error(`[NIP46-MOCK] Handler error:`, e)
+			}
+		}
+	}
+
+	/** Publish an event via the WebSocket and wait for OK */
+	private publishEvent(event: any): Promise<{ accepted: boolean; reason?: string }> {
+		if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+			return Promise.reject(new Error('WebSocket not connected'))
+		}
+
+		return new Promise((resolve) => {
+			this.okCallbacks.set(event.id, (ok, reason) => {
+				resolve({ accepted: ok, reason })
+			})
+			this.ws!.send(JSON.stringify(['EVENT', event]))
+
+			setTimeout(() => {
+				if (this.okCallbacks.has(event.id)) {
+					this.okCallbacks.delete(event.id)
+					resolve({ accepted: true }) // Assume success on timeout
+				}
+			}, 5_000)
+		})
+	}
+
+	// ─── QR-code flow ──────────────────────────────────────────
+
+	/**
+	 * Complete the nostrconnect:// handshake and start the signer loop.
+	 *
+	 * 1. Parse the nostrconnect:// URL for localPubkey, relay, secret
+	 * 2. Connect to relay and subscribe
+	 * 3. Set up event handler for responses
+	 * 4. Publish a `connect` request with the secret
+	 * 5. Event handler processes approval → sends ack
+	 * 6. Event handler processes signer requests (connect, get_public_key, sign_event)
+	 *
+	 * Returns a cleanup function.
+	 */
+	async respondToConnect(nostrconnectUrl: string): Promise<() => void> {
+		// Spec-compliant parsing via the library's parseNostrConnectURI — it
+		// THROWS on a missing `secret` (legacy `token`-only URIs fail closed,
+		// ADR-0002 amendment B-4 / #807). Manual `?? get('token')` silently defaulted to
+		// empty and was the loophole; the token read-alias was removed.
+		let parsed: ReturnType<typeof parseNostrConnectURI>
+		try {
+			parsed = parseNostrConnectURI(nostrconnectUrl)
+		} catch (e) {
+			throw new Error(`Unsupported nostrconnect URI (missing secret): ${(e as Error).message}`)
+		}
+		const localPubkey = parsed.client
+		const relayUrl = parsed.relays[0]
+		const secret = parsed.secret!
+
+		// Connect and wait for subscription EOSE
+		await this.connectAndSubscribe(relayUrl)
+
+		let qrHandshakeDone = false
+
+		// Set up event handler (also drains any buffered events)
+		this.setEventHandler(async (event) => {
+			const decrypted = await this.decryptContent(event.pubkey, event.content)
+			const msg = JSON.parse(decrypted)
+
+			if (!qrHandshakeDone && msg.result !== undefined && !msg.method) {
+				// App's approval response to our connect request
+				qrHandshakeDone = true
+				await this.sendEncrypted(localPubkey, { result: 'ack' })
+			} else if (msg.method) {
+				// Signer request from NDKNip46Signer
+				await this.handleSignerRequest(event.pubkey, msg)
+			}
+		})
+
+		// Publish the connect request
+		const connectRequest = {
+			id: crypto.randomUUID(),
+			method: 'connect',
+			params: { secret },
+		}
+		await this.sendEncrypted(localPubkey, connectRequest)
+
+		return () => this.close()
+	}
+
+	// ─── Bunker URL flow ───────────────────────────────────────
+
+	/**
+	 * Start listening for NIP-46 signer requests on the relay.
+	 * Used when testing bunker:// URL connections where the app
+	 * directly creates NDKNip46Signer without a QR handshake.
+	 *
+	 * Returns a cleanup function.
+	 */
+	async startSignerLoop(relayUrl?: string, options: SignerLoopOptions = {}): Promise<() => void> {
+		await this.connectAndSubscribe(relayUrl || RELAY_URL)
+
+		this.setEventHandler(async (event) => {
+			const decrypted = await this.decryptContent(event.pubkey, event.content)
+			const msg = JSON.parse(decrypted)
+
+			if (msg.method) {
+				await this.handleSignerRequest(event.pubkey, msg, options)
+			}
+		})
+
+		return () => this.close()
+	}
+
+	// ─── Internals ─────────────────────────────────────────────
+
+	private async handleSignerRequest(senderPubkey: string, request: any, options: SignerLoopOptions = {}): Promise<void> {
+		let response: any
+
+		switch (request.method) {
+			case 'connect':
+				if (options.requireAuthForSecretless && !request.params?.[1]) {
+					await this.sendEncrypted(senderPubkey, {
+						id: request.id,
+						result: 'auth_url',
+						error: options.authUrl || 'https://signer.test/approve',
+					})
+					await new Promise((resolve) => setTimeout(resolve, options.authAckDelayMs ?? 250))
+				}
+				response = { id: request.id, result: 'ack' }
+				break
+
+			case 'get_public_key':
+				response = { id: request.id, result: this.userPk }
+				break
+
+			case 'sign_event': {
+				const eventToSign = typeof request.params[0] === 'string' ? JSON.parse(request.params[0]) : request.params[0]
+				const signed = finalizeEvent(eventToSign, hexToBytes(this.userSk))
+				response = { id: request.id, result: JSON.stringify(signed) }
+				break
+			}
+
+			case 'nip04_encrypt': {
+				const [thirdPartyPubkey, plaintext] = request.params
+				const ciphertext = await nip04Encrypt(this.userSk, thirdPartyPubkey, plaintext)
+				response = { id: request.id, result: ciphertext }
+				break
+			}
+
+			case 'nip04_decrypt': {
+				const [thirdPartyPubkey2, ciphertext2] = request.params
+				const plaintext2 = await nip04Decrypt(this.userSk, thirdPartyPubkey2, ciphertext2)
+				response = { id: request.id, result: plaintext2 }
+				break
+			}
+
+			case 'nip44_encrypt': {
+				const [thirdPartyPubkey, plaintext] = request.params
+				const conversationKey = nip44.utils.getConversationKey(hexToBytes(this.userSk), thirdPartyPubkey)
+				const ciphertext = nip44.encrypt(plaintext, conversationKey)
+				response = { id: request.id, result: ciphertext }
+				break
+			}
+
+			case 'nip44_decrypt': {
+				const [thirdPartyPubkey, ciphertext] = request.params
+				const conversationKey = nip44.utils.getConversationKey(hexToBytes(this.userSk), thirdPartyPubkey)
+				const plaintext = nip44.decrypt(ciphertext, conversationKey)
+				response = { id: request.id, result: plaintext }
+				break
+			}
+
+			default:
+				response = { id: request.id, error: `Unsupported method: ${request.method}` }
+		}
+
+		await this.sendEncrypted(senderPubkey, response)
+	}
+
+	/**
+	 * Encrypt content and publish as a Kind 24133 event.
+	 * Retries on "mute" rejections (no matching subscription yet) with
+	 * a fresh event each time to avoid duplicate-event deduplication.
+	 */
+	private async sendEncrypted(recipientPubkey: string, content: object, maxRetries = 10): Promise<void> {
+		const plaintext = JSON.stringify(content)
+
+		for (let attempt = 0; attempt < maxRetries; attempt++) {
+			const encrypted = await this.encryptContent(recipientPubkey, plaintext)
+			const template: EventTemplate = {
+				kind: 24133,
+				created_at: Math.floor(Date.now() / 1000),
+				content: encrypted,
+				tags: [['p', recipientPubkey]],
+			}
+			const event = finalizeEvent(template, hexToBytes(this.remoteSignerSk))
+			const result = await this.publishEvent(event)
+
+			if (result.accepted) {
+				return
+			}
+
+			if (result.reason?.includes('mute') && attempt < maxRetries - 1) {
+				await new Promise((r) => setTimeout(r, 500))
+				continue
+			}
+
+			throw new Error(`Relay rejected event: ${result.reason}`)
+		}
+	}
+
+	close(): void {
+		this.isClosed = true
+
+		if (this.ws && this.subId) {
+			try {
+				if (this.ws.readyState === WebSocket.OPEN) {
+					this.ws.send(JSON.stringify(['CLOSE', this.subId]))
+				}
+			} catch (_) {}
+		}
+
+		try {
+			this.ws?.close()
+		} catch (_) {}
+		this.ws = null
+		this.subId = null
+		this.eventHandler = null
+		this.bufferedEvents = []
+		this.okCallbacks.clear()
+	}
+}
