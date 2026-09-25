@@ -12,6 +12,7 @@
 
 import type { AuctionSettlementStatus, Nut7ProofState, PathReleaseReason, ValidatorClaim, ValidatorReason } from './constants'
 import type { NostrEventLike } from '../nostr/eventLike'
+import type { DleqProof } from '../cashu/dleq'
 
 // =========================================================================
 // kind 30408 — Auction listing (seller-signed, addressable) — §4.1
@@ -148,6 +149,14 @@ export interface ParsedBidEvent {
 	 * MUST be parallel to {@link lockSecrets} (same length, same order).
 	 */
 	proofYs: string[]
+	/**
+	 * NUT-12 DLEQ proofs — one per locked proof, parallel to {@link
+	 * lockSecrets} and {@link proofYs}. DLEQ is required for every bid, so
+	 * every bid MUST carry one `dleq_proof` tag per locked proof; the Zod
+	 * schema enforces the triple-parallel invariant and the validation
+	 * pipeline enforces presence (`dleq_invalid`).
+	 */
+	dleqProofs?: DleqProof[]
 
 	// Bookkeeping
 	createdForEndAt: number
@@ -319,6 +328,29 @@ export interface ParsedValidatorVerdictEvent {
 // kind 30441 — Validator policy declaration — §4.4.2
 // =========================================================================
 
+export type ValidatorAdmissionPolicy =
+	| { enabled: false }
+	| {
+			enabled: true
+			maxBidsPerWindow: number
+			rateWindowSec: number
+			maxTrackedChildSubscriptions: number
+			childReplayLookbackSec: number
+			/** Optional for compatibility with policy events published before this bound was introduced. */
+			lateSettlementObservationSec?: number
+			maxTrackedBidsPerAuction: number
+			maxSeenEventIds: number
+			maxPendingEventsPerKey: number
+			maxPendingKeys: number
+			maxPendingEvents: number
+			pendingTtlSec: number
+			maxEventBytes: number
+			maxTagCount: number
+			maxNonceLength: number
+			maxProofCount: number
+			maxContentBytes: number
+	  }
+
 export interface ValidatorPolicyDocument {
 	type: 'auction_validator_policy_v1'
 	relatrMinScore?: number
@@ -330,6 +362,7 @@ export interface ValidatorPolicyDocument {
 	categoryAllowlist?: string[]
 	categoryDenylist?: string[]
 	maxAcceptableSkewSec?: number
+	admission?: ValidatorAdmissionPolicy
 	griefingDecayDays?: number
 	notes?: string
 }

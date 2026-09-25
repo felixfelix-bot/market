@@ -18,6 +18,7 @@ import { getAuctionSettlementGraceSeconds, nip60Actions } from '@/lib/stores/nip
 import { uiStore } from '@/lib/stores/ui'
 import { usePublishAuctionBidMutation } from '@/publish/auctions'
 import { findBidderRecord } from '@/lib/auction/bidderRecords'
+import { useDleqKeysetPolling } from '@/lib/auction/useDleqKeysetPolling'
 import { toRawEvent } from '@/lib/nostr/eventLike'
 import { useQueryClient } from '@tanstack/react-query'
 import { auctionKeys } from '@/queries/queryKeyFactory'
@@ -70,6 +71,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useStore } from '@tanstack/react-store'
 import { ArrowLeft, Check, Gavel, Landmark, Radio, Trophy, Truck, UserRound } from 'lucide-react'
+import { InvalidAuctionNotice } from '@/components/InvalidAuctionNotice'
 import { TestListingNotice } from '@/components/TestListingNotice'
 import { TestLabelButton } from '@/components/dashboard/TestLabelButton'
 import { AUCTION_KIND } from '@/lib/auction/constants'
@@ -389,7 +391,7 @@ function AuctionDetailRoute() {
 	const currency = getAuctionCurrency(auction)
 	const auctionType = getAuctionType(auction)
 	const categories = getAuctionCategories(auction)
-	const trustedMints = getAuctionMints(auction)
+	const trustedMints = useMemo(() => getAuctionMints(auction), [auction])
 	const pathIssuerPubkey = getAuctionPathIssuer(auction)
 	const keyScheme = getAuctionKeyScheme(auction)
 	const p2pkXpub = getAuctionP2pkXpub(auction)
@@ -432,6 +434,24 @@ function AuctionDetailRoute() {
 	)
 
 	const { bids } = useStreamingAuctionBids(auctionRootEventId || auctionId, 500, auctionCoordinates)
+
+	// ADR-0011 review R1: the DLEQ verdict gates `canonicalWinner` /
+	// `currentTopValidAmount`, but `computeValidatedBids` classifies a
+	// DLEQ-bearing bid as PENDING when no keysets are supplied, and pending is
+	// excluded from the valid set. Without this hook the public page's displayed
+	// price, bid count, leader and winner CTAs would come from the raw relay
+	// array (or read as empty) for every auction. Parse the bids once and feed
+	// the polling hook; the validated set below consumes the map.
+	const parsedBidsForDleq = useMemo(
+		() =>
+			bids
+				.map((b) => parseBidEvent(toRawEvent(b)))
+				.filter((r): r is { ok: true; value: ParsedBidEvent } => r.ok)
+				.map((r) => r.value),
+		[bids],
+	)
+	const { keysets: dleqKeysets, unknownKeysets: dleqUnknownKeysets } = useDleqKeysetPolling(parsedBidsForDleq, trustedMints)
+
 	const biddingCutoffAt = getAuctionBiddingCutoffAt(auction)
 	const countdown = useAuctionCountdown(biddingCutoffAt, { showSeconds: true })
 	const ended = countdown.isEnded
@@ -452,20 +472,18 @@ function AuctionDetailRoute() {
 		if (!auction || !(verdictsQuery.data ?? []).length) return null
 		const parsedAuctionResult = parseAuctionEvent(toRawEvent(auction))
 		if (!parsedAuctionResult.ok) return null
-		const parsedBids = bids
-			.map((b) => parseBidEvent(toRawEvent(b)))
-			.filter((r): r is { ok: true; value: ParsedBidEvent } => r.ok)
-			.map((r) => r.value)
 		const parsedVerdicts = (verdictsQuery.data ?? [])
 			.map((v) => parseValidatorVerdictEvent(toRawEvent(v)))
 			.filter((r): r is { ok: true; value: ParsedValidatorVerdictEvent } => r.ok)
 			.map((r) => r.value)
 		return computeValidatedBids({
 			auction: parsedAuctionResult.value,
-			bids: parsedBids,
+			bids: parsedBidsForDleq,
 			verdicts: parsedVerdicts,
+			dleqKeysets,
+			dleqUnknownKeysets,
 		})
-	}, [auction, bids, verdictsQuery.data])
+	}, [auction, parsedBidsForDleq, verdictsQuery.data, dleqKeysets, dleqUnknownKeysets])
 	const currentPrice = validatedSet
 		? Math.max(validatedSet.currentTopValidAmount, startingBid)
 		: getAuctionCurrentPriceFromBids(auction, bids, startingBid)
@@ -838,6 +856,12 @@ function AuctionDetailRoute() {
 								<TestLabelButton kind={AUCTION_KIND} pubkey={auction.pubkey} dTag={auctionDTag} itemLabel="Auction" />
 							</div>
 
+							{/* Spec validity (AUCTIONS.md §4.1): a malformed event is absent
+							    from the feed and the browse pages but reachable through this
+							    direct link, so name the offending tags here. Renders nothing
+							    for a valid event. */}
+							<InvalidAuctionNotice event={toRawEvent(auction)} itemLabel="Auction" />
+
 							<span>Posted by</span>
 							<UserCard pubkey={auction.pubkey} size="md" />
 
@@ -870,7 +894,15 @@ function AuctionDetailRoute() {
 								)}
 								{!ended && <span className="text-foreground/80 text-end">{formatAuctionEndTimeLabel(biddingCutoffAt, false)}</span>}
 							</div>
-							<AuctionBidder auction={auction} currentUserPubkey={activeUserPubkey} bids={bids} />
+							{/* Bid area: the only place an auction offers a bid control. It
+							    renders `InvalidAuctionBidBlock` instead of the panel when
+							    the event fails AUCTIONS.md §4.1 (see `AuctionBidder`), and
+							    the wrapper is the scope e2e asserts that on — cards for
+							    *other* auctions on this page are not bid controls for this
+							    one. */}
+							<div className="w-full" data-testid="auction-bid-area">
+								<AuctionBidder auction={auction} currentUserPubkey={activeUserPubkey} bids={bids} />
+							</div>
 							{parsedAuctionForSettlement && (
 								<AuctionSettlement
 									auction={parsedAuctionForSettlement}

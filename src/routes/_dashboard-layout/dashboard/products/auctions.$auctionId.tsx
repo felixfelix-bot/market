@@ -1,5 +1,6 @@
 import { AuctionClaimDialog } from '@/components/auctions/AuctionClaimDialog'
 import { Media } from '@/components/Media'
+import { InvalidAuctionNotice } from '@/components/InvalidAuctionNotice'
 import { TestListingNotice } from '@/components/TestListingNotice'
 import { TestLabelButton } from '@/components/dashboard/TestLabelButton'
 import { AUCTION_KIND } from '@/lib/auction/constants'
@@ -25,6 +26,7 @@ import { parseValidatorVerdictEvent } from '@/lib/schemas/auction/validatorEvent
 import { isStructurallyValidSettledSettlement } from '@/lib/auction/events'
 import { toRawEvent } from '@/lib/nostr/eventLike'
 import { useNut7Polling } from '@/lib/auction/useNut7Polling'
+import { useDleqKeysetPolling } from '@/lib/auction/useDleqKeysetPolling'
 import { parseSettlementEvent } from '@/lib/schemas/auction/settlementEvents'
 import { computeValidatedBids } from '@/lib/auction/bidValidation'
 import { auctionKeys } from '@/queries/queryKeyFactory'
@@ -280,6 +282,22 @@ function DashboardAuctionDetailRoute() {
 	const verdictsQuery = useAuctionVerdicts(auctionRootEventId || auctionId, 500, auctionCoordinates, auctionAuditorPubkeys)
 	const verdictsData = verdictsQuery.data ?? []
 
+	// Parse bids once so both the DLEQ keyset acquisition and the settlement
+	// validation use the same parsed set.
+	const parsedBids = useMemo(
+		() =>
+			bids
+				.map((b) => parseBidEvent(toRawEvent(b)))
+				.filter((r): r is { ok: true; value: import('@/lib/auction/events').ParsedBidEvent } => r.ok)
+				.map((r) => r.value),
+		[bids],
+	)
+	// ADR-0011 Blocker 1: gather the mint keysets needed to DLEQ-verify the
+	// bids (bounded to the auction's trusted mints). Without this, DLEQ-required
+	// bids are correctly treated as pending (non-authoritative) — but then the
+	// seller could never settle, so the ingestion path must actually feed evidence.
+	const { keysets: dleqKeysets, unknownKeysets: dleqUnknownKeysets } = useDleqKeysetPolling(parsedBids, trustedMints)
+
 	// Compute validated bid set unconditionally for display (no postSettlement).
 	// This is separate from the latestSettlement memo's validated set, which uses
 	// postSettlement semantics and is settlement-scoped.
@@ -287,10 +305,6 @@ function DashboardAuctionDetailRoute() {
 		if (!auction) return null
 		const parsedAuctionResult = parseAuctionEvent(toRawEvent(auction))
 		if (!parsedAuctionResult.ok) return null
-		const parsedBids = bids
-			.map((b) => parseBidEvent(toRawEvent(b)))
-			.filter((r): r is { ok: true; value: import('@/lib/auction/events').ParsedBidEvent } => r.ok)
-			.map((r) => r.value)
 		const parsedVerdicts = verdictsData
 			.map((v) => parseValidatorVerdictEvent(toRawEvent(v)))
 			.filter((r): r is { ok: true; value: import('@/lib/auction/events').ParsedValidatorVerdictEvent } => r.ok)
@@ -300,8 +314,10 @@ function DashboardAuctionDetailRoute() {
 			bids: parsedBids,
 			verdicts: parsedVerdicts,
 			nut7States,
+			dleqKeysets,
+			dleqUnknownKeysets,
 		})
-	}, [auction, bids, verdictsData, nut7States])
+	}, [auction, parsedBids, verdictsData, nut7States, dleqKeysets, dleqUnknownKeysets])
 	const currentPrice = validatedBidSet
 		? Math.max(validatedBidSet.currentTopValidAmount, startingBid)
 		: getAuctionCurrentPriceFromBids(auction, bids, startingBid)
@@ -328,11 +344,9 @@ function DashboardAuctionDetailRoute() {
 		if (!parsedAuctionResult.ok) return null
 		const parsedAuction = parsedAuctionResult.value
 
-		// Parse bids (NostrEventLike → raw shape → ParsedBidEvent).
-		const parsedBids = bids
-			.map((b) => parseBidEvent(toRawEvent(b)))
-			.filter((r): r is { ok: true; value: import('@/lib/auction/events').ParsedBidEvent } => r.ok)
-			.map((r) => r.value)
+		// Bids are parsed once at the route level (shared with the DLEQ
+		// keyset acquisition hook) — reuse them here.
+		const bidList = parsedBids
 
 		// Parse verdicts.
 		const parsedVerdicts = verdictsData
@@ -357,11 +371,13 @@ function DashboardAuctionDetailRoute() {
 		// Compute validated bids using quorum evidence.
 		const validatedBidSet = computeValidatedBids({
 			auction: parsedAuction,
-			bids: parsedBids,
+			bids: bidList,
 			verdicts: parsedVerdicts,
 			nut7States,
 			postSettlement: hasSettledSettlement,
 			settledBidIds,
+			dleqKeysets,
+			dleqUnknownKeysets,
 		})
 		const validatedBidderPubkeys = new Set(validatedBidSet.validBids.map((b) => b.bidderPubkey.toLowerCase()))
 		const hasReserveMeetingBid = validatedBidSet.validBids.some((b) => b.amount >= parsedAuction.reserve)
@@ -407,7 +423,7 @@ function DashboardAuctionDetailRoute() {
 		})
 
 		return validSettlements[0]?.ndkEvent ?? null
-	}, [auction, settlements, bids, verdictsData, nut7States])
+	}, [auction, settlements, parsedBids, verdictsData, nut7States, dleqKeysets, dleqUnknownKeysets])
 	const settlementMutation = usePublishAuctionSettlementMutation()
 
 	const topBid = useMemo(() => {
@@ -670,6 +686,13 @@ function DashboardAuctionDetailRoute() {
 								<TestLabelButton kind={AUCTION_KIND} pubkey={auction.pubkey} dTag={getAuctionId(auction)} itemLabel="Auction" />
 							</div>
 						)}
+
+						{/* Spec validity (AUCTIONS.md §4.1): this dashboard read is the
+						    owner surface, so it deliberately keeps a malformed event
+						    reachable (`includeInvalid` on the by-pubkey read) — an owner
+						    cannot republish a corrected event they cannot see. Name the
+						    offending tags here. Renders nothing for a valid event. */}
+						<InvalidAuctionNotice event={toRawEvent(auction)} itemLabel="Auction" />
 
 						<div className="grid gap-3 sm:grid-cols-2">
 							<StatCard label="Current price" value={formatSats(currentPrice)} eyebrow="Live pulse" />
