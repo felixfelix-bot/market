@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../fixtures'
-import { setupLnurlMock } from '../helpers/lnurl-mock'
+import { setupLnurlMock, FAKE_BOLT11 } from '../helpers/lnurl-mock'
 import { queryRelayEvents, filterByTag } from '../utils/relay-query'
 import { TEST_WALLETED_USER_LUD16, devUser1, devUser2 } from '../../src/lib/fixtures'
 
@@ -478,6 +478,11 @@ test.describe('Checkout Flow', () => {
 		await test.step('Create the order and open the payment step', async () => {
 			await continueFromSummaryToPayment(buyerPage)
 			await expect(buyerPage.getByText('Invoices', { exact: true })).toBeVisible({ timeout: 30_000 })
+
+			// The mocked invoice must reach the order, not merely the mock: the invoice text
+			// input carries the bolt11 the LNURL mock served, so a run that silently fell onto
+			// the failed-invoice branch cannot pass (review 5317252389, Blocking 1).
+			await expect(buyerPage.locator('#invoice').first()).toHaveValue(FAKE_BOLT11)
 		})
 
 		await test.step('Skip all mocked invoices and finish checkout', async () => {
@@ -496,6 +501,11 @@ test.describe('Checkout Flow', () => {
 		await fillShippingForm(buyerPage, 'Relay Test Buyer')
 		await continueFromSummaryToPayment(buyerPage)
 		await expect(buyerPage.getByText('Invoices', { exact: true })).toBeVisible({ timeout: 30_000 })
+
+		// The mocked invoice must reach the order, not merely the mock: the invoice text input
+		// carries the bolt11 the LNURL mock served, so a run that silently fell onto the
+		// failed-invoice branch cannot pass (review 5317252389, Blocking 1).
+		await expect(buyerPage.locator('#invoice').first()).toHaveValue(FAKE_BOLT11)
 
 		await expect(async () => {
 			const orderCreationEvents = filterByTag(
@@ -530,6 +540,12 @@ test.describe('Checkout Flow', () => {
 		await continueFromSummaryToPayment(buyerPage)
 
 		await expect(buyerPage.getByText('Invoices', { exact: true })).toBeVisible({ timeout: 30_000 })
+
+		// The mocked invoice must reach the order, not merely the mock: the invoice text input
+		// carries the bolt11 the LNURL mock served, so a run that silently fell onto the
+		// failed-invoice branch cannot pass (review 5317252389, Blocking 1).
+		await expect(buyerPage.locator('#invoice').first()).toHaveValue(FAKE_BOLT11)
+
 		const payLaterButton = buyerPage.getByRole('button', { name: /pay later/i })
 		await expect(payLaterButton).toBeVisible({ timeout: 10_000 })
 		await neutralizeBlockingToasts(buyerPage)
