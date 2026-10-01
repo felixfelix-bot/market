@@ -281,10 +281,15 @@ function DashboardAuctionDetailRoute() {
 
 	// Parse bids once so both the DLEQ keyset acquisition and the settlement
 	// validation use the same parsed set.
+	// B2 (PR #1280 review 5235113240): `bids` comes from the fetch seam as
+	// `NostrEventLike` (no `rawEvent` member — the applesauce/io port returns
+	// raw events), so calling `b.rawEvent()` here is a type error and a render
+	// crash on this surface. The supported seam is `toRawEvent` (see
+	// src/lib/nostr/eventLike.ts), matching the public route.
 	const parsedBids = useMemo(
 		() =>
 			bids
-				.map((b) => parseBidEvent(b.rawEvent()))
+				.map((b) => parseBidEvent(toRawEvent(b)))
 				.filter((r): r is { ok: true; value: import('@/lib/auction/events').ParsedBidEvent } => r.ok)
 				.map((r) => r.value),
 		[bids],
