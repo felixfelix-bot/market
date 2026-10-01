@@ -518,9 +518,14 @@ describe('validateBidChainNut7PrePublish — pre-publish NUT-7 gate', () => {
 describe('computeValidatedBids — M5 duplicate dleq_proof C', () => {
 	test("a bid reusing another bid's dleq_proof C is marked invalid (fabricated collateral)", () => {
 		const auction = buildAuction()
-		const sharedDleq = { id: '00deadbeef', amount: 100, C: COMPRESSED_PK, e: 'aa', s: 'bb', r: 'cc' }
-		const bid1 = buildBid(auction, { dleqProofs: [sharedDleq] })
-		const bid2 = buildBid(auction, { dleqProofs: [sharedDleq] }) // distinct lock_secret (nonce-N), same C
+		// B3: honest proof + supplied keyset map (the set carries DLEQ
+		// evidence on a non-required auction, so the binding verifies it).
+		const locktime = auction.maxEndAt + auction.settlementGrace
+		const secret1 = buildLockSecret(COMPRESSED_PK, locktime, REFUND_PK, 'm5-shared-c-nonce-1')
+		const secret2 = buildLockSecret(COMPRESSED_PK, locktime, REFUND_PK, 'm5-shared-c-nonce-2')
+		const sharedDleq = honestProofA(5_000, secret1)
+		const bid1 = buildBid(auction, { lockSecrets: [secret1], dleqProofs: [sharedDleq] })
+		const bid2 = buildBid(auction, { lockSecrets: [secret2], dleqProofs: [sharedDleq] }) // distinct lock_secret, same C
 		// Prove the fixture's two bids differ on secret/Y and share ONLY the
 		// DLEQ `C`, so the C-dedup is the sole discriminator (not the legacy
 		// secret/Y dedup) and this test cannot pass vacuously.
@@ -539,6 +544,7 @@ describe('computeValidatedBids — M5 duplicate dleq_proof C', () => {
 			bids: [bid1, bid2],
 			verdicts,
 			nut7States: unspent([bid1, bid2]),
+			dleqKeysets: keysetMapFor([`https://mint.test:${HONEST_KS_A}`, honestKeysetA([5_000])]),
 		})
 
 		// Earliest observed bid keeps the C; the reuser is invalid.
@@ -548,11 +554,18 @@ describe('computeValidatedBids — M5 duplicate dleq_proof C', () => {
 
 	test('two bids with distinct dleq_proof C values both stay valid', () => {
 		const auction = buildAuction()
-		const bid1 = buildBid(auction, { dleqProofs: [{ id: '00deadbeef', amount: 100, C: COMPRESSED_PK, e: 'aa', s: 'bb', r: 'cc' }] })
+		// B3: honest proofs under two distinct keysets (distinct C by
+		// construction) + the keyset map, so both verify.
+		const locktime = auction.maxEndAt + auction.settlementGrace
+		const secret1 = buildLockSecret(COMPRESSED_PK, locktime, REFUND_PK, 'm5-distinct-c-nonce-1')
+		const secret2 = buildLockSecret(COMPRESSED_PK, locktime, REFUND_PK, 'm5-distinct-c-nonce-2')
+		const bid1 = buildBid(auction, { lockSecrets: [secret1], dleqProofs: [honestProofA(5_000, secret1)] })
 		const bid2 = buildBid(auction, {
 			amount: 6_000,
-			dleqProofs: [{ id: '00deadbeef', amount: 100, C: '02' + '7'.repeat(64), e: 'aa', s: 'bb', r: 'cc' }],
+			lockSecrets: [secret2],
+			dleqProofs: [honestProofB(6_000, secret2)],
 		})
+		expect(bid1.dleqProofs?.[0]?.C).not.toBe(bid2.dleqProofs?.[0]?.C)
 		const verdicts = [
 			buildVerdict(bid1, { validatorPubkey: V1 }),
 			buildVerdict(bid1, { validatorPubkey: V2, observedAt: bid1.createdAt + 30 }),
@@ -565,6 +578,10 @@ describe('computeValidatedBids — M5 duplicate dleq_proof C', () => {
 			bids: [bid1, bid2],
 			verdicts,
 			nut7States: unspent([bid1, bid2]),
+			dleqKeysets: keysetMapFor(
+				[`https://mint.test:${HONEST_KS_A}`, honestKeysetA([5_000])],
+				[`https://mint.test:${HONEST_KS_B}`, honestKeysetB([6_000])],
+			),
 		})
 
 		expect(result.invalidBids).toHaveLength(0)
@@ -588,6 +605,20 @@ const makeDleqKeyset = (amounts: number[]): MintKeys => {
 }
 
 const dleqKeyset1 = makeDleqKeyset([100])
+
+// B3 (review 5235113240) fixtures: since the bid-visible activation binding,
+// any bid set containing a DLEQ-bearing bid verifies fail-closed EVEN when
+// `auction.dleqRequired` is false. Tests that place proof-bearing bids on
+// non-required auctions and expect them valid must therefore use honest,
+// verifiable proofs and supply the keyset map — exactly what a real
+// evidence-gathering surface (polling hook, settlement publish) does.
+const HONEST_KS_A = '00a11ce000000001'
+const HONEST_KS_B = '00b0b0b0b0b0b0b0'
+const honestKeysetA = (amounts: number[]): MintKeys => makeFixtureKeyset(amounts, { keysetId: HONEST_KS_A, basePrivKey: 500 })
+const honestKeysetB = (amounts: number[]): MintKeys => makeFixtureKeyset(amounts, { keysetId: HONEST_KS_B, basePrivKey: 900 })
+const honestProofA = (amount: number, secret: string) => makeHonestDleqProof(amount, secret, { keysetId: HONEST_KS_A, basePrivKey: 500 })
+const honestProofB = (amount: number, secret: string) => makeHonestDleqProof(amount, secret, { keysetId: HONEST_KS_B, basePrivKey: 900 })
+const keysetMapFor = (...entries: Array<[string, MintKeys]>): Map<string, MintKeys> => new Map(entries)
 
 // Garbage DLEQ — will NEVER pass hasValidDleq (real crypto verification fails)
 const garbageDleq = { id: '00deadbeef', amount: 100, C: GENERATOR_HEX, e: '00', s: '00', r: 'ff' }
@@ -866,7 +897,17 @@ const OTHER_BIDDER_PK = '9'.repeat(64)
 describe('computeValidatedBids — M5 (A3) bidder↔collateral binding across authors', () => {
 	test("a DIFFERENT author republishing another bid's locked proof is invalid (collateral is bound to one bidder)", () => {
 		const auction = buildAuction()
-		const bid1 = buildBid(auction, { id: 'a'.repeat(64), amount: 5_000, createdAt: 1_450 })
+		// B3: honest proofs + keyset map (proof-bearing bids on a
+		// non-required auction verify fail-closed under the binding).
+		const locktime = auction.maxEndAt + auction.settlementGrace
+		const secret1 = buildLockSecret(COMPRESSED_PK, locktime, REFUND_PK, 'a3-copy-nonce-1')
+		const bid1 = buildBid(auction, {
+			id: 'a'.repeat(64),
+			amount: 5_000,
+			createdAt: 1_450,
+			lockSecrets: [secret1],
+			dleqProofs: [honestProofA(5_000, secret1)],
+		})
 		// bid2 republishes bid1's WHOLE locked proof (`lock_secret` and the
 		// `proof_y` it hashes to are public in bid1's event) under a new author
 		// and a HIGHER amount. `proof_y` cannot be forged independently: validateBid
@@ -880,7 +921,7 @@ describe('computeValidatedBids — M5 (A3) bidder↔collateral binding across au
 			amount: 6_000,
 			createdAt: 1_600,
 			lockSecrets: bid1.lockSecrets,
-			dleqProofs: [{ id: '00deadbeef', amount: 6_000, C: '02' + '7'.repeat(64), e: 'aa', s: 'bb', r: 'cc' }],
+			dleqProofs: [honestProofB(6_000, bid1.lockSecrets[0])],
 		})
 		expect(bid2.bidderPubkey).not.toBe(bid1.bidderPubkey)
 		expect(bid2.lockSecrets).toEqual(bid1.lockSecrets)
@@ -893,8 +934,12 @@ describe('computeValidatedBids — M5 (A3) bidder↔collateral binding across au
 			buildVerdict(bid2, { validatorPubkey: V1 }),
 			buildVerdict(bid2, { validatorPubkey: V2, observedAt: bid2.createdAt + 30 }),
 		]
+		const keysets = keysetMapFor(
+			[`https://mint.test:${HONEST_KS_A}`, honestKeysetA([5_000])],
+			[`https://mint.test:${HONEST_KS_B}`, honestKeysetB([6_000])],
+		)
 
-		const both = computeValidatedBids({ auction, bids: [bid1, bid2], verdicts, nut7States: unspent([bid1, bid2]) })
+		const both = computeValidatedBids({ auction, bids: [bid1, bid2], verdicts, nut7States: unspent([bid1, bid2]), dleqKeysets: keysets })
 		expect(both.invalidBids.map((b) => b.id)).toContain(bid2.id)
 		expect(both.validBids.map((b) => b.id)).toEqual([bid1.id])
 		expect(both.canonicalWinner?.id).toBe(bid1.id)
@@ -907,25 +952,32 @@ describe('computeValidatedBids — M5 (A3) bidder↔collateral binding across au
 			bids: [bid2],
 			verdicts: verdicts.filter((v) => v.bidEventId === bid2.id),
 			nut7States: unspent([bid2]),
+			dleqKeysets: keysets,
 		})
 		expect(alone.canonicalWinner?.id).toBe(bid2.id)
 	})
 
 	test("a DIFFERENT author reusing another bid's DLEQ `C` (fabricated collateral) is invalid", () => {
 		const auction = buildAuction()
-		const sharedC = '02' + 'c'.repeat(64)
+		// B3: honest proof for bid1 (+ keyset map); bid2 reuses the SAME C —
+		// it is cross-author C-claim invalidated before verification, so its
+		// proof only needs the shared C.
+		const locktime = auction.maxEndAt + auction.settlementGrace
+		const secret1 = buildLockSecret(COMPRESSED_PK, locktime, REFUND_PK, 'a3-shared-c-nonce-1')
+		const sharedProof = honestProofA(5_000, secret1)
 		const bid1 = buildBid(auction, {
 			id: 'c'.repeat(64),
 			amount: 5_000,
 			createdAt: 1_450,
-			dleqProofs: [{ id: '00deadbeef', amount: 5_000, C: sharedC, e: 'aa', s: 'bb', r: 'cc' }],
+			lockSecrets: [secret1],
+			dleqProofs: [sharedProof],
 		})
 		const bid2 = buildBid(auction, {
 			id: 'd'.repeat(64),
 			bidderPubkey: OTHER_BIDDER_PK,
 			amount: 6_000,
 			createdAt: 1_600,
-			dleqProofs: [{ id: '00deadbeef', amount: 6_000, C: sharedC, e: 'aa', s: 'bb', r: 'cc' }],
+			dleqProofs: [{ ...sharedProof, amount: 6_000 }],
 		})
 		// C is the sole shared value: distinct authors, secrets, Ys.
 		expect(bid2.lockSecrets).not.toEqual(bid1.lockSecrets)
@@ -938,20 +990,37 @@ describe('computeValidatedBids — M5 (A3) bidder↔collateral binding across au
 			buildVerdict(bid2, { validatorPubkey: V1 }),
 			buildVerdict(bid2, { validatorPubkey: V2, observedAt: bid2.createdAt + 30 }),
 		]
-		const result = computeValidatedBids({ auction, bids: [bid1, bid2], verdicts, nut7States: unspent([bid1, bid2]) })
+		const result = computeValidatedBids({
+			auction,
+			bids: [bid1, bid2],
+			verdicts,
+			nut7States: unspent([bid1, bid2]),
+			dleqKeysets: keysetMapFor([`https://mint.test:${HONEST_KS_A}`, honestKeysetA([5_000])]),
+		})
 		expect(result.validBids.map((b) => b.id)).toEqual([bid1.id])
 		expect(result.invalidBids.map((b) => b.id)).toContain(bid2.id)
 	})
 
 	test('positive control: different authors with fully DISTINCT collateral both stay valid', () => {
 		const auction = buildAuction()
-		const bid1 = buildBid(auction, { id: 'e'.repeat(64), amount: 5_000, createdAt: 1_450 })
+		// B3: honest proofs under distinct keysets + the keyset map.
+		const locktime = auction.maxEndAt + auction.settlementGrace
+		const secret1 = buildLockSecret(COMPRESSED_PK, locktime, REFUND_PK, 'a3-control-nonce-1')
+		const secret2 = buildLockSecret(COMPRESSED_PK, locktime, REFUND_PK, 'a3-control-nonce-2')
+		const bid1 = buildBid(auction, {
+			id: 'e'.repeat(64),
+			amount: 5_000,
+			createdAt: 1_450,
+			lockSecrets: [secret1],
+			dleqProofs: [honestProofA(5_000, secret1)],
+		})
 		const bid2 = buildBid(auction, {
 			id: 'f'.repeat(64),
 			bidderPubkey: OTHER_BIDDER_PK,
 			amount: 6_000,
 			createdAt: 1_600,
-			dleqProofs: [{ id: '00deadbeef', amount: 6_000, C: '02' + '8'.repeat(64), e: 'aa', s: 'bb', r: 'cc' }],
+			lockSecrets: [secret2],
+			dleqProofs: [honestProofB(6_000, secret2)],
 		})
 		const verdicts = [
 			buildVerdict(bid1, { validatorPubkey: V1 }),
@@ -959,8 +1028,151 @@ describe('computeValidatedBids — M5 (A3) bidder↔collateral binding across au
 			buildVerdict(bid2, { validatorPubkey: V1 }),
 			buildVerdict(bid2, { validatorPubkey: V2, observedAt: bid2.createdAt + 30 }),
 		]
-		const result = computeValidatedBids({ auction, bids: [bid1, bid2], verdicts, nut7States: unspent([bid1, bid2]) })
+		const result = computeValidatedBids({
+			auction,
+			bids: [bid1, bid2],
+			verdicts,
+			nut7States: unspent([bid1, bid2]),
+			dleqKeysets: keysetMapFor(
+				[`https://mint.test:${HONEST_KS_A}`, honestKeysetA([5_000])],
+				[`https://mint.test:${HONEST_KS_B}`, honestKeysetB([6_000])],
+			),
+		})
 		expect(result.invalidBids).toHaveLength(0)
 		expect(result.validBids.map((b) => b.id).sort()).toEqual([bid1.id, bid2.id].sort())
+	})
+})
+
+// =============================================================================
+// B3 (PR #1280 review 5235113240) — bid-visible DLEQ activation binding
+// =============================================================================
+// A kind-30408 replacement that flips `dleq_required` to "0" is only rejected
+// by readers that hold an earlier version; a single-version reader derives
+// activation from the flipped tag. These tests pin the binding: once ANY bid
+// in the set carries `dleq_proof` tags (signed, bidder-side evidence that
+// activation was required at bid time), verification is fail-closed to
+// required for the whole set — the flipped auction cannot re-open the
+// unverified-bid path for that reader.
+describe('computeValidatedBids — B3 bid-visible DLEQ activation binding', () => {
+	test('flipped-to-0 auction: DLEQ-bearing bid with garbage proofs is dleq_invalid (was valid pre-binding)', () => {
+		const auction = buildAuction({ dleqRequired: false })
+		const bid = buildBid(auction, { dleqProofs: [garbageDleq] })
+		const verdicts = [
+			buildVerdict(bid, { validatorPubkey: V1 }),
+			buildVerdict(bid, { validatorPubkey: V2, observedAt: bid.createdAt + 30 }),
+		]
+		const result = computeValidatedBids({
+			auction,
+			bids: [bid],
+			verdicts,
+			nut7States: unspent([bid]),
+			dleqKeysets: new Map([['https://mint.test:00deadbeef', dleqKeyset1]]),
+		})
+
+		// Pre-binding this bid was VALID (auction says "0", proofs ignored —
+		// the fail-open the review flagged). Now the presented evidence must
+		// verify, and garbage fails: dleq_invalid.
+		expect(result.validBids).toHaveLength(0)
+		expect(result.canonicalWinner).toBeNull()
+		const classified = result.classified.find((cl) => cl.bid.id === bid.id)
+		expect(classified?.classification).toBe('invalid')
+		expect(classified?.invalidReason).toBe('dleq_invalid')
+	})
+
+	test('flipped-to-0 auction: DLEQ-bearing bid with unavailable keyset evidence is PENDING (fail-closed, non-authoritative)', () => {
+		const auction = buildAuction({ dleqRequired: false })
+		const bid = buildBid(auction, { dleqProofs: [garbageDleq] })
+		const verdicts = [
+			buildVerdict(bid, { validatorPubkey: V1 }),
+			buildVerdict(bid, { validatorPubkey: V2, observedAt: bid.createdAt + 30 }),
+		]
+		// Map supplied but the bid's (mint, keyset) entry is absent — the
+		// crafted-unadvertised-keyset case. Pending, never valid.
+		const result = computeValidatedBids({
+			auction,
+			bids: [bid],
+			verdicts,
+			nut7States: unspent([bid]),
+			dleqKeysets: new Map([['https://other.mint:00deadbeef', dleqKeyset1]]),
+		})
+
+		expect(result.validBids).toHaveLength(0)
+		expect(result.invalidBids).toHaveLength(0)
+		expect(result.canonicalWinner).toBeNull()
+		const classified = result.classified.find((cl) => cl.bid.id === bid.id)
+		expect(classified?.classification).toBe('pending')
+		expect(classified?.pendingReason).toBe('dlequ_evidence_unavailable')
+	})
+
+	test('flipped-to-0 auction: proof-less bid alongside a DLEQ-bearing bid fails closed structurally', () => {
+		const auction = buildAuction({ dleqRequired: false })
+		const locktime = auction.maxEndAt + auction.settlementGrace
+		const secret = buildLockSecret(COMPRESSED_PK, locktime, REFUND_PK, 'b3-proofless-nonce')
+		// bidProofless placed AFTER the flip (no dleq_proof tags — exactly the
+		// cheap 1-sat-collateral/100k-amount shape the review described); its
+		// sibling's evidence binds the set to required, so it fails Step 3.5.
+		const bidProofless = buildBid(auction, { id: '1'.repeat(64), amount: 5_000, createdAt: 1_600 })
+		const bidWithEvidence = buildBid(auction, {
+			id: '2'.repeat(64),
+			amount: 9_000,
+			createdAt: 1_450,
+			lockSecrets: [secret],
+			dleqProofs: [honestProofA(9_000, secret)],
+		})
+		const verdicts = [
+			buildVerdict(bidProofless, { validatorPubkey: V1 }),
+			buildVerdict(bidProofless, { validatorPubkey: V2, observedAt: bidProofless.createdAt + 30 }),
+			buildVerdict(bidWithEvidence, { validatorPubkey: V1 }),
+			buildVerdict(bidWithEvidence, { validatorPubkey: V2, observedAt: bidWithEvidence.createdAt + 30 }),
+		]
+		const result = computeValidatedBids({
+			auction,
+			bids: [bidProofless, bidWithEvidence],
+			verdicts,
+			nut7States: unspent([bidProofless, bidWithEvidence]),
+			dleqKeysets: keysetMapFor([`https://mint.test:${HONEST_KS_A}`, honestKeysetA([9_000])]),
+		})
+
+		// The honest evidence-bearing bid wins; the post-flip proof-less bid
+		// (the cheap fake-collateral shape) is excluded from validity —
+		// Step 3.5 rejects it into invalidBids (same assertion shape as the
+		// existing structural Step 3.5 test).
+		expect(result.canonicalWinner?.id).toBe(bidWithEvidence.id)
+		expect(result.validBids.map((b) => b.id)).toEqual([bidWithEvidence.id])
+		expect(result.invalidBids.map((b) => b.id)).toEqual([bidProofless.id])
+		// The honest evidence-bearing bid stays valid: the binding verifies,
+		// it does not condemn.
+		const evidenceClassified = result.classified.find((cl) => cl.bid.id === bidWithEvidence.id)
+		expect(evidenceClassified?.classification).toBe('valid')
+	})
+
+	test('flipped-to-0 auction: DLEQ-bearing bid with HONEST proofs stays valid under the binding (no over-rejection)', () => {
+		const auction = buildAuction({ dleqRequired: false })
+		const locktime = auction.maxEndAt + auction.settlementGrace
+		const secret = buildLockSecret(COMPRESSED_PK, locktime, REFUND_PK, 'b3-honest-nonce')
+		const bid = buildBid(auction, { lockSecrets: [secret], dleqProofs: [honestProofA(5_000, secret)] })
+		const verdicts = [
+			buildVerdict(bid, { validatorPubkey: V1 }),
+			buildVerdict(bid, { validatorPubkey: V2, observedAt: bid.createdAt + 30 }),
+		]
+		const result = computeValidatedBids({
+			auction,
+			bids: [bid],
+			verdicts,
+			nut7States: unspent([bid]),
+			dleqKeysets: keysetMapFor([`https://mint.test:${HONEST_KS_A}`, honestKeysetA([5_000])]),
+		})
+
+		expect(result.validBids).toHaveLength(1)
+		expect(result.canonicalWinner?.id).toBe(bid.id)
+	})
+
+	test('no binding trigger: signed-0 auction with only proof-less bids keeps grandfathered semantics', () => {
+		const auction = buildAuction({ dleqRequired: false })
+		const bid = buildBid(auction)
+		const verdicts = [buildVerdict(bid, { validatorPubkey: V1 }), buildVerdict(bid, { validatorPubkey: V2 })]
+		const result = computeValidatedBids({ auction, bids: [bid], verdicts, nut7States: unspent([bid]) })
+		expect(result.validBids).toHaveLength(1)
+		expect(result.canonicalWinner?.id).toBe(bid.id)
 	})
 })

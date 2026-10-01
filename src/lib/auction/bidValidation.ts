@@ -292,6 +292,26 @@ export function computeValidatedBids(input: ComputeValidatedBidsInput): Validate
 	const { auction, bids, verdicts, nut7States } = input
 	const postSettlement = input.postSettlement ?? false
 
+	// B3 (PR #1280 review 5235113240): bind DLEQ activation to bid-visible
+	// evidence, not only to the (single) auction version this reader holds.
+	// Immutability of `dleq_required` is enforced against the ROOT of the
+	// version set the reader fetched (`auctionImmutableFieldsMatch` inside
+	// `resolveAuctionVersionSet`) — but a reader that only ever sees ONE
+	// kind-30408 version (NIP-01 relays serve the latest replacement) derives
+	// activation from a tag the seller can still flip. A bid carrying
+	// `dleq_proof` tags is signed, bidder-side evidence that activation was
+	// REQUIRED when that bid was built (`publishAuctionBid` derives both its
+	// lock requirement and its published proof tags from the same canonical
+	// `resolveDleqRequired` decision). So once ANY bid in the set presents
+	// DLEQ evidence, verification is fail-closed to required for the whole
+	// set: a replacement that flips `dleq_required` to "0" after DLEQ-bearing
+	// bids exist cannot re-open the unverified-bid path (the 1-sat collateral
+	// claiming a 100,000-sat amount) for that reader. Fail-closed only: an
+	// auction whose bids carry no DLEQ evidence keeps its signed "0"/legacy
+	// semantics untouched.
+	const bidEvidenceRequiresDleq = bids.some((bid) => (bid.dleqProofs?.length ?? 0) > 0)
+	const effectiveAuction = !auction.dleqRequired && bidEvidenceRequiresDleq ? { ...auction, dleqRequired: true } : auction
+
 	// Step 1: Compute legLockedAmount from signed chain before validation.
 	computeLegLockedAmounts(bids)
 
@@ -388,7 +408,7 @@ export function computeValidatedBids(input: ComputeValidatedBidsInput): Validate
 
 	// Step 3: Classify each bid based on validator quorum.
 	const classified = bids.map((bid) =>
-		classifyBid(bid, auction, eligibleConfirmsByBidId.get(bid.id) ?? [], condemnByBidId.get(bid.id) ?? [], nut7States),
+		classifyBid(bid, effectiveAuction, eligibleConfirmsByBidId.get(bid.id) ?? [], condemnByBidId.get(bid.id) ?? [], nut7States),
 	)
 
 	// M5 FIX: Cross-bid dedup check at parse/classification time.
@@ -515,7 +535,7 @@ export function computeValidatedBids(input: ComputeValidatedBidsInput): Validate
 
 	for (const c of validCandidates) {
 		const verdict = validateBid({
-			auction,
+			auction: effectiveAuction,
 			bid: c.bid,
 			observedAt: c.observedAt,
 			nut7State: c.nut7State,
@@ -538,7 +558,10 @@ export function computeValidatedBids(input: ComputeValidatedBidsInput): Validate
 			// model as NUT-7 (Decision 6) — when evidence is unavailable the
 			// bid stays quorum-valid; when evidence IS available and DLEQ
 			// fails, the bid is invalidated (Decision 4: dleq_invalid).
-			if (auction.dleqRequired) {
+			// B3: keyed on the EFFECTIVE activation — bid-visible DLEQ
+			// evidence binds the set to required even when the (single)
+			// auction version this reader holds says otherwise.
+			if (effectiveAuction.dleqRequired) {
 				const dleqProofs = c.bid.dleqProofs
 				if (dleqProofs && dleqProofs.length > 0) {
 					const dleqKeysetMap = input.dleqKeysets

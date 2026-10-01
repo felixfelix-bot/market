@@ -383,3 +383,67 @@ describe('computeAuctionBidFloor (AUCTIONS.md §6.1)', () => {
 		}
 	})
 })
+
+// =============================================================================
+// B3 (PR #1280 review 5235113240) — immutable-single-tag comparison must
+// mirror the STRICT single reader. `readDleqRequiredTag` classifies duplicate
+// / multi-value / empty tags non-canonical (fail closed to required); the
+// version-set filter must not admit a replacement whose immutable-tag
+// occurrence list differs from the root's, even when the FIRST values match.
+// =============================================================================
+describe('resolveAuctionVersionSet — B3 strict immutable-tag mirror', () => {
+	const withTags = (event: NDKEvent, ...extraTags: string[][]): NDKEvent =>
+		({ ...event, tags: [...(event.tags as string[][]), ...extraTags] }) as NDKEvent
+
+	test('replacement appending a SECOND dleq_required tag is rejected even though the first value matches the root', () => {
+		const root = withTags(makeAuction({ id: 'auction-root', endAt: 200, createdAt: 10 }), ['dleq_required', '1'])
+		// Pre-B3-fix this compared equal: getAuctionTagValue took the FIRST
+		// value ('1' == '1') while the strict reader calls it non-canonical.
+		const appended = withTags(
+			makeAuction({ id: 'auction-appended', endAt: 200, createdAt: 20, rootEventId: 'auction-root' }),
+			['dleq_required', '1'],
+			['dleq_required', '0'],
+		)
+
+		const resolved = resolveAuctionVersionSet([root, appended])
+
+		expect(resolved?.rootEvent.id).toBe('auction-root')
+		expect(resolved?.displayEvent.id).toBe('auction-root')
+		expect(resolved?.rejectedEventIds).toContain('auction-appended')
+	})
+
+	test('replacement carrying an EMPTY dleq_required value is rejected (non-canonical)', () => {
+		const root = withTags(makeAuction({ id: 'auction-root', endAt: 200, createdAt: 10 }), ['dleq_required', '1'])
+		const emptied = withTags(makeAuction({ id: 'auction-emptied', endAt: 200, createdAt: 20, rootEventId: 'auction-root' }), [
+			'dleq_required',
+			'',
+		])
+
+		const resolved = resolveAuctionVersionSet([root, emptied])
+
+		expect(resolved?.rejectedEventIds).toContain('auction-emptied')
+	})
+
+	test('replacement DROPPING dleq_required is rejected (occurrence list differs)', () => {
+		const root = withTags(makeAuction({ id: 'auction-root', endAt: 200, createdAt: 10 }), ['dleq_required', '1'])
+		const dropped = makeAuction({ id: 'auction-dropped', endAt: 200, createdAt: 20, rootEventId: 'auction-root' })
+
+		const resolved = resolveAuctionVersionSet([root, dropped])
+
+		expect(resolved?.rejectedEventIds).toContain('auction-dropped')
+	})
+
+	test('replacement carrying the IDENTICAL single dleq_required tag stays compatible (no over-rejection)', () => {
+		const root = withTags(makeAuction({ id: 'auction-root', endAt: 200, createdAt: 10 }), ['dleq_required', '1'])
+		const honestUpdate = withTags(
+			makeAuction({ id: 'auction-update', endAt: 200, createdAt: 20, rootEventId: 'auction-root', title: 'Updated' }),
+			['dleq_required', '1'],
+		)
+
+		const resolved = resolveAuctionVersionSet([root, honestUpdate])
+
+		expect(resolved?.rootEvent.id).toBe('auction-root')
+		expect(resolved?.displayEvent.id).toBe('auction-update')
+		expect(resolved?.rejectedEventIds).toEqual([])
+	})
+})

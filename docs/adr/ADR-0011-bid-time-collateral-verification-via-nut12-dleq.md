@@ -128,19 +128,43 @@ kind-1025 path release already publishes full proofs at settlement.
 
    `dleq_required` is also listed in `AUCTION_IMMUTABLE_SINGLE_TAGS`, so a later
    kind-30408 replacement that adds, drops, or flips the tag fails
-   `auctionImmutableFieldsMatch` and is rejected by compliant readers and validators. A
-   bidder who read the tag before bidding can never be re-scored by a replacement that
-   flips it.
-   8b. **The deployment boundary is not a validity oracle (OPEN — maintainer decision).**
-   For tag-less (legacy) events, activation is still decided by
-   `APP_AUCTION_DLEQ_ROLLOUT_START_AT`, an env var resolved at build time
-   (`resolveDleqRolloutStartAt`, `src/lib/auction/constants.ts`). That retains a
-   deployment-controlled input to the interpretation of a _signed_ Nostr event, which
-   is review B2's objection: two builds with different boundaries can classify the same
-   event differently, and a seller can backdate `start_at` below the boundary to land in
-   the grandfathering branch (equivalent to signing `"0"`, but implicit instead of
-   announced). The signed tag now removes that dependency for every event that carries
-   one (8a); it cannot remove it for legacy events without a protocol-level decision.
+   `auctionImmutableFieldsMatch` and is rejected by compliant readers and
+   validators. **Scope of that guarantee (review B3, round 4):** the comparison
+   runs against the ROOT of the version set a reader actually holds
+   (`resolveAuctionVersionSet`), and a reader that only ever sees ONE version —
+   NIP-01 relays normally serve just the latest addressable replacement — has a
+   vacuous comparison: its activation comes from the replacement's own tag, and
+   `created_at` is seller-controlled on that path. Immutability is therefore
+   BEST-EFFORT over the version set a reader happens to hold, anchored
+   authoritatively by the validator service's first-seen root
+   (`server/auction-validator/state.ts`), not a guarantee for every standalone
+   reader. Two fail-closed mitigations bound the residual for readers:
+   1. The immutable-single-tag comparison mirrors the strict reader — it
+      compares the FULL ordered occurrence list, so a replacement that appends,
+      drops, duplicates, or empties an immutable tag never compares equal to the
+      root even when the first values match.
+   2. `computeValidatedBids` binds activation to bid-visible evidence: once ANY
+      bid in the set carries `dleq_proof` tags (signed, bidder-side proof that
+      activation was required when that bid was built), verification is
+      fail-closed to required for the whole set. A replacement that flips
+      `dleq_required` to "0" after DLEQ-bearing bids exist therefore cannot
+      re-open the unverified-bid path for any reader that sees those bids.
+      Residual, accepted as best-effort: a flip published BEFORE any DLEQ-bearing
+      bid exists, read by a client that never sees an earlier version, is locally
+      indistinguishable from an honest "0" auction. (Trade-off of mitigation 2: a
+      bidder can push a proof-bearing bid onto a signed-"0" auction to make
+      proof-less bids fail closed there; that direction only ever invalidates
+      bids, never validates them.)
+      8b. **The deployment boundary is not a validity oracle (OPEN — maintainer decision).**
+      For tag-less (legacy) events, activation is still decided by
+      `APP_AUCTION_DLEQ_ROLLOUT_START_AT`, an env var resolved at build time
+      (`resolveDleqRolloutStartAt`, `src/lib/auction/constants.ts`). That retains a
+      deployment-controlled input to the interpretation of a _signed_ Nostr event, which
+      is review B2's objection: two builds with different boundaries can classify the same
+      event differently, and a seller can backdate `start_at` below the boundary to land in
+      the grandfathering branch (equivalent to signing `"0"`, but implicit instead of
+      announced). The signed tag now removes that dependency for every event that carries
+      one (8a); it cannot remove it for legacy events without a protocol-level decision.
 
    **Decision required (maintainer):** how should a tag-less event be classified once
    the rollout is over?
