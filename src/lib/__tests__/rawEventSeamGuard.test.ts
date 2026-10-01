@@ -30,10 +30,7 @@ const TEST_FILE = /\.(test|integration)\./
 const DIRECT_RAW_EVENT_CALL = /\.rawEvent\s*\(\s*\)/
 
 /** Remove `//`-line and `/* *\/`-block comments so the guard matches code only. */
-const stripComments = (source: string): string =>
-	source
-		.replace(/\/\*[\s\S]*?\*\//g, '')
-		.replace(/(^|\s)\/\/.*$/gm, '$1')
+const stripComments = (source: string): string => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '$1')
 
 /** Recursively collect non-test .ts/.tsx files under `dir` (concurrent walk). */
 async function collectSourceFiles(dir: string): Promise<string[]> {
@@ -49,19 +46,15 @@ async function collectSourceFiles(dir: string): Promise<string[]> {
 }
 
 describe('B2: render surfaces must not call .rawEvent() directly (use toRawEvent)', () => {
-	test(
-		'no direct .rawEvent() call exists under src/routes/ or src/components/',
-		async () => {
-			const files = (await Promise.all(SCANNED_ROOTS.map((root) => collectSourceFiles(root)))).flat()
-			const sources = await Promise.all(files.map(async (file) => [file, stripComments(await readFile(file, 'utf8'))] as const))
-			const offenders = sources.flatMap(([file, source]) =>
-				source
-					.split('\n')
-					.map((line, index) => (DIRECT_RAW_EVENT_CALL.test(line) ? `${file}:${index + 1}: ${line.trim()}` : ''))
-					.filter(Boolean),
-			)
-			expect(offenders).toEqual([])
-		},
-		20000,
-	)
+	test('no direct .rawEvent() call exists under src/routes/ or src/components/', async () => {
+		const files = (await Promise.all(SCANNED_ROOTS.map((root) => collectSourceFiles(root)))).flat()
+		const sources = await Promise.all(files.map(async (file) => [file, stripComments(await readFile(file, 'utf8'))] as const))
+		const offenders = sources.flatMap(([file, source]) =>
+			source
+				.split('\n')
+				.map((line, index) => (DIRECT_RAW_EVENT_CALL.test(line) ? `${file}:${index + 1}: ${line.trim()}` : ''))
+				.filter(Boolean),
+		)
+		expect(offenders).toEqual([])
+	}, 20000)
 })
