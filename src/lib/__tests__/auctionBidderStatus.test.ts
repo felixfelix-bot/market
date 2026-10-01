@@ -112,3 +112,80 @@ describe('auction bidder status', () => {
 		expect(getAuctionBidderStatus({ currentUserPubkey: 'alice', auction, bids, isEnded: false })?.status).toBe('outbid')
 	})
 })
+
+// =============================================================================
+// PR #1280 review B1: bidder status must derive from the VALIDATED bid set
+// when one is supplied, so a DLEQ-fabricated raw bid cannot make an honest
+// bidder read as outbid. (Raw fallback while verdicts load stays covered by
+// the legacy tests above.)
+// =============================================================================
+
+describe('auction bidder status — validated bid set (B1)', () => {
+	const aliceBid = { id: 'bid-alice', bidderPubkey: 'alice', amount: 1000 } as unknown as import('@/lib/auction/events').ParsedBidEvent
+	const malloryFakeBid = {
+		id: 'bid-mallory',
+		bidderPubkey: 'mallory',
+		amount: 1_000_000,
+	} as unknown as import('@/lib/auction/events').ParsedBidEvent
+
+	const validatedSet: import('@/lib/auction/bidValidation').ValidatedBidSet = {
+		classified: [
+			{ bid: aliceBid, classification: 'valid', observedAt: 150 },
+			{ bid: malloryFakeBid, classification: 'invalid', observedAt: 160, invalidReason: 'dleq_invalid' },
+		],
+		validBids: [aliceBid],
+		pendingBids: [],
+		invalidBids: [malloryFakeBid],
+		canonicalWinner: aliceBid,
+		currentTopValidAmount: 1000,
+	}
+
+	const rawBids = [
+		makeBid({ id: 'bid-alice', pubkey: 'alice', amount: 1000, createdAt: 120 }),
+		// The attacker's raw event IS on the relay and IS the raw top bid.
+		makeBid({ id: 'bid-mallory', pubkey: 'mallory', amount: 1_000_000, createdAt: 130 }),
+	]
+
+	test('an honest bidder is NOT outbid by a dleq_invalid raw bid when the validated set is supplied', () => {
+		const auction = makeAuction({})
+		expect(
+			getAuctionBidderStatus({
+				currentUserPubkey: 'alice',
+				auction,
+				bids: rawBids,
+				isEnded: true,
+				validatedBidSet: validatedSet,
+			}),
+		).toEqual({ status: 'won', label: 'You had the top bid' })
+		expect(
+			getAuctionBidderStatus({
+				currentUserPubkey: 'alice',
+				auction,
+				bids: rawBids,
+				isEnded: false,
+				validatedBidSet: validatedSet,
+			})?.status,
+		).toBe('winning')
+	})
+
+	test('the attacker whose only bid is dleq_invalid gets no status from the validated set', () => {
+		const auction = makeAuction({})
+		expect(
+			getAuctionBidderStatus({
+				currentUserPubkey: 'mallory',
+				auction,
+				bids: rawBids,
+				isEnded: false,
+				validatedBidSet: validatedSet,
+			}),
+		).toBeNull()
+	})
+
+	test('without a validated set the legacy raw derivation is unchanged (loading fallback)', () => {
+		const auction = makeAuction({})
+		// Same raw bids, no validatedBidSet: the raw top bid (mallory) leads,
+		// so alice reads as outbid — this is the pre-B1 behaviour, kept ONLY
+		// as the transient fallback while verdict evidence loads.
+		expect(getAuctionBidderStatus({ currentUserPubkey: 'alice', auction, bids: rawBids, isEnded: true })?.status).toBe('was_outbid')
+	})
+})

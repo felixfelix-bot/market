@@ -81,6 +81,8 @@ import { useAuctionVerdicts } from '@/queries/auctions'
 import { parseValidatorVerdictEvent } from '@/lib/schemas/auction/validatorEvents'
 import type { ParsedValidatorVerdictEvent } from '@/lib/auction/events'
 import { computeValidatedBids } from '@/lib/auction/bidValidation'
+import { getValidatedTopAmount } from '@/lib/auction/validatedBidView'
+import { useDleqKeysetPolling } from '@/lib/auction/useDleqKeysetPolling'
 import { AuctionSettlement } from '@/components/AuctionSettlement'
 import { parseAuctionEvent } from '@/lib/schemas/auction/auctionEvent'
 import { parseBidEvent } from '@/lib/schemas/auction/bidEvent'
@@ -386,7 +388,9 @@ function AuctionDetailRoute() {
 	const currency = getAuctionCurrency(auction)
 	const auctionType = getAuctionType(auction)
 	const categories = getAuctionCategories(auction)
-	const trustedMints = getAuctionMints(auction)
+	// Memoized: the DLEQ keyset polling hook below depends on this array, and
+	// a fresh identity per render would retrigger its fetch effect every render.
+	const trustedMints = useMemo(() => getAuctionMints(auction), [auction])
 	const pathIssuerPubkey = getAuctionPathIssuer(auction)
 	const keyScheme = getAuctionKeyScheme(auction)
 	const p2pkXpub = getAuctionP2pkXpub(auction)
@@ -432,8 +436,70 @@ function AuctionDetailRoute() {
 	const biddingCutoffAt = getAuctionBiddingCutoffAt(auction)
 	const countdown = useAuctionCountdown(biddingCutoffAt, { showSeconds: true })
 	const ended = countdown.isEnded
-	const currentPrice = getAuctionCurrentPriceFromBids(auction, bids, startingBid)
-	const bidsCount = getAuctionBidCountFromBids(auction, bids)
+
+	// Parse raw NDK events into typed structs for the settlement descriptor
+	// and (PR #1280 review B1) for the validated bid set below.
+	const parsedAuctionForSettlement = useMemo(() => {
+		if (!auction) return null
+		const result = parseAuctionEvent(toRawEvent(auction))
+		return result.ok ? result.value : null
+	}, [auction])
+
+	const parsedBidsForSettlement = useMemo(
+		() =>
+			bids
+				.map((b) => parseBidEvent(toRawEvent(b)))
+				.filter((r): r is { ok: true; value: ParsedBidEvent } => r.ok)
+				.map((r) => r.value),
+		[bids],
+	)
+
+	// Review #1235 (Should-fix 3): scope verdict fetch to the auction's
+	// configured auditors (relay authors filter) — null-safe; an unloaded or
+	// auditor-less auction fails closed (no verdicts authorized).
+	const auctionAuditorPubkeys = useMemo(() => getAuctionAuditors(auction), [auction])
+	const verdictsQuery = useAuctionVerdicts(auctionRootEventId || auctionId, 500, auctionCoordinates, auctionAuditorPubkeys)
+	const parsedVerdicts = useMemo(() => {
+		return (verdictsQuery.data ?? [])
+			.map((e) =>
+				parseValidatorVerdictEvent(
+					e as unknown as { id: string; pubkey: string; kind: number; content: string; tags: string[][]; created_at: number },
+				),
+			)
+			.filter((r): r is { ok: true; value: ParsedValidatorVerdictEvent } => r.ok)
+			.map((r) => r.value)
+	}, [verdictsQuery.data])
+
+	// PR #1280 review B1: gather the mint keysets needed to DLEQ-verify the
+	// bids (bounded to the auction's trusted mints). `computeValidatedBids`
+	// treats unavailable DLEQ evidence as PENDING (non-authoritative), so the
+	// read path must actually feed evidence or every DLEQ-required bid would
+	// read as unplaced.
+	const dleqKeysets = useDleqKeysetPolling(parsedBidsForSettlement, trustedMints)
+
+	// PR #1280 review B1: the economically authoritative read path (displayed
+	// price, bidder-visible floor, displayed leader, winner-only CTAs) must
+	// derive from the VALIDATED bid set, not the raw relay array. A
+	// hand-crafted kind-1023 claiming amount=1_000_000 with a 1-sat or
+	// fabricated proof is classified pending/dleq_invalid by
+	// `computeValidatedBids` and therefore can no longer raise the displayed
+	// price, the min-bid floor on honest bidders' forms, or the leader.
+	// While verdict evidence has not loaded (no verdict events fetched yet)
+	// the set is null and the legacy raw derivations below are used.
+	const validatedSet = useMemo(() => {
+		if (!parsedAuctionForSettlement || !(verdictsQuery.data ?? []).length) return null
+		return computeValidatedBids({
+			auction: parsedAuctionForSettlement,
+			bids: parsedBidsForSettlement,
+			verdicts: parsedVerdicts,
+			dleqKeysets,
+		})
+	}, [parsedAuctionForSettlement, parsedBidsForSettlement, parsedVerdicts, dleqKeysets, verdictsQuery.data])
+
+	const currentPrice = validatedSet
+		? getValidatedTopAmount(validatedSet, startingBid)
+		: getAuctionCurrentPriceFromBids(auction, bids, startingBid)
+	const bidsCount = validatedSet ? validatedSet.validBids.length : getAuctionBidCountFromBids(auction, bids)
 	const minBid = Math.max(startingBid, currentPrice + Math.max(1, bidIncrement))
 	const parsedBidAmount = parseInt(bidAmountInput || '0', 10)
 	const newestBids = useMemo(() => [...bids].sort((a, b) => (b.created_at || 0) - (a.created_at || 0)), [bids])
@@ -444,8 +510,9 @@ function AuctionDetailRoute() {
 				auction,
 				bids,
 				isEnded: ended,
+				validatedBidSet: validatedSet,
 			}),
-		[activeUserPubkey, auction, bids, ended],
+		[activeUserPubkey, auction, bids, ended, validatedSet],
 	)
 
 	const { data: oracleName } = useProfileName(pathIssuerPubkey || '')
@@ -483,37 +550,8 @@ function AuctionDetailRoute() {
 	const pathReleases = pathReleasesQuery.data ?? []
 	const queryClient = useQueryClient()
 
-	// Parse raw NDK events into typed structs for the settlement descriptor.
-	const parsedAuctionForSettlement = useMemo(() => {
-		if (!auction) return null
-		const result = parseAuctionEvent(toRawEvent(auction))
-		return result.ok ? result.value : null
-	}, [auction])
-
-	const parsedBidsForSettlement = useMemo(
-		() =>
-			bids
-				.map((b) => parseBidEvent(toRawEvent(b)))
-				.filter((r): r is { ok: true; value: ParsedBidEvent } => r.ok)
-				.map((r) => r.value),
-		[bids],
-	)
-
-	// Review #1235 (Should-fix 3): scope verdict fetch to the auction's
-	// configured auditors (relay authors filter) — null-safe; an unloaded or
-	// auditor-less auction fails closed (no verdicts authorized).
-	const auctionAuditorPubkeys = useMemo(() => getAuctionAuditors(auction), [auction])
-	const verdictsQuery = useAuctionVerdicts(auctionRootEventId || auctionId, 500, auctionCoordinates, auctionAuditorPubkeys)
-	const parsedVerdicts = useMemo(() => {
-		return (verdictsQuery.data ?? [])
-			.map((e) =>
-				parseValidatorVerdictEvent(
-					e as unknown as { id: string; pubkey: string; kind: number; content: string; tags: string[][]; created_at: number },
-				),
-			)
-			.filter((r): r is { ok: true; value: ParsedValidatorVerdictEvent } => r.ok)
-			.map((r) => r.value)
-	}, [verdictsQuery.data])
+	// The auction/bids/verdicts parsing and the validated bid set live above
+	// (hoisted ahead of the price/leader derivations, PR #1280 review B1).
 
 	const parsedSettlementsForSettlement = useMemo(
 		() =>
@@ -537,6 +575,17 @@ function AuctionDetailRoute() {
 
 	const myTopBidEvent = useMemo(() => {
 		if (!activeUserPubkey) return null
+		// PR #1280 review B1: when the validated set is available, derive the
+		// user's top bid from their VALID bids only — a still-pending or
+		// dleq_invalid bid of theirs must not drive winner-only CTAs.
+		if (validatedSet) {
+			const mine = validatedSet.validBids.filter((b) => b.bidderPubkey === activeUserPubkey)
+			if (!mine.length) return null
+			// Map back to the raw event for path-release / bidder-record lookups.
+			const topParsedBid = mine.reduce((best, b) => (b.amount > best.amount ? b : best), mine[0])
+			return bids.find((b) => b.id === topParsedBid.id) ?? null
+		}
+		// Fallback: derive from raw bids (verdicts still loading).
 		const mine = bids.filter((b) => b.pubkey === activeUserPubkey)
 		if (!mine.length) return null
 		return mine.reduce(
@@ -549,9 +598,18 @@ function AuctionDetailRoute() {
 			},
 			mine[0] as (typeof mine)[0] | null,
 		)
-	}, [bids, activeUserPubkey])
+	}, [bids, activeUserPubkey, validatedSet])
 
 	const topBidOverall = useMemo(() => {
+		// PR #1280 review B1: the displayed leader is the canonical winner of
+		// the validated set — a fabricated high raw bid cannot appear to lead.
+		if (validatedSet && validatedSet.canonicalWinner) {
+			// Map canonicalWinner (ParsedBidEvent) back to the raw event for
+			// rendering.
+			const rawBid = bids.find((b) => b.id === validatedSet.canonicalWinner!.id)
+			if (rawBid) return rawBid
+		}
+		// Fallback: derive from raw bids (verdicts still loading).
 		if (!bids.length) return null
 		return bids.reduce(
 			(best, bid) => {
@@ -563,11 +621,14 @@ function AuctionDetailRoute() {
 			},
 			bids[0] as (typeof bids)[0] | null,
 		)
-	}, [bids])
+	}, [bids, validatedSet])
 
 	const bidderSummaries = useMemo(() => {
 		const summariesByPubkey = new Map<string, AuctionParticipantSummary>()
-		const currentLeaderPubkey = topBidOverall?.pubkey || ''
+		// PR #1280 review B1: the leader is the canonical winner of the
+		// validated set when available (fallback: raw top bid while verdicts
+		// load).
+		const currentLeaderPubkey = validatedSet?.canonicalWinner?.bidderPubkey || topBidOverall?.pubkey || ''
 
 		for (const bid of newestBids) {
 			if (!bid.pubkey) continue
@@ -609,14 +670,26 @@ function AuctionDetailRoute() {
 
 			return a.pubkey.localeCompare(b.pubkey)
 		})
-	}, [newestBids, settlementWinner, topBidOverall?.pubkey])
+	}, [newestBids, settlementWinner, topBidOverall?.pubkey, validatedSet?.canonicalWinner])
 
-	const isMyBidTop = !!(myTopBidEvent && topBidOverall && myTopBidEvent.id === topBidOverall.id)
+	// PR #1280 review B1: winner-only state comes from the validated set's
+	// canonical winner — the raw-bid comparison is only the loading fallback.
+	const isMyBidTop = validatedSet
+		? !!(validatedSet.canonicalWinner && validatedSet.canonicalWinner.bidderPubkey === activeUserPubkey)
+		: !!(myTopBidEvent && topBidOverall && myTopBidEvent.id === topBidOverall.id)
 	const myAlreadyReleased = useMemo(() => {
 		if (!myTopBidEvent) return false
 		return pathReleases.some((pr) => pr.tags.find((t) => t[0] === 'e')?.[1] === myTopBidEvent.id)
 	}, [pathReleases, myTopBidEvent])
-	const canReleaseNow = !!(isMyBidTop && ended && !myAlreadyReleased && myTopBidEvent && findBidderRecord(myTopBidEvent.id))
+	const canReleaseNow = validatedSet
+		? !!(
+				validatedSet.canonicalWinner?.bidderPubkey === activeUserPubkey &&
+				ended &&
+				!myAlreadyReleased &&
+				myTopBidEvent &&
+				findBidderRecord(myTopBidEvent.id)
+			)
+		: !!(isMyBidTop && ended && !myAlreadyReleased && myTopBidEvent && findBidderRecord(myTopBidEvent.id))
 	const [isReleasing, setIsReleasing] = useState(false)
 
 	const handleReleasePath = async () => {

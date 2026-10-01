@@ -24,6 +24,7 @@ import { useNut7Polling } from '@/lib/auction/useNut7Polling'
 import { useDleqKeysetPolling } from '@/lib/auction/useDleqKeysetPolling'
 import { parseSettlementEvent } from '@/lib/schemas/auction/settlementEvents'
 import { computeValidatedBids } from '@/lib/auction/bidValidation'
+import { getValidatedTopAmount, isReserveMetFromValidBids } from '@/lib/auction/validatedBidView'
 import { auctionKeys } from '@/queries/queryKeyFactory'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -267,11 +268,7 @@ function DashboardAuctionDetailRoute() {
 	const now = countdown.now
 	const status = formatAuctionStatus(startAt, biddingCutoffAt, now)
 	const ended = status === 'Ended'
-	const currentPrice = getAuctionCurrentPriceFromBids(auction, bids, startingBid)
-	const bidCount = getAuctionBidCountFromBids(auction, bids)
 
-	const settlementsQuery = useAuctionSettlements(auctionRootEventId || auctionId, 100, auctionCoordinates)
-	const settlements = settlementsQuery.data ?? []
 	// Review #1235 (Should-fix 3): scope verdict fetch to the auction's
 	// configured auditors (relay authors filter) — null-safe; an unloaded or
 	// auditor-less auction fails closed (no verdicts authorized).
@@ -281,14 +278,14 @@ function DashboardAuctionDetailRoute() {
 
 	// Parse bids once so both the DLEQ keyset acquisition and the settlement
 	// validation use the same parsed set.
-	// B2 (PR #1280 review 5235113240): `bids` comes from the fetch seam as
-	// `NostrEventLike` (no `rawEvent` member — the applesauce/io port returns
-	// raw events), so calling `b.rawEvent()` here is a type error and a render
-	// crash on this surface. The supported seam is `toRawEvent` (see
-	// src/lib/nostr/eventLike.ts), matching the public route.
 	const parsedBids = useMemo(
 		() =>
 			bids
+				// B2 (PR #1280 review 5235113240): `bids` comes from the fetch seam as
+				// `NostrEventLike` (no `rawEvent` member — the applesauce/io port returns
+				// raw events), so calling `b.rawEvent()` here is a type error and a render
+				// crash on this surface. The supported seam is `toRawEvent` (see
+				// src/lib/nostr/eventLike.ts), matching the public route.
 				.map((b) => parseBidEvent(toRawEvent(b)))
 				.filter((r): r is { ok: true; value: import('@/lib/auction/events').ParsedBidEvent } => r.ok)
 				.map((r) => r.value),
@@ -299,6 +296,38 @@ function DashboardAuctionDetailRoute() {
 	// bids are correctly treated as pending (non-authoritative) — but then the
 	// seller could never settle, so the ingestion path must actually feed evidence.
 	const dleqKeysets = useDleqKeysetPolling(parsedBids, trustedMints)
+
+	// PR #1280 review B1: compute a validated bid set for the DISPLAY path
+	// (no postSettlement semantics). This is separate from the
+	// latestSettlement memo's validated set below, which uses postSettlement
+	// semantics and is settlement-scoped. The seller's authoritative read
+	// state — current price, bid count, top bid, reserve-met, and the
+	// desiredStatus/winningBidEventId decision in submitSettlement — derives
+	// from it, so a hand-crafted kind-1023 with a fabricated proof can no
+	// longer mark the reserve met or suppress the reserve_not_met path.
+	const validatedBidSet = useMemo(() => {
+		if (!auction || !verdictsData.length) return null
+		const parsedAuctionResult = parseAuctionEvent(toRawEvent(auction))
+		if (!parsedAuctionResult.ok) return null
+		const parsedVerdicts = verdictsData
+			.map((v) => parseValidatorVerdictEvent(toRawEvent(v)))
+			.filter((r): r is { ok: true; value: import('@/lib/auction/events').ParsedValidatorVerdictEvent } => r.ok)
+			.map((r) => r.value)
+		return computeValidatedBids({
+			auction: parsedAuctionResult.value,
+			bids: parsedBids,
+			verdicts: parsedVerdicts,
+			nut7States,
+			dleqKeysets,
+		})
+	}, [auction, parsedBids, verdictsData, nut7States, dleqKeysets])
+	const currentPrice = validatedBidSet
+		? getValidatedTopAmount(validatedBidSet, startingBid)
+		: getAuctionCurrentPriceFromBids(auction, bids, startingBid)
+	const bidCount = validatedBidSet ? validatedBidSet.validBids.length : getAuctionBidCountFromBids(auction, bids)
+
+	const settlementsQuery = useAuctionSettlements(auctionRootEventId || auctionId, 100, auctionCoordinates)
+	const settlements = settlementsQuery.data ?? []
 
 	// B4: Validate settlements before using them. The previous code read
 	// `settlements[0]` (newest by created_at) with NO validation, allowing
@@ -398,6 +427,16 @@ function DashboardAuctionDetailRoute() {
 	const settlementMutation = usePublishAuctionSettlementMutation()
 
 	const topBid = useMemo(() => {
+		// PR #1280 review B1: the seller's top bid is the canonical winner of
+		// the validated set — a fabricated high raw bid cannot drive the
+		// reserve-met decision or the settlement intent.
+		if (validatedBidSet && validatedBidSet.canonicalWinner) {
+			// Map canonicalWinner (ParsedBidEvent) back to the raw event for
+			// downstream render + path-release gating.
+			const rawBid = bids.find((b) => b.id === validatedBidSet.canonicalWinner!.id)
+			if (rawBid) return rawBid
+		}
+		// Fallback: derive from raw window-valid bids (verdicts still loading).
 		const validBids = auction ? getAuctionWindowValidBids(auction, bids) : bids
 		if (validBids.length === 0) return null
 		return [...validBids]
@@ -409,11 +448,15 @@ function DashboardAuctionDetailRoute() {
 				return b.id.localeCompare(a.id)
 			})
 			.at(0)
-	}, [auction, bids])
+	}, [auction, bids, validatedBidSet])
 
 	const bidsByNewest = useMemo(() => [...bids].sort((a, b) => (b.created_at || 0) - (a.created_at || 0)), [bids])
 
-	const reserveMet = !!topBid && getBidAmount(topBid) >= reserve
+	// PR #1280 review B1: only cryptographically verified bids can mark the
+	// reserve met — a DLEQ-fabricated bid must not suppress the seller's
+	// reserve_not_met path (which otherwise leaves the seller stuck between
+	// two failing publishes).
+	const reserveMet = validatedBidSet ? isReserveMetFromValidBids(validatedBidSet, reserve) : !!topBid && getBidAmount(topBid) >= reserve
 	const settlementLocked = !!latestSettlement
 	const latestSettlementStatus = latestSettlement ? getAuctionSettlementStatus(latestSettlement) : 'unknown'
 	const reserveLabel = bidCount === 0 ? 'Waiting for bids' : reserveMet ? 'Reserve met' : 'Below reserve'
@@ -482,6 +525,17 @@ function DashboardAuctionDetailRoute() {
 	// available.
 	const myTopBidEvent = useMemo(() => {
 		if (!user?.pubkey) return null
+		// PR #1280 review B1: when the validated set is available, derive the
+		// user's top bid from their VALID bids only — a still-pending or
+		// dleq_invalid bid of theirs must not drive the release CTA.
+		if (validatedBidSet) {
+			const mine = validatedBidSet.validBids.filter((b) => b.bidderPubkey === user.pubkey)
+			if (!mine.length) return null
+			// Map back to the raw event for path-release / bidder-record lookups.
+			const topParsed = mine.reduce((best, b) => (b.amount > best.amount ? b : best), mine[0])
+			return bids.find((b) => b.id === topParsed.id) ?? null
+		}
+		// Fallback: derive from raw bids (verdicts still loading).
 		const mine = bids.filter((b) => b.pubkey === user.pubkey)
 		if (!mine.length) return null
 		return mine.reduce<(typeof mine)[0] | null>((best, bid) => {
@@ -491,9 +545,13 @@ function DashboardAuctionDetailRoute() {
 			if (delta < 0) return best
 			return (bid.created_at ?? 0) < (best.created_at ?? 0) ? bid : best
 		}, mine[0])
-	}, [bids, user?.pubkey])
+	}, [bids, user?.pubkey, validatedBidSet])
 
-	const isMyBidTop = !!(myTopBidEvent && topBid && myTopBidEvent.id === topBid.id)
+	// PR #1280 review B1: winner-only state comes from the validated set's
+	// canonical winner — the raw-bid comparison is only the loading fallback.
+	const isMyBidTop = validatedBidSet
+		? !!(validatedBidSet.canonicalWinner && validatedBidSet.canonicalWinner.bidderPubkey === user?.pubkey)
+		: !!(myTopBidEvent && topBid && myTopBidEvent.id === topBid.id)
 	const myAlreadyReleased = useMemo(() => {
 		if (!myTopBidEvent) return false
 		return pathReleases.some((pr) => pr.tags.find((t) => t[0] === 'e')?.[1] === myTopBidEvent.id)
