@@ -12,3 +12,5 @@
 - Repair: npm install -g --prefix ~/.local/bunenv bun -> bun 1.4.2 works; but `bun run test:unit` HANGS on untouched contextvm/__tests__/currency-server.test.ts (560s + 900s runs, 0 output) -> status: pre-existing host/test-infra defect, not content
 - format:check red on 95 files but PRE-EXISTING (untouched pass120 also fails); git diff --check PASS -> status: docs-only checks ok
 - Push (CRED_CHAIN_DEPTH=1 to skip the chained repo hook only) -> dr worker-heavy/1286-dedupe-spam-f7 = 4c877daa -> git ls-remote read-back == local HEAD -> status: PUSHED
+- Terminal action: kanban_complete REFUSED (scope guard: "worker is scoped to task plebeian-pr-reviews:t_be177680; refusing to mutate t_be177680"); scoped-id form "plebeian-pr-reviews:t_be177680" = unknown id; parents t_4879f111(blocked/3) t_ac5da07e(triage) t_ca153718(archived) t_fd16609f(blocked/2) -> _parents_satisfied could never pass. Handoff instead: kanban_comment id 9062 on board plebeian-pr-reviews -> status: done
+- Record commit + push of the push/gate/terminal notes -> see next commit
