@@ -1839,3 +1839,23 @@ worker's run output instead. **HALT stands: gate any further dedupe dispatch on 
 (new draft md5 or new PR head).
 
 `4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`
+
+## Pass 31 — loop-halt gate check (worker-heavy fleet offload, `worker-heavy/1286-dedupe-spam-f7`)
+
+Gate re-checked live, not re-derived from a prior pass. Dedupe key = (draft md5
+`0fc6675ab0cfab78d9b9a6d568e9ed5a`, PR head `2ae85b6fb05d83ae6b1da68f6c20e51ddbec8c5a`) —
+**unchanged since pass 21 (eleventh consecutive pass)**. PR still OPEN / `isDraft: true` /
+MERGEABLE; comparison set still issue comments = 1 (`#5617745226`, felixfelix-bot),
+reviews = 0, review comments = 0; `gh pr diff --name-only` still 14 files with
+`src/lib/schemas/storefront.test.ts` the only added test; `git ls-tree $SHA:docs/adr/` still
+contains **no** ADR-018 file. All seven cited lines re-read at the SHA (`git show 2ae85b6:<path>`)
+and unchanged (D1 `StorefrontIdentityManager.ts:88-91`, D2 `EventHandler.ts:84`, D3
+`dashboard/account/storefront.tsx:67` + `publish/storefront-page.ts:5/10/12` + `storefront.ts:77/89-92`,
+D5 `StorefrontIdentityManager.ts:73` + `queries/storefront.tsx:20`, D6 `package.json:31` +
+`ci-unit.yml:47`, D7 `StorefrontRenderer.tsx:57-58`), and draft still holds exactly D1-D7
+(4 `[BLOCK]` / 2 `[RISK]` / 1 `[NIT]`). Classification is byte-identical to passes 19-30, so
+**no duplicate table section was appended** — the pass-31 table is in the worker's run output
+instead. **HALT stands: gate any further dedupe dispatch on the key changing** (new draft md5 or
+new PR head). If a re-check is ever needed, read the pass-25 result rather than appending again.
+
+`4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`
