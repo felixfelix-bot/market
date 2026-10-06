@@ -28,8 +28,17 @@ Crash-recovery map. One line per cluster: finding -> status -> files touched.
 - Commit + push -> DONE (observed): commit `5be2a998`; push `44a52636..5be2a998` to `dr`
   (felixfelix-bot/market) and to `fork`; remote sha `5be2a998f7d97fa0c0d36e19da371ad7b8165073`
   verified on BOTH via `git ls-remote`.
-- Terminal action (kanban) -> BLOCKED (external; same root cause as passes 130-135): board-qualified
-  `HERMES_KANBAN_TASK` (`plebeian-pr-reviews:t_be177680`) vs bare-id board DB -> no id form satisfies both
-  the scope guard and the DB. Manager must close the card.
+- Terminal action (kanban) -> BLOCKED (external; reproduced pass 136, same root cause as passes 130-135).
+  Diagnosed once (no retry loop): the card EXISTS in
+  `~/.hermes/kanban/boards/plebeian-pr-reviews/kanban.db` as id `t_be177680`, status `todo`,
+  assignee `manager`. Failures: no-arg `kanban_complete` -> "could not complete
+  plebeian-pr-reviews:t_be177680 (unknown id or already terminal)"; `kanban_show(task_id=t_be177680)`
+  -> "task t_be177680 not found"; `kanban_show/complete(task_id=plebeian-pr-reviews:t_be177680,
+  board=plebeian-pr-reviews)` -> not found / unknown. ROOT CAUSE: `HERMES_KANBAN_TASK` is
+  board-qualified (`plebeian-pr-reviews:t_be177680`) while the DB stores the bare id, AND the tools
+  resolve the board from `HERMES_KANBAN_BOARD=fork-pr-steward` (not `plebeian-pr-reviews`), so no
+  id/board form satisfies both the scope guard and the DB. Manager must close the card (fix:
+  spawn with matching `HERMES_KANBAN_BOARD`/`HERMES_KANBAN_DB`, or normalize the guard to the bare
+  suffix and route the board explicitly).
 - STATUS -> COMPLETE (deliverable written; only manager-side card close outstanding).
 - LOOP NOTE: pass 136 of an identical re-dispatch loop; deliverable stable since pass 21.
