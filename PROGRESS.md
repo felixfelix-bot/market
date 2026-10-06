@@ -22,6 +22,14 @@ Crash-recovery map. One line per cluster: finding -> status -> files touched.
   Count: `4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`.
 - Deliverable written -> DONE: `artifacts/pr1286/1286-dedupe-spam-pass133.md`, `REPORT.md`,
   this `PROGRESS.md`.
-- Commit + push -> see below (recorded after observed).
-- STATUS -> COMPLETE once push observed.
+- Commit + push -> DONE (observed): commit `342e6c4b` (pass133 artifact, REPORT.md, PROGRESS.md);
+  push `7c69e440..342e6c4b` to dr/felixfelix-bot/market and fork, remote sha verified `342e6c4b` on
+  BOTH via `git ls-remote` (`342e6c4b9fefecb058bfc149f71126153fa8a0a5`).
+- Terminal action (kanban) -> BLOCKED (external, re-reproduced pass 133): no-arg
+  `kanban_complete` -> "could not complete plebeian-pr-reviews:t_be177680 (unknown id or already
+  terminal)"; `kanban_show(task_id=t_be177680)` and `kanban_show(board=fork-pr-steward,
+  task_id=t_be177680)` both -> "task t_be177680 not found". The env task id is board-qualified
+  (`plebeian-pr-reviews:t_be177680`) while the underlying board DB stores the bare id, so the worker
+  cannot close the card. Manager must close it. No extra board comment added (avoid board spam).
+- STATUS -> COMPLETE (deliverable pushed + remote-verified; only manager-side card close outstanding).
 - LOOP NOTE: pass 133 of an identical re-dispatch loop; deliverable stable since pass 21.
