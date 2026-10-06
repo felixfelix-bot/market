@@ -1627,3 +1627,67 @@ Notes:
   gate any further dedupe dispatch on the key changing.
 
 `4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`
+
+
+## Independent re-verification (twenty-sixth pass — worker-heavy fleet offload, `worker-heavy/1286-dedupe-spam-f7`)
+
+Inputs re-verified **live** (not copied): draft `/home/c03rad0r/worktrees/t_31cab538/PR1286-REVIEW-DRAFT.md`
+present, 3548 B, md5 `0fc6675ab0cfab78d9b9a6d568e9ed5a`; `gh pr view 1286 --repo PlebeianApp/market`
+-> OPEN, `isDraft: true`, base `auctions`, head branch `feat/nip05-CMS-vanity-url-intergration`,
+author `hkarani`, head `2ae85b6fb05d83ae6b1da68f6c20e51ddbec8c5a`; comparison set = **1** issue comment
+(`#5617745226`, `felixfelix-bot`, 2026-09-10T11:11:01Z — the five prev-issues) / **0** reviews /
+**0** review comments => no `DUPLICATE-OF-UNLISTED` row is possible; `gh pr diff --name-only` ->
+14 files, `src/lib/schemas/storefront.test.ts` the only added test. Every cited line was re-read from
+the reviewed object with `git show 2ae85b6:<path>` (never the working tree): D1
+`StorefrontIdentityManager.ts:88-91` (`const existing = this.registry.get(name)`, `:89` validity check
+against that one registry only), D2 `EventHandler.ts:84`
+(`this.purchaseManagers = [this.vanityManager, this.nip05Manager, this.storefrontManager]`),
+D3 `dashboard/account/storefront.tsx:67` (`const page = parseStorefrontPage(content)`) feeding
+`publish/storefront-page.ts:5` (`StorefrontPageSchema.parse(page)`) with `storefront.ts:89-92`
+dropping failed blocks via `flatMap` and `storefront.ts:77`
+(`blocks: z.array(StorefrontBlockSchema).max(40)` — no `.min`), plus `storefront-page.ts:12`
+(`tags: [['d', 'storefront-page']]` -> new event replaces old), D4 `publish/storefront-page.ts:10`
+(`kind: 30024`), D5 `StorefrontIdentityManager.ts:73` (`registryDTag: 'storefront-names'`) mirrored
+client-side at `queries/storefront.tsx:20` (`'#d': ['storefront-names']`), D6 `package.json:31` glob
+(`find contextvm src/queries/__tests__ src/lib/__tests__ -type f -name '*.test.ts' ...`) vs the spec
+under `src/lib/schemas/`, invoked by `.github/workflows/ci-unit.yml:47` (`run: bun run test:unit`),
+D7 `StorefrontRenderer.tsx` (static `{block.products.length} product references published by this
+seller.` at `:57`, global `/products` `SafeLink` at `:58`, `/community` at `:66`; draft cites `:59`,
+the same block's `</section>` close). ADR-019 re-read at the SHA: `:110-111` registry
+`d=${instanceNamespace}-storefront-names` resolved through ADR-018 rather than a literal, `:114-116`
+reject any name held in either legacy registry by a different pubkey for the whole window, `:125-127`
+legacy managers stay registered **read-only** / reject new zap receipts, `:134`
+`Kind 30024 (addressable, application-specific)`, `:140-142` coordinates re-fetched/re-validated at
+render time, `:161-162` instance domain from runtime config (ADR-018) never a literal, `:163-165`
+hostile-page renderer unit test. `git ls-tree $SHA:docs/adr/` lists **no** ADR-018 file. Prev-round
+wording re-read verbatim: #2 states both managers "validate independently and each only sees its own
+registry, so they can happily assign the same name to two different pubkeys", remedy "Unify on one
+registry or cross-check `existing.pubkey` across both pools before registering/serving". Prev #1
+(`$vanityName.tsx` never resolves) is **not** re-raised by this draft, so no D-item can overlap it.
+
+| Draft issue (short label + file:line as cited in the draft) | NOVELTY | SPAM CHECK |
+|---|---|---|
+| **D1** `[BLOCK]` `src/server/StorefrontIdentityManager.ts:88` — `validateRegistration` consults only the storefront registry, so a name still held in `nip05-names`/`vanity-urls` by another pubkey can be bought again, and unified-wins at `nip05.ts:12` repoints the address inside the first holder's paid window | **DUPLICATE OF #2** — same root cause reached by a different path. Prev #2 names the mechanism (both managers "validate independently and each only sees its own registry, so they can happily assign the same name to two different pubkeys") and its remedy explicitly says to cross-check `existing.pubkey` "across both pools before **registering**/serving". D1 *is* that missing cross-check on the registration path (`this.registry.get(name)`, `:88`) rather than the serving merge (`nip05.ts:12`); the cited ADR-019:114-116 is the same requirement. Root-cause near-duplicate => duplicate. | **ACTIONABLE** — cross-pool double-sale of one paid name (the earlier holder is repointed while still inside their paid window); required change: make `validateRegistration` reject a name held by a different pubkey in *either* legacy registry (ADR-019:114-116). *Already tracked as prev #2.* |
+| **D2** `[BLOCK]` `src/server/EventHandler.ts:84` — both legacy managers stay armed as sellers (no read-only demotion), so `vanity-register`/`nip05-register` receipts still mint legacy entries for a name the unified registry already owns (ADR-019:125-127) | **DUPLICATE OF #2** — *stated marginal call:* the mechanism differs (sale wiring vs the serving merge) but the root cause and the symptom prev #2 already covers are the same — the pools are not unified, so one name is representable to two pubkeys and two buyers can each pay for `alice` (`/alice` != `alice@host`). `:84` keeping `vanityManager`/`nip05Manager` inside `purchaseManagers` is the same "unify on one registry" gap prev #2 names, and prev #2's remedy explicitly spans the **registering** path. Restricting prev #2 to the `nip05.ts:12` merge alone would make D2 NEW, but the task rule counts same-root-cause/same-symptom as duplicate. | **ACTIONABLE** — the legacy purchase paths still mint entries for a name the unified registry owns (a second buyer pays); required change: register `vanityManager`/`nip05Manager` as read-only resolvers that reject new zap receipts for the compatibility window (ADR-019:125-127). *Already tracked as prev #2.* |
+| **D3** `[BLOCK]` `src/routes/_dashboard-layout/dashboard/account/storefront.tsx:67` — the publish gate reuses the lenient *render* parser, so invalid blocks are silently dropped and a truncated page publishes behind a success toast | **NEW** — none of the five touches the publish/render validation split. Prev #4 is a missing `safeText` refine on `heroBlock.title` (`storefront.ts:26`) — a different root cause in a different region; prev #5 is the page-expiry gate. | **ACTIONABLE** — silent data loss behind a false success: `parseStorefrontPage` drops every invalid block (`storefront.ts:89-92`), then `publishStorefrontPage` re-parses the residue with `StorefrontPageSchema.parse` (`publish/storefront-page.ts:5`) which passes (`blocks` is `.max(40)` with no `.min`), so one typo (`"type":"textt"`) truncates the page, the success toast fires, and the `d=storefront-page` event (`:12`) replaces the previous page. Required change: validate with `StorefrontPageSchema` at publish and fail loudly; keep the lenient parse at render only. |
+| **D4** `[BLOCK]` `src/publish/storefront-page.ts:10` — kind `30024` is NIP-23's long-form *draft* kind, not "addressable, application-specific" as ADR-019:134 claims | **NEW** — no prev issue mentions the page event kind. | **ACTIONABLE** — concrete spec/interop collision plus an internal ADR error: the kind is hard-coded `30024` (`:10`) while ADR-019:134 labels it `Kind 30024 (addressable, application-specific)` (verified verbatim). Required change: use a free addressable `3xxxx` kind for the storefront page and correct ADR-019:134. *(Whether the NIP-23 reservation claim itself holds is the separate code-truth worker's call; the code/ADR mismatch names an exact, actionable change either way.)* |
+| **D5** `[RISK]` `src/server/StorefrontIdentityManager.ts:73` — registry `d` is the literal `storefront-names`, while ADR-019:110-111 mandates `d=${instanceNamespace}-storefront-names` via ADR-018; mirrored client-side at `queries/storefront.tsx:20` | **NEW** — same *file* as prev #3 (`:5-53`, `RESERVED_NAMES`) but a different line, function and root cause; nothing in the prev five concerns the registry `d` tag or ADR-018 instance namespacing. The deliberate "do not judge overlap by file name" case. | **ACTIONABLE** — accepted-ADR violation with a multi-instance namespace-collision risk: ADR-019:110-111 requires the namespaced `d` resolved through ADR-018, and ADR-019:161-162 likewise forbids a literal for the instance domain, yet the value is hard-coded server-side (`registryDTag: 'storefront-names'`, `:73`) and mirrored client-side (`queries/storefront.tsx:20`), and no ADR-018 file exists at this tip (verified). Required change: resolve the `d` from instance config on both server and client instead of the literal. |
+| **D6** `[RISK]` `src/lib/schemas/storefront.test.ts:1` — the only new test sits outside the `test:unit` glob, so CI never runs it | **NEW** — no prev issue concerns test placement or coverage. | **ACTIONABLE** — ADR-019:163-165's hostile-page renderer guardrail is unenforced: this is the only added test in the diff (verified against `gh pr diff --name-only`), it sits under `src/lib/schemas/`, but `test:unit` (`package.json:31`) scans only `contextvm`, `src/queries/__tests__`, `src/lib/__tests__`, and CI runs exactly that (`ci-unit.yml:47`), so it never executes. Required change: move the spec under `src/lib/__tests__/` (or widen the glob) and add the ADR-019 hostile-page renderer test. |
+| **D7** `[NIT]` `src/components/storefront/StorefrontRenderer.tsx:59` — `productGrid`/`collectionRow` never resolve the coordinates they validated | **NEW** — no prev issue concerns the renderer's coordinate resolution (prev #5 is the page-expiry gate, not render-time re-fetch). | **NIT** — display fidelity only: the blocks print a static count (`:57`, "N product references published by this seller.") and link to the global `/products` (`:58`) / `/community` (`:66`) instead of resolving the coordinates, so the harm is a misleading count/link, not a correctness, security or data-loss defect; ADR-019:140-142 states render-time re-fetch as architectural intent rather than a testable invariant, and the draft's own tag is `[NIT]`. Not actionable as a blocking change. *(Draft cites `:59`, the `</section>` close; the count/link lines are `:57`-`:58` in the same block.)* |
+
+Notes:
+
+- D1/D2 are DUPLICATE-but-ACTIONABLE: real and worth a code change, but already tracked as prev #2, so
+  a maintainer gains nothing by treating them as new. D7 is NEW-but-NIT.
+- Counting: the buckets partition all seven (`4 + 2 + 1 = 7`). `X + Y = 6`, not 7, only because D7 is
+  NEW-but-NIT; the NIT count is on the spam axis as instructed.
+- Read-only vs GitHub: only `gh pr view`, `gh pr diff`, `gh api ...` GET reads and `git show` /
+  `git ls-tree` reads were issued; no comment, review, label, approval, or any other API write was made.
+- **Loop-halt (pass 26).** Dedupe key = (draft md5 `0fc6675ab0cfab78d9b9a6d568e9ed5a`, PR head
+  `2ae85b6fb05d83ae6b1da68f6c20e51ddbec8c5a`) — **unchanged since pass 21** (six consecutive passes).
+  The result is byte-identical to passes 19-25. Re-dispatching this dedupe task while that key is
+  unchanged cannot produce new information; **gate any further dedupe dispatch on the key changing**.
+  This artifact is also now ~260 KB of near-identical sections — recommend the manager stop appending
+  and read the pass-25 result if a re-check is ever needed.
+
+`4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`
