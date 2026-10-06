@@ -26,7 +26,9 @@ Crash-recovery map. One line per cluster: finding -> status -> files touched.
   Count: `4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`.
 - Deliverable written -> DONE: `artifacts/pr1286/1286-dedupe-spam-pass134.md`, `REPORT.md`,
   this `PROGRESS.md`.
-- Commit + push -> see lines below after the git commands run.
+- Commit + push -> DONE (observed): commit `b7c89413` (pass-134 artifact, REPORT.md,
+  PROGRESS.md); push `ab55e88b..b7c89413` to `dr` (felixfelix-bot/market) and fork (same repo),
+  remote sha verified `b7c89413f2977f692fe25f1ec4c225650e4f2323` on BOTH via `git ls-remote`.
 - Terminal action (kanban) -> BLOCKED (external, reproduced again pass 134): no-arg
   `kanban_complete` -> "unknown id or already terminal"; `kanban_show(task_id=t_be177680)` and
   `kanban_show(board=fork-pr-steward, task_id=t_be177680)` both -> "task not found". Env id is
