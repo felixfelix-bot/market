@@ -21,5 +21,7 @@ Crash-recovery map. One line per cluster: finding -> status -> files touched.
   Count: `4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`.
 - Deliverable written -> DONE: `artifacts/pr1286/1286-dedupe-spam-pass130.md` (self-contained),
   `REPORT.md` (full report at worktree root), this `PROGRESS.md`.
-- Commit + push -> pending (next step).
-- Terminal action (kanban) -> pending attempt (known scope-guard defect).
+- Commit re-derived deliverables -> DONE: commit 61475212 (4 files: pass130 artifact, aggregate report append, REPORT.md, PROGRESS.md).
+- Push -> DONE: a33329a8..61475212 to dr/felixfelix-bot/market branch worker-heavy/1286-dedupe-spam-f7; remote HEAD verified = 61475212.
+- Terminal action (kanban) -> BLOCKED (known defect, reproduced): kanban_comment(t_be177680, board=plebeian-pr-reviews) OK = comment_id 9069; kanban_complete(t_be177680) REFUSED (scope guard, board-qualified env id vs bare DB id); kanban_complete(plebeian-pr-reviews:t_be177680) -> unknown id/already terminal; kanban_block(t_be177680) REFUSED same scope msg. Manager must close the card.
+- STATUS -> COMPLETE (deliverable pushed; only manager-side card close outstanding).
