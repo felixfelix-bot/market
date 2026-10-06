@@ -6,7 +6,10 @@
 - Every cited site re-read at the SHA via git show: StorefrontIdentityManager:73/84/88/89 + RESERVED_NAMES:5-53, EventHandler:84, nip05.ts:12, storefront.tsx:67/76, storefront-page.ts:5/10/12, schemas:26/77/89-92, queries/storefront.tsx:20, Renderer:57-59/66, package.json:31, ci-unit.yml:47, ADR-019:110-111/114-116/125-127/134/140-142/161-165, no ADR-018 at tip -> status: ok
 - Verdict re-derived: 4 NEW-and-ACTIONABLE (D3 D4 D5 D6), 2 duplicates of #2 (D1 D2), 1 nit (D7) -> status: unchanged -> files: artifacts/pr1286/1286-dedupe-spam-pass123.md
 - Wrote REPORT.md + pass123 artifact -> status: done -> files: REPORT.md, artifacts/pr1286/1286-dedupe-spam-pass123.md
-- Commit locally (no push: task body forbids push) -> status: pending in this log
+- Commit locally (no push: task body forbids push) -> status: DONE -> commit 5bbd78a7
+- Terminal action attempted, both forms REFUSED (observed): kanban_complete() -> "could not complete plebeian-pr-reviews:t_be177680 (unknown id or already terminal)"; kanban_complete(task_id=t_be177680, board=plebeian-pr-reviews) -> "worker is scoped to task plebeian-pr-reviews:t_be177680; refusing to mutate t_be177680" -> status: lifecycle unreachable from this worker
+- kanban_comment(task_id=t_be177680, board=plebeian-pr-reviews) -> OK, comment_id 9061 -> status: handoff written
+- ALL STEPS COMPLETE. No push (task body read-only).
 
 ## REMAINING (if cut off)
 1. git add + commit the artifact + PROGRESS.md + REPORT.md on worker-heavy/1286-dedupe-spam-f7
