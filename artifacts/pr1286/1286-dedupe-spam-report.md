@@ -82,3 +82,34 @@ Read-only: no comment, review, label, or any other GitHub write was made.
   `src/lib/schemas/`, D7 `StorefrontRenderer.tsx` productGrid/collectionRow block (draft cites
   :59; the count sits at :57 and the global `/products` link at :58 in the same block).
 - Classification reproduced independently; result unchanged.
+
+## Independent re-verification (third pass — worker-heavy fleet offload)
+
+- Live PR re-read (`gh pr view 1286 --repo PlebeianApp/market`): OPEN, head
+  `2ae85b6fb05d83ae6b1da68f6c20e51ddbec8c5a`, base `auctions`, author `hkarani`; head commit
+  present locally (`git cat-file -t` -> commit). Comparison set still 1:1: issue comments = 1
+  (`#5617745226`), reviews = 0, review comments = 0.
+- `gh pr diff 1286 --name-only` -> 14 files; exactly one added test
+  (`src/lib/schemas/storefront.test.ts`), confirming D6's premise.
+- Prev-round body re-read verbatim: its #2 states the pools' managers "validate independently and
+  each only sees its own registry, so they can happily assign the same name to two different
+  pubkeys" and prescribes cross-checking `existing.pubkey` across both pools — the root cause D1
+  (registration path) and D2 (still-armed purchase managers) re-express.
+- Cited lines re-read at the SHA and confirmed: D1 `StorefrontIdentityManager.ts:88`
+  (`const existing = this.registry.get(name)`), D2 `EventHandler.ts:84`
+  (`purchaseManagers = [vanityManager, nip05Manager, storefrontManager]`), D3
+  `.../dashboard/account/storefront.tsx:67` (`parseStorefrontPage(content)`) + `publish/storefront-page.ts:5`
+  (`StorefrontPageSchema.parse(page)`) + `storefront.ts:89-91` (flatMap silently drops failed blocks),
+  D4 `publish/storefront-page.ts:10` (`kind: 30024`), D5 `StorefrontIdentityManager.ts:73`
+  (`registryDTag: 'storefront-names'`) mirrored at `queries/storefront.tsx:20`, D6 `package.json:31`
+  glob (`contextvm src/queries/__tests__ src/lib/__tests__`) vs spec under `src/lib/schemas/` and
+  `ci-unit.yml:47` (`bun run test:unit`), D7 `StorefrontRenderer.tsx:53-59` (static count at :57,
+  global `/products` link at :58).
+- ADR-019 re-read: :110-111 namespaced `d` via ADR-018, :114-116 cross-pool reject, :125-127 read-only
+  demotion, :134 `30024` labelled "addressable, application-specific", :140-142 render-time re-fetch,
+  :163 renderer-hostility test. No ADR-018 file exists at the tip. `StorefrontPageSchema.blocks =
+  z.array(...).max(40)` (no `min`), so an all-dropped page still passes `StorefrontPageSchema.parse`
+  — consistent with D3's silent-truncation claim.
+- Classification reproduced independently; result unchanged.
+
+`4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`
