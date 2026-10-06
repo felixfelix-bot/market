@@ -73,6 +73,15 @@ an exact `WHERE id = ?` match and the row's id is plain `t_be177680`. The two
 constraints are mutually unsatisfiable: the only tid the guard accepts does not
 exist in the DB, and the tid that exists is refused by the guard.
 
+Observed this pass (no mutation resulted from the refusals):
+
+| Tool call | Arguments | Observed result |
+|---|---|---|
+| `kanban_complete` | env id `plebeian-pr-reviews:t_be177680` | `unknown id or already terminal` |
+| `kanban_complete` | `task_id=t_be177680`, `board=plebeian-pr-reviews` | `worker is scoped to task plebeian-pr-reviews:t_be177680; refusing to mutate t_be177680` |
+| `kanban_block` | env id, `kind=capability` | `unknown id or not in running/ready` |
+| `kanban_comment` | `task_id=t_be177680`, `board=plebeian-pr-reviews` | **ok — comment `#9066`** (the only viable board write) |
+
 **Remaining step for a human/manager (cannot be done by this worker):**
 1. Close `t_be177680` against the existing deliverable
    (`1286-dedupe-spam-RESULT.md` / this pass file / `REPORT.md`).
