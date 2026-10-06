@@ -6,4 +6,7 @@
 - Re-read every premise at the SHA (git show / git ls-tree): prev#2 nip05.ts:12 merge; prev#3 RESERVED_NAMES :5-53 lacks terms/privacy (checked programmatically); prev#4 storefront.ts:26 title no safeText; prev#5 queries/storefront.tsx:56 no expiry; D1 :88 this.registry.get(name); D2 EventHandler:84 array; D3 storefront.tsx:67+:76, schemas :77 .max(40), :89-92 flatMap drop, publish :5,:10,:12; D5 :73 registryDTag literal + :20 client mirror, ADR-019:110-111/:161-162, no ADR-018 in docs/adr; D6 test:unit glob + ci-unit.yml:47 + spec in src/lib/schemas; D7 Renderer :57/:58/:66 -> status: ok
 - Verdict re-derived, unchanged: 4 NEW-and-ACTIONABLE (D3 D4 D5 D6), 2 dups of #2 (D1 D2), 1 nit (D7) -> status: unchanged
 - Wrote artifacts/pr1286/1286-dedupe-spam-pass126.md + REPORT.md (full pass report) -> status: done -> files: artifacts/pr1286/1286-dedupe-spam-pass126.md, REPORT.md, PROGRESS.md
-- Commit + push -> see commits below (recorded after observed)
+- Commit 196a7031 (pass126 artifact + REPORT.md + PROGRESS.md; untracked pr1252/ + tsconfig.packages-check.json left untouched) -> status: committed
+- Push: PATH prepended with /home/c03rad0r/.local/bunenv/bin (bun 1.4.2); pre-push quality gate ran full and PASSED (docs-only range -> test/coverage skipped; pre-commit full-repo scan passed) -> `git push dr worker-heavy/1286-dedupe-spam-f7` = 58a179e2..196a7031 -> status: PUSHED
+- Push read-back: `git ls-remote dr worker-heavy/1286-dedupe-spam-f7` == local HEAD 196a70311137c4620374d4f543a84faa9eecf694 -> status: verified
+- Read-only vs GitHub confirmed: only gh pr view / gh pr diff / gh api GET reads; no comment, review, label or write -> status: ok
