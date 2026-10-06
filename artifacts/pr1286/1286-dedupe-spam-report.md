@@ -2111,3 +2111,39 @@ Notes:
   comment, review, label, approval, or other write was made.
 
 `4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`
+
+## Independent re-verification (pass 130 — fleet offload re-derivation)
+
+Re-derived from scratch at head `2ae85b6fb05d83ae6b1da68f6c20e51ddbec8c5a`; every cited line
+re-read from the reviewed object via `git show 2ae85b6:<path>`, never the working tree. Full
+self-contained artifact: `artifacts/pr1286/1286-dedupe-spam-pass130.md`.
+
+- **Authoritative draft**: `/home/c03rad0r/worktrees/t_31cab538/PR1286-REVIEW-DRAFT.md` (parent
+  task `t_31cab538`) — present, non-empty (3548 B, md5 `0fc6675ab0cfab78d9b9a6d568e9ed5a`) -> used.
+  Seven findings D1-D7 (4 [BLOCK], 2 [RISK], 1 [NIT]).
+- **Comparison set live**: issue comments = 1 (`#5617745226`, felixfelix-bot, 2026-09-10T11:11:01Z,
+  body re-read verbatim = the five prev-issues); reviews = 0; review comments = 0 -> no
+  `DUPLICATE-OF-UNLISTED` row possible.
+- **PR state**: OPEN, `isDraft` true, `mergeable` MERGEABLE, base `auctions`, head branch
+  `feat/nip05-CMS-vanity-url-intergration`, author `hkarani`, head `2ae85b6...` present locally
+  (`git cat-file -t` -> commit); 14 files; `src/lib/schemas/storefront.test.ts` the only added test.
+- **Cited sites re-read at the SHA**: D1 `StorefrontIdentityManager.ts:88`
+  (`const existing = this.registry.get(name)` then `:89` validity on that one registry);
+  D2 `EventHandler.ts:84` (`purchaseManagers = [vanityManager, nip05Manager, storefrontManager]`);
+  D3 `storefront.tsx:67` (`parseStorefrontPage`) -> `storefront-page.ts:5`
+  (`StorefrontPageSchema.parse`) with `storefront.ts:77` `blocks` `.max(40)` no `.min`, `:89`
+  flatMap drop, toast `:76`, `:12` `['d','storefront-page']`; D4 `storefront-page.ts:10`
+  (`kind: 30024`); D5 `StorefrontIdentityManager.ts:73` (`registryDTag: 'storefront-names'`)
+  mirrored `queries/storefront.tsx:20` (`'#d': ['storefront-names']`); D6 `package.json:31` glob
+  (`contextvm src/queries/__tests__ src/lib/__tests__`) vs spec under `src/lib/schemas/`, run by
+  `ci-unit.yml:47`; D7 `StorefrontRenderer.tsx:57-58` (static count, global `/products`).
+- **Prev-issue sites re-read**: #1 `$vanityName.tsx:21` resolveVanity only; #2 `nip05.ts:12`;
+  #3 `terms`/`privacy` absent; #4 `storefront.ts:26` no safeText; #5 no validUntil gate.
+- **ADR-019 re-read**: `:110-111` namespaced `d` via ADR-018; `:114-116` cross-pool reject;
+  `:125-127` read-only demotion; `:134` `Kind 30024 (addressable, application-specific)`;
+  `:140-142` render-time re-fetch. `git ls-tree 2ae85b6...:docs/adr` -> NO ADR-018 file (verified).
+
+Classification reproduced independently and unchanged: D1,D2 = DUPLICATE OF #2 (ACTIONABLE);
+D3,D4,D5,D6 = NEW ACTIONABLE; D7 = NEW NIT.
+
+`4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`
