@@ -86,3 +86,24 @@ supersede RESULT.md, and `1286-dedupe-spam-HALT-ESCALATION.md` still stands.
   Read `1286-dedupe-spam-RESULT.md` rather than appending to the chain.
 
 `4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`
+
+## Terminal-action note (board handoff)
+
+No lifecycle transition is possible from the worker for `t_be177680`. The card's DB
+row is id `t_be177680` on board `plebeian-pr-reviews`, but this session's env scopes
+the worker to `plebeian-pr-reviews:t_be177680` while `HERMES_KANBAN_BOARD` is
+`fork-pr-steward` (which does not hold the card). `kanban_complete` therefore fails on
+every combination:
+
+- prefixed id + env board -> "unknown id or already terminal" (looked up in the wrong DB)
+- bare id + board `plebeian-pr-reviews` -> "worker is scoped to
+  plebeian-pr-reviews:t_be177680; refusing to mutate t_be177680"
+- prefixed id + board `plebeian-pr-reviews` -> "unknown id or already terminal"
+
+The row is in any case already `status=blocked`, `assignee=manager`, and was never
+claimed by a run (`started_at`/`current_run_id` NULL; its 3 run records are all
+`blocked`). The permitted board write, `kanban_comment`, succeeded on the bare id
+(comment `9044`), which carries this pass's classification and the terminal-action
+note. Manager action: close `t_be177680` against the existing deliverable plus
+`1286-dedupe-spam-HALT-ESCALATION.md`, fix the offload route, and gate further dedupe
+dispatch on the key changing.
