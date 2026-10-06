@@ -24,5 +24,17 @@ Crash-recovery map. One line per cluster: finding -> status -> files touched.
   Count: `4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`.
 - Deliverable written -> DONE: `artifacts/pr1286/1286-dedupe-spam-pass135.md`, `REPORT.md`,
   this `PROGRESS.md`.
-- Commit + push -> PENDING (recorded here after observed).
+- Commit + push -> DONE (observed): commit `b19d8a64`; push `72d568a9..b19d8a64` to `dr`
+  (felixfelix-bot/market) and to `fork`; remote sha `b19d8a644792a9cedf88cd8d87c8fe745c0b50b8`
+  verified on BOTH via `git ls-remote`.
+- Terminal action (kanban) -> BLOCKED (external; reproduced pass 135, same root cause as passes
+  130-134): no-arg `kanban_complete` -> "could not complete plebeian-pr-reviews:t_be177680
+  (unknown id or already terminal)"; `kanban_complete(task_id=t_be177680, board=plebeian-pr-reviews)`
+  -> "worker is scoped to task plebeian-pr-reviews:t_be177680; refusing to mutate t_be177680";
+  `kanban_comment(task_id=plebeian-pr-reviews:t_be177680, ...)` -> "unknown task". ROOT CAUSE:
+  `HERMES_KANBAN_TASK` is board-qualified while the board DB stores the bare id, so no id form
+  satisfies both the scope guard and the DB. Manager must close the card (fix: store/accept the
+  qualified id, or normalize the guard to the bare suffix).
+- STATUS -> COMPLETE (deliverable written + pushed + remote-verified; only manager-side card close
+  outstanding).
 - LOOP NOTE: pass 135 of an identical re-dispatch loop; deliverable stable since pass 21.
