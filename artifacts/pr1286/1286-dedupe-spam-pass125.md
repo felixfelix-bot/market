@@ -1,9 +1,4 @@
-# REPORT — PR #1286 dedupe + spam-check, pass 125 (fleet offload)
-
-**Result: `4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`** (7 draft issues D1-D7).
-
-This file is the pass-125 deliverable; canonical answer remains
-`artifacts/pr1286/1286-dedupe-spam-RESULT.md`.
+# PR #1286 dedupe + spam-check — pass 125 (fleet offload, read-only)
 
 Task: dedupe + spam-classify every issue in the parent draft review of
 PlebeianApp/market PR #1286. Canonical answer remains
