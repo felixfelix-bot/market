@@ -1751,3 +1751,16 @@ Notes:
   than appending again.
 
 `4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`
+
+## Pass 28 — loop-halt gate check (worker-heavy fleet offload, `worker-heavy/1286-dedupe-spam-f7`)
+
+Gate re-checked live rather than re-derived. Dedupe key = (draft md5 `0fc6675ab0cfab78d9b9a6d568e9ed5a`,
+PR head `2ae85b6fb05d83ae6b1da68f6c20e51ddbec8c5a`) — **unchanged since pass 21** (eighth consecutive
+pass). Comparison set unchanged: issue comments = 1 (`#5617745226`), reviews = 0, review comments = 0;
+no `DUPLICATE-OF-UNLISTED` row possible. All seven cited lines re-spot-checked at the SHA
+(`git show 2ae85b6:<path>`) and unchanged; draft still holds exactly the same D1-D7. Classification is
+therefore byte-identical to passes 19-27, so **no duplicate table section was appended**.
+**HALT: gate any further dedupe dispatch on this key changing** (new draft md5 or new PR head). If a
+re-check is ever needed, read the pass-25 result rather than appending again.
+
+`4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`
