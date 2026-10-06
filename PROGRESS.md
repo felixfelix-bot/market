@@ -21,5 +21,7 @@ Crash-recovery map. One line per cluster: finding -> status -> files touched.
   Count: `4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`.
 - Deliverable written -> DONE: `artifacts/pr1286/1286-dedupe-spam-pass131.md`, `REPORT.md`,
   this `PROGRESS.md`.
-- Next: commit + push; then terminal kanban action.
+- Commit + push -> DONE: commit 45d919f9 (pass131 artifact, REPORT.md, PROGRESS.md); push b4a8e72e..45d919f9 to dr/felixfelix-bot/market; remote sha verified 45d919f9.
+- Terminal action (kanban) -> BLOCKED (known defect re-reproduced): kanban_complete(task_id=t_be177680, board=plebeian-pr-reviews) REFUSED ('worker is scoped to plebeian-pr-reviews:t_be177680'); kanban_complete(task_id=plebeian-pr-reviews:t_be177680) -> 'unknown id or already terminal'; kanban_block(t_be177680) REFUSED (same scope msg). No extra comment added this pass (comment 9069 already carries this, avoid board spam). Manager must close the card.
+- STATUS -> COMPLETE (deliverable pushed; only manager-side card close outstanding).
 - LOOP NOTE: pass 131 of an identical re-dispatch loop; deliverable stable since pass 21.
