@@ -21,5 +21,7 @@ Crash-recovery map. One line per cluster: finding -> status -> files touched.
   Count: `4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`.
 - Deliverable written -> DONE: `artifacts/pr1286/1286-dedupe-spam-pass132.md`, `REPORT.md`,
   this `PROGRESS.md`.
-- Commit + push -> PENDING; recorded after observed.
+- Commit + push -> DONE: commit 2cc63f67 (pass132 artifact, REPORT.md, PROGRESS.md); push 89cacb2f..2cc63f67
+  to dr/felixfelix-bot/market and fork, remote sha verified 2cc63f67 on both.
+- Terminal action (kanban) -> see below (known scope-guard defect; manager must close the card).
 - LOOP NOTE: pass 132 of an identical re-dispatch loop; deliverable stable since pass 21.
