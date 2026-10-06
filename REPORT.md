@@ -89,7 +89,16 @@ Required final line:
   no id/board form satisfies both. Manager must close the card (fix: spawn with a matching
   `HERMES_KANBAN_BOARD`/`HERMES_KANBAN_DB`, or normalize the guard to the bare suffix + route the board
   explicitly).
+- Non-mutating handoff WORKED: `kanban_comment(task_id=t_be177680, board=plebeian-pr-reviews)` →
+  `comment_id 9070` (the diagnosis is now recorded on the card itself). Mutating tools
+  (`kanban_complete`, `kanban_block`) refuse the bare id with the scope-guard error.
 
-## 8. Loop note
+## 8. Push record (observed)
+- Commit `1aa62335`; `git push dr HEAD:worker-heavy/1286-dedupe-spam-f7` → `e23cbee6..1aa62335`.
+- `git ls-remote dr|fork refs/heads/worker-heavy/1286-dedupe-spam-f7` → both
+  `1aa62335e9da1ded41d9cc1472c6de89047509bc` (verified, matching `git rev-parse HEAD`).
+- Not pushed to PlebeianApp/market (read-only scope).
+
+## 9. Loop note
 Pass 137 of an identical re-dispatch loop. The deliverable has been stable since pass 21
 (4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits). Only the manager-side card close is outstanding.
