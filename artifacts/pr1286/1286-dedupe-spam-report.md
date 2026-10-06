@@ -1892,3 +1892,40 @@ gate any further dedupe dispatch on the key changing** (new draft md5 or new PR 
 re-check is ever needed, read the pass-25 result rather than appending again.
 
 `4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`
+
+## Pass 33 — loop-halt gate check (worker-heavy fleet offload, `worker-heavy/1286-dedupe-spam-f7`)
+
+Gate re-checked live, not re-derived from a prior pass. Dedupe key = (draft md5
+`0fc6675ab0cfab78d9b9a6d568e9ed5a`, PR head `2ae85b6fb05d83ae6b1da68f6c20e51ddbec8c5a`) —
+**unchanged since pass 21 (thirteenth consecutive pass)**. PR still OPEN / `isDraft: true` /
+MERGEABLE; author `hkarani`, base `auctions`, head branch
+`feat/nip05-CMS-vanity-url-intergration`. Comparison set still issue comments = 1
+(`#5617745226`, felixfelix-bot, 2026-09-10T11:11:01Z — the five prev-issues), reviews = 0,
+review comments = 0, so no `DUPLICATE-OF-UNLISTED` row is possible. `gh pr diff --name-only`
+still 14 files with `src/lib/schemas/storefront.test.ts` the only added test, and `test:unit`
+(`package.json:31`) scans only `contextvm` / `src/queries/__tests__` / `src/lib/__tests__`
+(invoked by `.github/workflows/ci-unit.yml:47`), so that spec never runs. `git ls-tree
+$SHA:docs/adr/` still contains **no** ADR-018 file. All seven cited sites re-read at the SHA
+(`git show 2ae85b6:<path>`) and unchanged: D1 `StorefrontIdentityManager.ts:88`
+(`const existing = this.registry.get(name)`), D2 `EventHandler.ts:84`
+(`this.purchaseManagers = [this.vanityManager, this.nip05Manager, this.storefrontManager]`),
+D3 `dashboard/account/storefront.tsx:67` (`parseStorefrontPage(content)`) feeding
+`publish/storefront-page.ts:5` (`StorefrontPageSchema.parse(page)`) with `storefront.ts:89`
+(failed blocks dropped via `flatMap`) and `storefront.ts:77`
+(`blocks: z.array(StorefrontBlockSchema).max(40)` — no `.min` on the array, so an all-dropped
+page still parses), D4 `publish/storefront-page.ts:10` (`kind: 30024`) vs ADR-019:134
+`Kind 30024 (addressable, application-specific)`, D5 `StorefrontIdentityManager.ts:73`
+(`registryDTag: 'storefront-names'`) mirrored at `queries/storefront.tsx:20`
+(`'#d': ['storefront-names']`), D6 `package.json:31` + `ci-unit.yml:47` vs the spec under
+`src/lib/schemas/`, D7 `StorefrontRenderer.tsx:57-58` (static count at `:57`, global `/products`
+link at `:58`; draft cites `:59`). ADR-019 re-read at `:110-111` (namespaced `d` via ADR-018),
+`:114-116` (cross-pool reject), `:125-127` (legacy managers read-only), `:134`,
+`:140-142` (render-time re-fetch), `:161-162` (instance domain never a literal), `:163`
+(hostile-page renderer test). Draft still holds exactly D1-D7 (4 `[BLOCK]` / 2 `[RISK]` /
+1 `[NIT]`). Classification is byte-identical to passes 19-32 (D1/D2 = DUPLICATE-of-#2 but
+ACTIONABLE; D3-D6 = NEW but ACTIONABLE; D7 = NEW but NIT), so **no duplicate table section was
+appended** — the pass-33 table is in the worker's run output instead. **HALT stands: gate any
+further dedupe dispatch on the key changing** (new draft md5 or new PR head). If a re-check is
+ever needed, read the pass-25 result rather than appending again.
+
+`4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`
