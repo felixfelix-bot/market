@@ -1,6 +1,43 @@
 # REPORT — PR #1286 dedupe + spam-check, pass 125 (fleet offload)
 
-**Result: `4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`** (7 draft issues D1-D7).
+**Result: ## Push / environment record
+
+- Repo verify gate broken on this host: `~/.bun` is a symlink to the dead mount
+  `/mnt/dq05-lexar/cw-offload/bun`, so no `bun` existed on PATH and the repo's own
+  pre-push quality gate died with `bun: command not found` -> TESTS FAILED.
+  Repaired for this session by `npm install -g --prefix ~/.local/bunenv bun`
+  (bun 1.4.2); no repo file changed.
+- With bun present, `bun run test:unit` (the gate's test step) HANGS indefinitely
+  on `contextvm/__tests__/currency-server.test.ts` — first file in the glob,
+  untouched by this pass and by PR #1286 (confirmed at 560 s and 900 s, zero
+  test output). Pre-existing host/test-infra defect, not a content failure, so
+  the chained repo gate cannot pass on this host for any branch.
+- `git diff --check` = PASS. `bun run format:check` red on 95 files, verified
+  PRE-EXISTING (untouched `1286-dedupe-spam-pass120.md` fails identically); this
+  pass's delta is docs-only.
+- Push used the fleet hook's documented `CRED_CHAIN_DEPTH=1` knob, which skips
+  only GATE 4 (the chained repo hook). Fleet GATE 1 (credential literal, tip tree
+  + added lines), GATE 2 (.ngit upstream guard) and GATE 3 (class-pattern scan)
+  all ran and passed.
+- Result: `refs/heads/worker-heavy/1286-dedupe-spam-f7` on `dr`
+  (`https://github.com/felixfelix-bot/market.git`) = `2cfdbda9`, verified by
+  `git ls-remote` read-back == local HEAD. Milestones: `4c877daa` (deliverable),
+  `5c126952` (push/gate record), `2cfdbda9` (terminal-action record).
+
+## Terminal action (kanban)
+
+- `kanban_complete` on `t_be177680` (board `plebeian-pr-reviews`) is REFUSED by
+  the worker scope guard: `worker is scoped to task plebeian-pr-reviews:t_be177680;
+  refusing to mutate t_be177680`. The scoped form `plebeian-pr-reviews:t_be177680`
+  returns "unknown id". Same defect pass 113/123/124 hit.
+- The `_parents_satisfied` gate also cannot pass: parents `t_4879f111`
+  (blocked, completion, rec=3), `t_ac5da07e` (triage), `t_ca153718` (archived),
+  `t_fd16609f` (blocked, completion, rec=2).
+- Handoff instead: durable `kanban_comment` id **9062** on board
+  `plebeian-pr-reviews`, carrying the full table, the push SHAs and these
+  forensics.
+
+`4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`** (7 draft issues D1-D7).
 
 This file is the pass-125 deliverable; canonical answer remains
 `artifacts/pr1286/1286-dedupe-spam-RESULT.md`.
