@@ -1,78 +1,70 @@
-# REPORT — PR #1286 dedupe vs 5 prev-issues + spam check (pass 135)
+# REPORT — PR #1286 dedupe + spam classification (pass 136)
 
-**Task:** Dedupe draft PR #1286 review issues vs 5 known prev-issues and spam-check each.
-**Repo:** PlebeianApp/market · **PR:** #1286 "feat: nip05 cms vanity url intergration"
-**Head:** `2ae85b6fb05d83ae6b1da68f6c20e51ddbec8c5a` (verified UNCHANGED vs task spec)
-**Base:** `auctions` · OPEN · draft · MERGEABLE · 14 files (+680/-9)
-**Workspace:** `/home/c03rad0r/repos/market` · branch `worker-heavy/1286-dedupe-spam-f7`
-**Kanban card:** `plebeian-pr-reviews:t_be177680`
+Worker: worker-heavy/1286-dedupe-spam-f7 · Workspace: /home/c03rad0r/repos/market
+Task: classify every issue of the parent task's draft review of PlebeianApp/market PR #1286 on two
+independent axes (NEW vs the five prev-issues; ACTIONABLE vs NIT). Read-only on GitHub.
 
-## Status: COMPLETE (deliverable written + committed + pushed)
+## Status: COMPLETE (deliverable written; kanban card close externally blocked — see below)
 
-Deliverable: `artifacts/pr1286/1286-dedupe-spam-pass135.md`
+## 1. Inputs verified under my own commands
+- Draft artifact `/home/c03rad0r/worktrees/t_31cab538/PR1286-REVIEW-DRAFT.md` — present, 3548 B,
+  md5 `0fc6675ab0cfab78d9b9a6d568e9ed5a`, 7 findings D1–D7.
+- `gh pr view 1286 --repo PlebeianApp/market` → OPEN, draft, MERGEABLE, base `auctions`,
+  head `2ae85b6fb05d83ae6b1da68f6c20e51ddbec8c5a` (UNCHANGED), 14 files.
+- Comparison set: 0 review comments, 0 reviews, 1 issue comment (`5617745226`) = the five prev-issues.
+- Cited lines re-read with `git show <sha>:<path>` at the head SHA; ADR-019 (332 lines) read at the
+  SHA; NIP-23 spec checked for the kind-30024 claim.
 
-## Answer
+## 2. Deliverable
+Full table: `artifacts/pr1286/1286-dedupe-spam-pass136.md`
 
+| # | Draft issue | Novelty | Spam |
+|---|---|---|---|
+| D1 | StorefrontIdentityManager.ts:88 registry-only ownership check | DUPLICATE OF #2 (same root cause, claim path) | ACTIONABLE (tracked) |
+| D2 | EventHandler.ts:84 both legacy managers still armed | DUPLICATE OF #2 (same root cause, write path) | ACTIONABLE (tracked) |
+| D3 | account/storefront.tsx:67 publish reuses lenient parser | NEW | ACTIONABLE |
+| D4 | publish/storefront-page.ts:10 kind 30024 = NIP-23 draft kind | NEW | ACTIONABLE |
+| D5 | StorefrontIdentityManager.ts:73 literal `d` vs ADR-019:110-111 | NEW | ACTIONABLE |
+| D6 | schemas/storefront.test.ts outside `test:unit` glob | NEW | ACTIONABLE |
+| D7 | StorefrontRenderer.tsx:59 coordinates never resolved | NEW | NIT |
+
+Required final line:
 `4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`
 
-| # | Draft issue (cited) | NOVELTY | SPAM CHECK |
-|---|---|---|---|
-| D1 | `src/server/StorefrontIdentityManager.ts:88` registry-only `validateRegistration` | DUPLICATE OF #2 | ACTIONABLE (already tracked) |
-| D2 | `src/server/EventHandler.ts:84` legacy managers still armed as sellers | DUPLICATE OF #2 | ACTIONABLE (already tracked) |
-| D3 | `.../account/storefront.tsx:67` publish gate uses lenient render parser | NEW | ACTIONABLE |
-| D4 | `src/publish/storefront-page.ts:10` kind 30024 vs ADR-019:134 | NEW | ACTIONABLE |
-| D5 | `src/server/StorefrontIdentityManager.ts:73` literal `d` vs ADR-019:110-111 | NEW | ACTIONABLE |
-| D6 | `src/lib/schemas/storefront.test.ts:1` outside `test:unit` glob | NEW | ACTIONABLE |
-| D7 | `src/components/storefront/StorefrontRenderer.tsx:59` coordinates never resolved | NEW | NIT |
+## 3. Key evidence per NEW-and-ACTIONABLE
+- D3: `account/storefront.tsx:67` calls lenient `parseStorefrontPage(content)`; `schemas/storefront.ts:89`
+  flatMap-drops invalid blocks and `:94` parses the reduced array successfully (no `blocks` min), so the
+  non-null page is published via `publishStorefrontPage` after its strict re-parse at `:5` sees only the
+  survivors → truncated page overwrites `d=storefront-page` behind a success toast. Data-loss/correctness.
+- D4: ADR-019:134 calls 30024 "addressable, application-specific"; NIP-23 §Description says 30024 was the
+  long-form-draft kind (deprecated, superseded by NIP-37). Spec violation → free 3xxxx kind + ADR fix.
+- D5: `StorefrontIdentityManager.ts:73` literal `'storefront-names'` and `queries/storefront.tsx:20` mirror
+  it, while ADR-019:110-111 mandates `d=${instanceNamespace}-storefront-names` via ADR-018 (no ADR-018 file
+  exists at this tip). Concrete spec violation with a stated fix.
+- D6: `package.json:31` glob roots are `contextvm`, `src/queries/__tests__`, `src/lib/__tests__`; the new
+  test lives in `src/lib/schemas/` → matched by none, so CI never runs it.
 
-Axes kept independent: D1/D2 are DUPLICATE-but-ACTIONABLE (already tracked as prev#2);
-D7 is NEW-but-NIT. No DUPLICATE-but-NIT exists, so the three labels partition all 7 issues
-(X+Y+Z = 7). Strict two-axis reading: NEW = 5, NIT = 1, with 4 of the 5 NEW being ACTIONABLE.
+## 4. Why D1/D2 are duplicates (not merely same-file)
+prev#2 (the only previously-raised risk on this topic) states the defect itself: "both managers validate
+independently and each only sees its own registry … they can happily assign the same name to two different
+pubkeys" and prescribes "cross-check existing.pubkey across both pools before registering/serving". D1 is
+exactly that defect on the claim/validation path; D2 is the same two-pool defect on the seller-arming
+(write) path. Both are near-duplicates by root cause and already tracked.
 
-## Inputs verified live this pass (read-only)
+## 5. Constraints honoured
+- Read-only: `gh pr view`, `gh pr diff`, `gh api …/comments`, `gh api …/reviews` (GET only), `git show`,
+  `curl` to the public NIPs repo. No comment, review, label, approve, or push to GitHub.
+- No code-truth judgement of the underlying bugs (a separate worker owns that); only novelty + actionability.
 
-- Parent draft artifact PRESENT at `/home/c03rad0r/worktrees/t_31cab538/PR1286-REVIEW-DRAFT.md`
-  (3548 B, md5 `0fc6675ab0cfab78d9b9a6d568e9ed5a`, 7 findings D1-D7: 4 BLOCK / 2 RISK / 1 NIT).
-- `gh pr view 1286` -> head SHA matches the task spec exactly; OPEN/draft/MERGEABLE/base `auctions`;
-  14 changed files (+680/-9).
-- Comparison set live: reviews = 0, review comments = 0, issue comments = 1 (`#5617745226`,
-  felixfelix-bot = the five prev-issues) => no `DUPLICATE-OF-UNLISTED` row is possible.
-- Cited lines re-read at the SHA (`git show 2ae85b6...:<path>`): D1 `:84-93`, D2 `:84`,
-  D3 `account/storefront.tsx:66-76` + `schemas/storefront.ts:84-98` + `publish/storefront-page.ts:5,10,12`,
-  D4 `:10`, D5 `:73` + `queries/storefront.tsx:20`, D6 `storefront.test.ts:1` vs `package.json` `test:unit`,
-  D7 `StorefrontRenderer.tsx:52-68`; prev sites prev#1 `$vanityName.tsx:21`, prev#2 `nip05.ts:10-12`,
-  prev#3 `StorefrontIdentityManager.ts:5-53`, prev#4 `schemas/storefront.ts:26`, prev#5 `queries/storefront.tsx:39-54`.
-- ADR-019 read at the SHA (333 lines): :110-111, :114-116, :125-127, :134, :140-142, :161-163 verbatim.
-  `docs/adr/` contains NO `ADR-018` at the tip.
+## 6. Kanban terminal action — externally blocked (unchanged from passes 130–135)
+- no-arg `kanban_complete` → "could not complete plebeian-pr-reviews:t_be177680 (unknown id or already terminal)".
+- `kanban_complete(task_id=t_be177680, board=plebeian-pr-reviews)` → "worker is scoped to task
+  plebeian-pr-reviews:t_be177680; refusing to mutate t_be177680".
+- `kanban_comment(task_id=…)` → "unknown task".
+- ROOT CAUSE: `HERMES_KANBAN_TASK=plebeian-pr-reviews:t_be177680` is board-qualified while the board DB
+  stores the bare id, so no id form satisfies both the scope guard and the DB. Manager must close the card
+  (fix: store/accept the qualified id, or normalize the guard to the bare suffix).
 
-## Key judgments (root cause, not title/file name)
-
-- **D1 / D2 = DUPLICATE OF #2** (near-duplicate by root cause, stated explicitly): prev#2's root
-  cause is the un-unified name pools, and its remedy already spans "cross-check existing.pubkey
-  across both pools before **registering**/serving". D1 is the registration path
-  (`:88 this.registry.get(name)`); D2 is the sale/write wiring (`:84` both legacy managers armed);
-  the symptom ("two pubkeys can each pay for `alice`") is prev#2's. ADR-019:114-116/:125-127 restate it.
-- **D3 = NEW, not a dup of prev#4.** Both touch `src/lib/schemas/storefront.ts`, but prev#4 is a
-  field-level missing `safeText` on `heroBlock.title`; D3 is the lenient drop-and-continue parser
-  used as a publish gate. Different root cause (classified by root cause, not by file name).
-- **D5 = NEW, not a dup of prev#3 or prev#5.** Same file as prev#3 (reserved list) but different
-  line/function/root cause (registry `d` tag); prev#5's file (`queries/storefront.tsx`) is cited by
-  D5 only for the mirrored literal at `:20`, not the missing expiry filter at `:39-54`.
-- **D7 = NEW but NIT** — display fidelity only; the count equals the number of schema-valid
-  coordinates (no fabricated product data), and resolving coordinates into cards is new feature
-  scope. Latent ADR-019:140-142 tension recorded in the artifact for the reviewer.
-
-## Constraint compliance
-
-Read-only re GitHub. Only `gh pr view`, `gh api ...(GET)` and `git show` / `git ls-tree` reads were
-issued. No GitHub comment, review, label, approval or any other API write was made. The only writes
-are to the local worktree (`artifacts/pr1286/1286-dedupe-spam-pass135.md`, this `REPORT.md`,
-`PROGRESS.md`) plus the task-mandated `git commit` + `git push` of that deliverable.
-
-## Honest caveat on the re-dispatch loop
-
-This is pass 135 of a re-dispatch loop on an unchanged PR and an unchanged draft artifact; the
-classification has been stable since pass 21. The board card CANNOT be closed or commented on by
-the worker (`HERMES_KANBAN_TASK` is board-qualified `plebeian-pr-reviews:t_be177680` while the board
-DB stores the bare id `t_be177680`, so no id form satisfies both the scope guard and the DB). The
-manager must close the card manually; the worker deliverable is complete and pushed regardless.
+## 7. Loop note
+Pass 136 of an identical re-dispatch loop; the deliverable has been stable since pass 21
+(4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits). Only the manager-side card close is outstanding.
