@@ -77,3 +77,22 @@ is NEW-but-NIT — the case the task's `X+Y = total` shortcut does not anticipat
 Only `gh pr view` / `gh pr diff` / `gh api … (GET)` reads plus `git show` /
 `git ls-tree` reads. **No GitHub comment, review, label, approval or any other API
 write was made.**
+
+## TERMINAL ACTION (board plebeian-pr-reviews:t_be177680)
+
+- `kanban_comment(task_id=t_be177680, board=plebeian-pr-reviews)` → **OK,
+  comment_id 9067** (full table + count line + blocker recorded durably on the card).
+- `kanban_complete(task_id=t_be177680)` → REFUSED: "worker is scoped to task
+  plebeian-pr-reviews:t_be177680; refusing to mutate t_be177680".
+- `kanban_complete(task_id=plebeian-pr-reviews:t_be177680)` → "unknown id or
+  already terminal"; `kanban_show` with that qualified id → "not found".
+- `kanban_block(task_id=t_be177680, kind=capability)` → REFUSED, same scope message.
+- Root cause (read from the board DB): the scope guard compares the env value
+  `HERMES_KANBAN_TASK=plebeian-pr-reviews:t_be177680` textually against the
+  requested id, but `~/.hermes/kanban/boards/plebeian-pr-reviews/kanban.db` only
+  holds the bare id: `select id,status,started_at,assignee from tasks` →
+  `t_be177680 | todo | (NULL) | manager`. No worker-side terminal transition
+  exists for a board whose cards carry a board-qualified env task id.
+- Manager action required: close the card against the existing deliverable and
+  gate further dispatch on the dedupe key changing (new draft md5 / new PR head).
+- No GitHub write was made. Only read-only gh/git plus local docs commits.

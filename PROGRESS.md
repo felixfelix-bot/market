@@ -8,3 +8,5 @@
 - classification → 4 NEW-and-ACTIONABLE (D3,D4,D5,D6), 2 duplicates (D1,D2 → #2), 1 NIT (D7) → REPORT.md written
 - files touched: REPORT.md, PROGRESS.md, artifacts/pr1286/1286-dedupe-spam-pass129.md
 - commit + push → PENDING
+- terminal action → kanban_comment OK (comment_id 9067); kanban_complete/block REFUSED (scope guard: env id board-qualified 'plebeian-pr-reviews:t_be177680' vs bare DB id 't_be177680'; card status=todo, started_at NULL, assignee=manager) → manager must close
+- evidence: ~/.hermes/kanban/boards/plebeian-pr-reviews/kanban.db tasks → t_be177680|todo|manager
