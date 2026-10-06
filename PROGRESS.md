@@ -23,5 +23,9 @@ Crash-recovery map. One line per cluster: finding -> status -> files touched.
   this `PROGRESS.md`.
 - Commit + push -> DONE: commit 2cc63f67 (pass132 artifact, REPORT.md, PROGRESS.md); push 89cacb2f..2cc63f67
   to dr/felixfelix-bot/market and fork, remote sha verified 2cc63f67 on both.
-- Terminal action (kanban) -> see below (known scope-guard defect; manager must close the card).
+- Terminal action (kanban) -> BLOCKED (known defect re-reproduced this pass): kanban_complete(task_id=t_be177680, board=plebeian-pr-reviews) REFUSED
+  ('worker is scoped to task plebeian-pr-reviews:t_be177680; refusing to mutate t_be177680');
+  kanban_complete(task_id=plebeian-pr-reviews:t_be177680) -> 'unknown id or already terminal'.
+  No extra board comment added (150 already; pass-131 precedent, avoid board spam). Manager must close the card.
+- STATUS -> COMPLETE (deliverable pushed; only manager-side card close outstanding).
 - LOOP NOTE: pass 132 of an identical re-dispatch loop; deliverable stable since pass 21.

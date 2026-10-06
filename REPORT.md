@@ -50,7 +50,10 @@ Only `gh pr view`, `gh pr diff`, `gh api … (GET)` and `git show` / `git ls-tre
 
 ## 5. Terminal action (kanban)
 
-See PROGRESS.md for this pass's outcome. Known fleet defect: the worker's `kanban_complete` /
+BLOCKED (known defect re-reproduced pass 132): `kanban_complete(task_id=t_be177680, board=plebeian-pr-reviews)`
+refused with "worker is scoped to task plebeian-pr-reviews:t_be177680; refusing to mutate t_be177680";
+`kanban_complete(task_id=plebeian-pr-reviews:t_be177680)` returned "unknown id or already terminal".
+No further board comment added (150 already; avoid spam). Known fleet defect: the worker's `kanban_complete` /
 `kanban_block` are refused by the scope guard because the env task id is board-qualified
 (`plebeian-pr-reviews:t_be177680`) while the board DB stores the bare id (`t_be177680`). Manager
 action required to close the card. This is pass 132 of an identical re-dispatch loop — the deliverable
