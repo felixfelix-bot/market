@@ -81,3 +81,43 @@ adjudicated here.
 ## FINAL COUNT
 
 `4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`
+
+## BOARD TERMINAL ACTION — BLOCKED (environmental defect, observed live)
+
+The deliverable above is complete; the board transition is not reachable from this
+worker session. Attempted, with observed errors (no mutation resulted):
+
+| Tool call | Arguments | Observed result |
+|---|---|---|
+| `kanban_complete` | `task_id=plebeian-pr-reviews:t_be177680`, `board=fork-pr-steward` (env default) | `could not complete plebeian-pr-reviews:t_be177680 (unknown id or already terminal)` |
+| `kanban_complete` | `task_id=plebeian-pr-reviews:t_be177680`, `board=plebeian-pr-reviews` | `could not complete plebeian-pr-reviews:t_be177680 (unknown id or already terminal)` |
+| `kanban_complete` | `task_id=t_be177680`, `board=plebeian-pr-reviews` | `worker is scoped to task plebeian-pr-reviews:t_be177680; refusing to mutate t_be177680` |
+| `kanban_block` | `task_id=plebeian-pr-reviews:t_be177680`, `board=plebeian-pr-reviews`, `kind=capability` | `could not block plebeian-pr-reviews:t_be177680 (unknown id or not in running/ready)` |
+
+Root cause (read from the installed tool source, `tools/kanban_tools.py`):
+`_enforce_worker_task_ownership()` rejects any `tid != os.environ["HERMES_KANBAN_TASK"]`,
+and the env var here is the **board-qualified** string `plebeian-pr-reviews:t_be177680`.
+`kb.get_task()` in `hermes_cli/kanban_db.py:3418` does an exact `WHERE id = ?` match,
+and the row's id is plain `t_be177680` (verified read-only in
+`~/.hermes/kanban/boards/plebeian-pr-reviews/kanban.db`). The two constraints are
+mutually unsatisfiable: the only tid the guard accepts does not exist in the DB, and
+the tid that exists is refused by the guard. `kanban_request_review` shares the same
+guard, so it is unreachable too.
+
+Ground truth read directly from the board DB (read-only sqlite): card `t_be177680` on
+board `plebeian-pr-reviews` is `status=todo`, `assignee=manager`, `started_at=NULL`,
+`current_run_id=NULL`, `worker_pid=NULL`, created by `auto-decomposer`,
+`block_kind=completion`, `block_recurrences=3`. It is **not** `running`; `block_task`
+only accepts running/ready, so a block could not land even with a resolvable id.
+
+The only board write available from this scope is `kanban_comment` (the guard's own
+documented handoff path); a full handoff comment was posted as `#9063` on this card.
+
+**Remaining step for a human/manager (cannot be done by this worker):**
+1. Close `t_be177680` against the existing deliverable (`1286-dedupe-spam-RESULT.md`
+   or this pass file).
+2. Fix the dispatch env: `HERMES_KANBAN_TASK` must carry the bare task id
+   (`t_be177680`) with the board conveyed by `HERMES_KANBAN_BOARD`/`HERMES_KANBAN_DB`,
+   otherwise every mutating kanban tool is unusable for this card's workers.
+3. Gate further dedupe dispatch on the dedupe key changing (new draft md5 or new PR
+   head) — constant since pass 21, so further passes cannot yield new information.
