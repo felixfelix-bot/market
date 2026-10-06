@@ -1825,3 +1825,17 @@ Notes:
   result rather than appending again.
 
 `4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`
+
+## Pass 30 — loop-halt gate check (worker-heavy fleet offload, `worker-heavy/1286-dedupe-spam-f7`)
+
+Gate re-checked live, not re-derived from a prior pass. Dedupe key = (draft md5
+`0fc6675ab0cfab78d9b9a6d568e9ed5a`, PR head `2ae85b6fb05d83ae6b1da68f6c20e51ddbec8c5a`) —
+**unchanged since pass 21 (tenth consecutive pass)**. PR still OPEN/`isDraft`; comparison set
+still issue comments = 1 (`#5617745226`), reviews = 0, review comments = 0; all seven cited lines
+plus ADR-019:110-111/114-116/125-127/134/140-142/160-166 re-read at the SHA and unchanged; draft
+still holds exactly D1-D7 (4 `[BLOCK]` / 2 `[RISK]` / 1 `[NIT]`). Classification is byte-identical
+to passes 19-29, so **no duplicate table section was appended** — the pass-30 table is in the
+worker's run output instead. **HALT stands: gate any further dedupe dispatch on the key changing**
+(new draft md5 or new PR head).
+
+`4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`
