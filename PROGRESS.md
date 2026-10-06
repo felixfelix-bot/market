@@ -25,7 +25,9 @@ Crash-recovery map. One line per cluster: finding -> status -> files touched.
   (ACTIONABLE); D3,D4,D5,D6 = NEW ACTIONABLE; D7 = NEW NIT.
   Count: `4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`.
 - Deliverable written -> DONE: `artifacts/pr1286/1286-dedupe-spam-pass136.md`, `REPORT.md`, this `PROGRESS.md`.
-- Commit + push -> IN PROGRESS (see below).
+- Commit + push -> DONE (observed): commit `5be2a998`; push `44a52636..5be2a998` to `dr`
+  (felixfelix-bot/market) and to `fork`; remote sha `5be2a998f7d97fa0c0d36e19da371ad7b8165073`
+  verified on BOTH via `git ls-remote`.
 - Terminal action (kanban) -> BLOCKED (external; same root cause as passes 130-135): board-qualified
   `HERMES_KANBAN_TASK` (`plebeian-pr-reviews:t_be177680`) vs bare-id board DB -> no id form satisfies both
   the scope guard and the DB. Manager must close the card.
