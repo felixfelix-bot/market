@@ -1,11 +1,10 @@
-# PROGRESS — PR1286 dedupe+spam pass 128 (fleet offload, read-only)
+# PROGRESS — PR #1286 dedupe + spam check (card plebeian-pr-reviews:t_be177680, pass 129)
 
-- Oriented: branch worker-heavy/1286-dedupe-spam-f7; env HERMES_KANBAN_TASK=plebeian-pr-reviews:t_be177680, board=fork-pr-steward. kanban_show(default) -> "task not found" (board-qualified id vs exact-id lookup) -> noted -> files: none
-- Parent draft artifact FOUND, byte-identical to pass-21 baseline: /home/c03rad0r/worktrees/t_31cab538/PR1286-REVIEW-DRAFT.md 3548 B md5 0fc6675ab0cfab78d9b9a6d568e9ed5a; 7 findings D1-D7 (4 BLOCK / 2 RISK / 1 NIT) -> status: ok
-- Live key re-verified via gh (read-only): head 2ae85b6fb05d83ae6b1da68f6c20e51ddbec8c5a OPEN/isDraft/MERGEABLE/base auctions/updatedAt 2026-09-10T11:11:01Z; changedFiles=14 (+680/-9); reviews=0, review comments=0, issue comments=1 (#5617745226) -> status: UNCHANGED vs pass 21..127
-- Re-read every premise at the SHA (git show to /tmp/pr1286-v/): prev#1 $vanityName.tsx:44; prev#2 nip05.ts:12 merge; prev#3 RESERVED_NAMES :5-53 (47 entries, terms/privacy ABSENT); prev#4 storefront.ts:26 title no safeText; prev#5 queries/storefront.tsx:56 no expiry; D1 :88 this.registry.get(name); D2 EventHandler.ts:84 purchaseManagers; D3 dash storefront.tsx:67 + :76, schemas :77 .max(40), :89 flatMap drop, publish :5/:12; D4 publish :10 kind 30024 + ADR-019:134 verbatim; D5 :73 literal registryDTag + queries/storefront.tsx:20 client mirror, ADR-019:110-111/:161-162, no ADR-018 file (git ls-tree); D6 test:unit glob (package.json:31) + ci-unit.yml:47 + spec in src/lib/schemas; D7 Renderer :57/:58/:66 -> status: ok
-- Verdict re-derived, UNCHANGED: 4 NEW-and-ACTIONABLE (D3 D4 D5 D6), 2 dups of #2 (D1 D2), 1 nit (D7) -> status: ok
-- Wrote artifacts/pr1286/1286-dedupe-spam-pass128.md; committed 43dcc347; pushed to dr -> read-back dr=43dcc3479c45bbfcb706afe5d2f5cfa397dff137 (verified) -> status: done
-- Encountered stale 0-byte index.lock at /home/c03rad0r/market/.git/worktrees/market/index.lock (shared tree); no git process held it -> removed -> commit succeeded
-- Wrote REPORT.md + PROGRESS.md -> status: done -> files: artifacts/pr1286/1286-dedupe-spam-pass128.md, REPORT.md, PROGRESS.md
-- Board terminal action: attempt kanban_complete/block with board-qualified env id — expected refusal per pass-126/127 (env defect) -> see REPORT.md
+- pass 129 dispatched (worker-heavy, branch worker-heavy/1286-dedupe-spam-f7) → orient: task is on board `plebeian-pr-reviews` (not default); 3 prior blocked attempts (fleet-offload:dq05) → status
+- input check → draft artifact FOUND at /home/c03rad0r/worktrees/t_31cab538/PR1286-REVIEW-DRAFT.md, md5 0fc6675ab0cfab78d9b9a6d568e9ed5a, 7 findings D1–D7 → ok
+- live PR check → head 2ae85b6fb05d83ae6b1da68f6c20e51ddbec8c5a UNCHANGED, OPEN/draft/MERGEABLE, 14 files → ok
+- unlisted-source check → reviews 0, review comments 0, issue comments 1 (the 5 prev-issues source) ⇒ no DUPLICATE-OF-UNLISTED possible → ok
+- code re-read at SHA → prev#1..#5 + D1..D7 cited lines + ADR-019:110-116/125-127/134/140-142/163 + package.json:31 + git ls-tree adr (NO ADR-018) → verified
+- classification → 4 NEW-and-ACTIONABLE (D3,D4,D5,D6), 2 duplicates (D1,D2 → #2), 1 NIT (D7) → REPORT.md written
+- files touched: REPORT.md, PROGRESS.md, artifacts/pr1286/1286-dedupe-spam-pass129.md
+- commit + push → PENDING
