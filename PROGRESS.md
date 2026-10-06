@@ -29,9 +29,17 @@ Crash-recovery map. One line per cluster: finding -> status -> files touched.
 - Commit + push -> DONE (observed): commit `b7c89413` (pass-134 artifact, REPORT.md,
   PROGRESS.md); push `ab55e88b..b7c89413` to `dr` (felixfelix-bot/market) and fork (same repo),
   remote sha verified `b7c89413f2977f692fe25f1ec4c225650e4f2323` on BOTH via `git ls-remote`.
-- Terminal action (kanban) -> BLOCKED (external, reproduced again pass 134): no-arg
-  `kanban_complete` -> "unknown id or already terminal"; `kanban_show(task_id=t_be177680)` and
-  `kanban_show(board=fork-pr-steward, task_id=t_be177680)` both -> "task not found". Env id is
-  board-qualified (`plebeian-pr-reviews:t_be177680`) while the board DB stores the bare id.
-  Manager must close the card.
+- Terminal action (kanban) -> BLOCKED (external, PRECISELY diagnosed pass 134, still reproduced):
+  no-arg `kanban_complete` -> "could not complete plebeian-pr-reviews:t_be177680 (unknown id or
+  already terminal)"; `kanban_complete(task_id=t_be177680)` ->
+  "worker is scoped to task plebeian-pr-reviews:t_be177680; refusing to mutate t_be177680";
+  `kanban_comment(task_id=plebeian-pr-reviews:t_be177680)` -> "unknown task";
+  `kanban_block(task_id=t_be177680)` -> scope-guard refusal; `kanban_show` (bare or qualified) ->
+  "not found". ROOT CAUSE: `HERMES_KANBAN_TASK` is board-qualified while the board DB stores the
+  bare id, so no id form satisfies both the scope guard and the DB. No read, comment, or terminal
+  action is reachable from the worker. Manager must close the card (fix: store/accept the
+  qualified id, or normalize the guard to the bare suffix).
+- STATUS -> COMPLETE (deliverable written + pushed + remote-verified; only manager-side card close
+  outstanding). No kanban comment could be recorded (all board writes refused) — diagnosis is here
+  and in REPORT.md.
 - LOOP NOTE: pass 134 of an identical re-dispatch loop; deliverable stable since pass 21.

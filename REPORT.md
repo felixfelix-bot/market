@@ -61,6 +61,17 @@ Read-only. Only `gh pr view`, `gh api …(GET)`, `gh pr diff`, `git show` / `git
 ## Honest caveat on the loop
 
 This is pass 134 of a re-dispatch loop on an unchanged PR and an unchanged draft artifact; the
-classification has been stable since pass 21. The card cannot be closed by the worker: the env
-task id is board-qualified (`plebeian-pr-reviews:t_be177680`) while the board DB stores the bare
-id, so `kanban_show` / `kanban_complete` both fail with "not found". Manager must close the card.
+classification has been stable since pass 21. The card CANNOT be closed or even commented on by
+the worker — reproduced precisely this pass:
+
+- no-arg `kanban_complete` → "could not complete plebeian-pr-reviews:t_be177680 (unknown id or already terminal)"
+- `kanban_complete(task_id="t_be177680")` → "worker is scoped to task plebeian-pr-reviews:t_be177680; refusing to mutate t_be177680"
+- `kanban_comment(task_id="plebeian-pr-reviews:t_be177680")` → "unknown task plebeian-pr-reviews:t_be177680"
+- `kanban_show(task_id="t_be177680")` / `kanban_show(board="fork-pr-steward", task_id="t_be177680")` → "task t_be177680 not found"
+- `kanban_block(task_id="t_be177680")` → scope-guard refusal
+
+ROOT CAUSE: `HERMES_KANBAN_TASK` is **board-qualified** (`plebeian-pr-reviews:t_be177680`) while the
+board DB stores the **bare** id `t_be177680`. The scope guard authorizes only the qualified string;
+the DB resolves only the bare string, so no id form satisfies both. Manager-side fix: store/accept
+the qualified id, or normalize the guard to compare the bare suffix. Manager must close the card
+manually; the worker's deliverable is complete and pushed regardless.
