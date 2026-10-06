@@ -62,3 +62,23 @@ Read-only: no comment, review, label, or any other GitHub write was made.
 ## Result
 
 `4 NEW-and-ACTIONABLE, 2 duplicates, 1 nits`
+
+## Independent re-verification (fleet offload re-run)
+
+- Live PR state re-read: `gh pr view 1286 --repo PlebeianApp/market` -> OPEN, head
+  `2ae85b6fb05d83ae6b1da68f6c20e51ddbec8c5a`, base `auctions`; head commit present locally
+  (`git cat-file -t 2ae85b6...` -> commit).
+- Comparison set still 1:1: issue comments = 1 (`#5617745226`, the prev round), reviews = 0,
+  review comments = 0.
+- `gh pr diff 1286 --name-only` -> 14 files; exactly one added test
+  (`src/lib/schemas/storefront.test.ts`), confirming D6's "only new test" premise.
+- Cited lines re-read at the SHA and confirmed in place: D1 `StorefrontIdentityManager.ts:88`
+  (`this.registry.get(name)`), D2 `EventHandler.ts:84`
+  (`purchaseManagers = [vanityManager, nip05Manager, storefrontManager]`), D3
+  `.../dashboard/account/storefront.tsx:67` (`parseStorefrontPage(content)`), D4
+  `publish/storefront-page.ts:10` (`kind: 30024`), D5 `StorefrontIdentityManager.ts:73`
+  (`registryDTag: 'storefront-names'`) mirrored at `queries/storefront.tsx:20`, D6
+  `package.json:31` glob (`contextvm src/queries/__tests__ src/lib/__tests__`) vs the spec under
+  `src/lib/schemas/`, D7 `StorefrontRenderer.tsx` productGrid/collectionRow block (draft cites
+  :59; the count sits at :57 and the global `/products` link at :58 in the same block).
+- Classification reproduced independently; result unchanged.
