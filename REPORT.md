@@ -120,10 +120,9 @@ the old base), 1 × [NIT] (PR-body provenance), [INFO] verification list. Review
 
 - `bf0c8d44` — pass 1 (PROGRESS.md + `artifacts/pr1332/{review-1332,consultant-brief,bundle,commit-msg-pass1}`).
   `git push dr HEAD:worker-heavy/1286-dedupe-spam-f7` → `175f6671..bf0c8d44`.
-Recorded pass 1 in §7 above. Pass 2 (this REPORT + `artifacts/pr1332/gate25-glm.md` + the refined
-review body) was committed and pushed to `dr` after this file was written; the observed hash is
-appended by a follow-up patch commit (see `git log --oneline -3` on
-`worker-heavy/1286-dedupe-spam-f7`).
+- `95ce4078` — pass 2 (PROGRESS.md, REPORT.md, `artifacts/pr1332/gate25-glm.md`, refined
+  `review-1332.md`). `git push dr HEAD:worker-heavy/1286-dedupe-spam-f7` → `bf0c8d44..95ce4078`;
+  `git ls-remote dr` → `95ce4078c50bc72f112e86d5c52965bc21c84e2b` (== `git rev-parse HEAD`).
 
 ## 8. Not done / for the manager
 
