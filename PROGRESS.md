@@ -28,5 +28,13 @@ Crash-recovery map. One line per cluster: finding -> status -> files touched.
 - Commit + push -> DONE (observed): commit `3112c940`; `git push dr|fork
   HEAD:worker-heavy/1286-dedupe-spam-f7` → `8d202cd8..3112c940`; remote sha
   `3112c940a4b06f99b8b2c8f0c8db27d9721d9ae0` verified on BOTH via `git ls-remote`.
-- Terminal action (kanban) -> PENDING: known scope-guard trap (`HERMES_KANBAN_BOARD=fork-pr-steward`
-  vs board-qualified env id); handoff via `kanban_comment`.
+- Terminal action (kanban) -> BLOCKED (external; reproduced). `HERMES_KANBAN_TASK` is
+  board-qualified (`plebeian-pr-reviews:t_6457008c`) while the board DB stores the bare id, and the
+  tools resolve the board from `HERMES_KANBAN_BOARD=fork-pr-steward`; no id/board form satisfies both.
+  `kanban_complete()` → "could not complete plebeian-pr-reviews:t_6457008c (unknown id or already
+  terminal)" (the card IS archived/terminal). `kanban_complete(task_id='t_6457008c',
+  board='plebeian-pr-reviews')` and `kanban_block(task_id='t_6457008c', ...)` → "worker is scoped to
+  task plebeian-pr-reviews:t_6457008c; refusing to mutate t_6457008c". Non-mutating handoff WORKED:
+  `kanban_comment(task_id='t_6457008c', board='plebeian-pr-reviews')` → comment_id `9108`. Manager
+  must close the lineage (fix: spawn with a matching `HERMES_KANBAN_BOARD`/`HERMES_KANBAN_DB`, or
+  normalize the scope guard to the bare suffix). No retry loop.

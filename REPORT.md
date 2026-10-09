@@ -154,7 +154,22 @@ remaining discretionary step.
   `3112c940a4b06f99b8b2c8f0c8db27d9721d9ae0`, matching `git rev-parse HEAD` (verified).
 - Nothing written to PlebeianApp/market — the PR review is read-only for this card.
 
-## 9. Remaining steps for the manager
+## 9. Kanban terminal action — externally blocked
+
+- `kanban_complete()` (no args → board-qualified env id) → `could not complete
+  plebeian-pr-reviews:t_6457008c (unknown id or already terminal)` — the card is **archived**, i.e.
+  terminal by design.
+- `kanban_complete(task_id='t_6457008c', board='plebeian-pr-reviews')` → `worker is scoped to task
+  plebeian-pr-reviews:t_6457008c; refusing to mutate t_6457008c`.
+- `kanban_block(task_id='t_6457008c', kind='needs_input', ...)` → same scope-guard refusal.
+- Non-mutating handoff **WORKED**: `kanban_comment(task_id='t_6457008c', board='plebeian-pr-reviews')`
+  → `comment_id 9108` (full evidence posted on the card).
+- Root cause (unchanged from the pr1286 passes ~130-137): the guard compares the board-qualified env
+  id while the board DB stores the bare id, and the tools resolve the board from
+  `HERMES_KANBAN_BOARD=fork-pr-steward`. Manager must close the lineage. Fix: spawn the worker with a
+  matching `HERMES_KANBAN_BOARD`/`HERMES_KANBAN_DB`, or normalize the scope guard to the bare suffix.
+
+## 10. Remaining steps for the manager
 
 1. Close/re-archive this duplicate lineage if it re-appears (detector dedup should already prevent it).
 2. Optionally post the verification text as a comment if a fresh artifact is wanted (§5 command).
