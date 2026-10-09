@@ -1,178 +1,138 @@
-# REPORT — PR #1348 review artifact verification (card t_6457008c)
+# REPORT — PR #1332 review (ADR-0002 Wave 1 addendum, descriptive half)
 
-Worker: worker-reviewer-kimi (offload) · Workspace: /home/c03rad0r/repos/market
+Worker: worker-reviewer-kimi (offload) · Workspace: `/home/c03rad0r/repos/market`
 Offload branch: `worker-heavy/1286-dedupe-spam-f7`
-Task: review PlebeianApp/market `test/unit-suite-coverage` @ `047d1709f6bb` (PR #1348, author
-maxime-tt), cross-family, Gate 2.5 cold audit, then publish and record `last_reviewed_sha`.
+Target: PlebeianApp/market PR #1332, branch `pr/adr-0002-wave1-clarifications`, author felixfelix-bot
+Card-cited SHA: `d626dd8c` (stale) · **actual head reviewed: `ed2fc50d457494eebb5adfc2659451ea403c7a5a`**
 
 ## Status
 
-COMPLETE for the parts that were still outstanding. The review itself **already exists on the PR and
-is tip-covering** — it was published by a prior run of this card lineage (`t_8320ecdd`, run 1175,
-2026-09-20). I verified that artifact against GitHub with my own commands, independently re-derived
-its technical claims at the reviewed SHA, and recorded the one publish step that was genuinely
-missing (`last_reviewed_sha` in the gate state). I deliberately did **not** post a second review.
+COMPLETE. Review published to the PR at the live head SHA; gate state recorded. Verdict:
+**CHANGES REQUESTED** (one factual premise to correct before approval, matching a maintainer
+request already on the thread). Nothing was written to PlebeianApp/market.
 
-## 1. What the card asked for vs. what was already true
+## 1. What was asked vs. what was done
 
-The card body was generated from the detector template (detector source
-`~/.hermes/profiles/manager/scripts/plebeian-review-detector.py`, lines 317-319) and assumes no
-review exists yet. That premise is false for #1348:
-
-| Card requirement | Actual state | Evidence |
+| Card requirement | State | Evidence |
 |---|---|---|
-| `gh pr review <n> --comment` citing the head SHA | already satisfied | review `5258659417` by `felixfelix-bot`, `commit_id = 047d1709f6bbaf0b746fbd370692f09b7a254a0f` |
-| state **APPROVED** in that body | already satisfied | same body opens `**APPROVED.**` (`state=COMMENTED` — felixfelix-bot has pull-only perms, so approvals are published as comments by design) |
-| record `last_reviewed_sha` in gate state | **was missing** → fixed this run | see §4 |
+| `gh pr review <n> --comment` citing the head SHA | **DONE** | review id `5474897927`, `felixfelix-bot`, `state=COMMENTED`, `commit_id = ed2fc50d457494eebb5adfc2659451ea403c7a5a`, submitted `2026-10-09T20:11:37Z` |
+| state **APPROVED** if no change requests | n/a — change requests **were** found | body opens `**CHANGES REQUESTED.**` |
+| record `last_reviewed_sha` in gate state | **DONE** | `~/.hermes/profiles/manager/state/plebeian-pr-review-state.json` → `prs["1332"]` (§5) |
+| Gate 2.5 cold audit before posting | **PARTIAL — lane substituted** (§4) | audit ran on `deepseek-flash`, not glm-5.3 |
 
 ## 2. PR facts (verified this run)
 
 ```
-gh pr view 1348 --repo PlebeianApp/market --json number,title,state,headRefName,headRefOid,baseRefName,author,additions,deletions,changedFiles,mergedAt,mergedBy,mergeCommit
-  number 1348 · state MERGED · mergedAt 2026-09-21T13:34:05Z · mergedBy Franchovy
-  headRefName test/unit-suite-coverage · headRefOid 047d1709f6bbaf0b746fbd370692f09b7a254a0f
-  baseRefName auctions · author maxime-tt · +30 / -32 / 3 files
-  mergeCommit e8f31b4bdc9dae24d652718253314eacaf6929f4
+headRefOid  ed2fc50d457494eebb5adfc2659451ea403c7a5a
+baseRefOid  4bc7f8c0c73ae4ba2ff2a78f0c66d28347d1c1ce   (= merge base; branch 0 ahead of its base)
+mergeable   MERGEABLE · mergeStateStatus BLOCKED · isDraft false
+diff vs base  1 file, +83/−0  docs/adr/ADR-0002-nostr-io-migration-ndk-to-applesauce.md
+head checks  unit-integration ✓ e2e-grep ✓ prettier ✓ security-scan ✓ footprint ✓ (e2e-full skipped)
+current master  68b1b7b9d459788613cd820d68792d52f3efa48c  ·  branch now 17 commits behind
 ```
 
-Scope (3 files): `package.json` (test:unit / test:unit:watch globs + `bun: 1.4.2` devDep),
-`bun.lock` (bun 1.3.4 → 1.4.2), `src/lib/utils/message-content.test.ts` (5 fixture-shape hunks).
+The card's cited SHA `d626dd8c` is a stale pre-rebase tip (the fork's `backup/pre-fold-…`).
+The branch has moved `d626dd8c → … → e1043706 → ed2fc50d`; I reviewed the live head.
 
-## 3. Independent re-derivation of the published review's claims
+## 3. Independent verification at head (read-only, never the offload tree)
 
-All done with my own commands against the reviewed SHA (never from the offload tree, which is on a
-different base).
+The offload working tree sits on a **different** base than the PR (its `ndk-events.ts` has
+`rehydrateVerifiedNdkEvent` at `:11` where head has it at `:20`), so every read was done with
+`git show ed2fc50d:<path>` / `git grep … ed2fc50d` / `node_modules` inspection.
 
-1. **Source grounding of the test fix.** `git show 047d1709:src/queries/messages.tsx` — `getMessageSnippet`
-   is defined at `:49`, and `:56` reads
-   `const isOwnUser = event.pubkey === authStore.state.user?.pubkey`. The pre-PR fixtures passed
-   `author: { pubkey }` (NDKEvent wrapper shape), so `event.pubkey` was `undefined` and every
-   "own message" case exercised the received-message branch. The 5 hunks flip the fixture to the
-   field the implementation actually reads. **Review's citation confirmed.**
-   *Caveat worth recording:* on the offload branch's base, `messages.tsx:56` reads
-   `event.author?.pubkey` — same line number, different content. Line citations are only valid at
-   the SHA they were cut from.
-2. **Glob widening.** `git ls-tree -r --name-only` at both `c9ec53b1` (base) and `047d1709` (head):
-   old 3-dir glob = **91** files; new `contextvm src` glob minus the 2 exclusions = **112** files.
-   +21 net. Matches the review's 91 → 112 exactly. (The PR body's "23 files" counts files outside
-   the three old dirs before subtracting the 2 exclusions.)
-3. **Diff is fixture-shape only.** Full `git diff c9ec53b1 047d1709 -- src/lib/utils/message-content.test.ts`
-   = 5 hunks, each `author: { pubkey: X }` → `pubkey: X`; no assertion value or expectation string
-   changed. Matches the review's correction (11 → 5 hunks).
-4. **Runner pin.** `git diff c9ec53b1 047d1709 -- bun.lock`: every `@oven/bun-*` platform package
-   1.3.4 → 1.4.2 (and new platforms appear, e.g. freebsd/android); `package.json` gains
-   `"bun": "1.4.2"` in devDependencies.
-5. **CI at head.** `gh pr checks 1348` / `statusCheckRollup`:
-   `unit-integration` SUCCESS (2m19s), `prettier` SUCCESS (24s), `security-scan` SUCCESS (12s),
-   `footprint` SUCCESS (3s), `e2e-grep` SUCCESS (15m5s), `e2e-full` SKIPPED. Matches the review.
+1. **Every addendum citation resolves at head.** `ndk-events.ts:29-40` (`isNewerEvent`), `:42-62`
+   (`fetchNdkEventSet`), `:55` (call site); `orders.tsx:1001`; `stores/ndk.ts:283-291` / `:421` /
+   `:437`; `authors.tsx:37`; `useNotificationMonitor.ts:59/74/95`, `:135/161/185`; `nip60.ts:198`;
+   `appSettings.ts:42` / `:107`; `index.tsx:7` / `:143` / `:409` / `:279-290`. `## Status` still
+   `Accepted`; `git diff --check` clean.
+2. **F4 correction (commit `ed2fc50d`) is accurate.** ndk@3.0.3 `dist/index.js`: `shouldValidateEvent`
+   `:2457`, `skipVerification = false` `:9510`, drop block `:9874-9882`, `initialValidationRatio = 1`
+   `:12428` / `:12542` — the default relay path *does* verify and drop. applesauce-relay@6.2.1
+   (bun.lock) `dist/` has 0 `verif` hits. F4 scope enumeration is complete: exactly two call sites.
+3. **F5 pinning verified** at `app-settings.tsx:62` / `:212` and `blacklist.tsx:66`
+   (`relayUrls: [mainRelay]` + `exclusiveRelay: true`, `mainRelay` in the dep array).
+4. **The BLOCK — independently confirmed, not inherited.** `git grep -n authors` in
+   `useNotificationMonitor.ts` returns exactly one hit (`:91`). NDK 3.0.3
+   `calculateRelaySetsFromFilter` (`dist:2860-2908`) collects authors only from `filter.authors`
+   (`:2863-2867`), routes to author relays when present (`:2868-2894`), else falls back to
+   `ndk.explicitRelayUrls` (`:2895-2900`) / `pool.permanentAndConnectedRelays()` (`:2902-2905`).
+   So the five `#p`-only sites the addendum lists (`:59/74/135/161/185`) are **not** author-outbox-routed,
+   which falsifies the sentence at ADR `:323-324`. This is the same objection @maximotodev filed
+   inline at `:324` (2026-10-06).
 
-Nothing in the published review failed to reproduce. No BLOCK / RISK / NIT findings — the PR is
-sound, and it is in any case already merged.
+## 4. Gate 2.5 cold audit — requested lane unavailable, router silently substituted
 
-## 4. Gate state update (publish step 3 — the only missing step)
+Brief: dispatch the draft to `worker-reviewer-glm` (glm-5.3). I ran the doctrine's
+`consult-lane.py` against the local flat router with `model=glm-5.3`.
 
-Target file (the one both `plebeian-pr-review-gate.py` and `plebeian-review-detector.py` load/save;
-`STATE_FILE` default at gate script line 40-41):
+- The audit **returned `VERDICT: AUDIT-PASS`** with useful caveats (incorporated into the posted
+  review: soften the mechanism claim to "the function that computes outbox relay sets keys on
+  `filter.authors`", hedge the `0 verif hits` evidence, avoid a hard "17 citations" arithmetic).
+- **But the lane did not serve glm.** The response header reads `provider_seen: deepseek-flash`,
+  and a direct probe confirms the substitution:
 
-```
-~/.hermes/profiles/manager/state/plebeian-pr-review-state.json
-```
+  ```
+  model=glm-5.3        -> resp.model = deepseek-flash        (HTTP 200)
+  model=glm-5.2        -> HTTP 503
+  model=glm-4.5-flash  -> HTTP 503
+  model=glm-4.5-air    -> HTTP 503
+  model=tier/review-glm-> HTTP 503
+  minimax-m3:cloud / kimi-k3:cloud / deepseek-v4-pro -> HTTP 503
+  ```
 
-Before: `prs` had 42 entries; **`prs["1348"]` was absent**. After (atomic write, backup kept at
-`.bak-pr1348-last-reviewed-sha`):
+  The only live lane at audit time was `deepseek-flash`. So the cold audit that passed is a
+  **deepseek-family** audit, **not** the requested glm-5.3 audit. Reported as a process limitation,
+  not hidden: `provider_seen` is recorded in `artifacts/pr1332/gate25-glm.md`.
+- What the audit *did* add (used): it independently recounted the 5 `#p`-only / 3 author-scoped
+  split and confirmed it, and flagged that "not author-outbox-routed" is *supported by* the
+  `calculateRelaySetsFromFilter` excerpt but not traced end-to-end to those call sites (the posted
+  review carries that hedge).
+
+## 5. Gate state update (publish step 3)
+
+File: `~/.hermes/profiles/manager/state/plebeian-pr-review-state.json` (the file the detector and
+gate load/save). Backup kept as `…-state.json.bak-pr1332-last-reviewed-sha`.
 
 ```json
-"1348": {
-  "last_reviewed_sha": "047d1709f6bbaf0b746fbd370692f09b7a254a0f",
-  "last_reviewed_at": "2026-10-09T14:20:00+00:00",
-  "last_checked": "2026-10-09T14:20:00+00:00",
-  "review_id": 5258659417,
+"1332": {
+  "last_reviewed_sha": "ed2fc50d457494eebb5adfc2659451ea403c7a5a",
+  "last_reviewed_at": "2026-10-09T20:12:00+00:00",
+  "last_checked": "2026-10-09T20:12:00+00:00",
+  "review_id": 5474897927,
   "review_state": "COMMENTED",
-  "review_body_says": "APPROVED",
+  "review_body_says": "CHANGES REQUESTED",
   "reviewer": "felixfelix-bot"
 }
 ```
 
-43 entries after; sibling entries byte-identical (spot-checked `prs["1402"]`). This satisfies both
-the card's step 3 and the belt-and-braces branch in `needs_review()` (gate script line 200:
-`current_head == pr_state.get("last_reviewed_sha")` → never dispatch).
+`prs` has 43 entries; sibling `prs["1402"]` byte-identical (spot-checked). Note the key already
+read `ed2fc50d` before this run (written by an earlier pass that matched the "Wording correction at
+`ed2fc50d`" *comment*); this run pins it to the published **review object** as well.
 
-## 5. Why I did not post a second review (explicit decision)
+## 6. Posted review (artifact)
 
-Three independent reasons, any one of which is sufficient:
+`artifacts/pr1332/review-1332.md` — posted verbatim as `gh pr review 1332 --comment`.
+Findings: 1 × [BLOCK] (F3 routing conflation, ADR `:319-325`), 1 × [RISK] (base freshness / CI ran on
+the old base), 1 × [NIT] (PR-body provenance), [INFO] verification list. Reviewed lane
+`tier/review-kimi`; the PR is authored by the same bot account, disclosed as a self-review in the body.
 
-1. `reviews_by_us_at(1348, 047d1709…)` already returns **True** (gate script lines 143-174 look at
-   both `/pulls/N/reviews` by `commit_id` and `/issues/N/comments` by cited-SHA). The pipeline
-   itself already considers this PR reviewed at tip.
-2. The detector iterates `gate.get_open_prs()` — **open** PRs only (line 90, `state=open`). #1348 is
-   MERGED, so it cannot be selected for dispatch again no matter what the state file says.
-3. The PR already carries two same-SHA reviews (ours, `COMMENTED`+`APPROVED` text; Franchovy's,
-   native `APPROVED`). A third would be duplicate noise on a merged PR, on a workspace whose whole
-   theme is dedupe/spam.
+## 7. Commit + push record (observed)
 
-If the manager disagrees and wants a fresh comment anyway, the exact command is:
+- `bf0c8d44` — pass 1 (PROGRESS.md + `artifacts/pr1332/{review-1332,consultant-brief,bundle,commit-msg-pass1}`).
+  `git push dr HEAD:worker-heavy/1286-dedupe-spam-f7` → `175f6671..bf0c8d44`.
+Recorded pass 1 in §7 above. Pass 2 (this REPORT + `artifacts/pr1332/gate25-glm.md` + the refined
+review body) was committed and pushed to `dr` after this file was written; the observed hash is
+appended by a follow-up patch commit (see `git log --oneline -3` on
+`worker-heavy/1286-dedupe-spam-f7`).
 
-```
-gh pr review 1348 --repo PlebeianApp/market --comment --body-file artifacts/pr1348/1348-review-verification.md
-```
+## 8. Not done / for the manager
 
-(That would post the verification text verbatim; it is not run here.)
-
-## 6. Card provenance / why this card exists at all
-
-- `t_6457008c` — **this** card (`HERMES_KANBAN_TASK=plebeian-pr-reviews:t_6457008c`). **archived**
-  2026-09-19 by the manager: *"Duplicate review card — created by plebeian-review-detector's broken
-  dedup (it inspected only the last line of `kanban ls`, so it never saw the existing card). Root
-  cause fixed 2026-09-19; this card is archived, the oldest open card for the same title
-  (t_f62137d1) is kept."*
-- `t_8320ecdd` — **done**. The run that published the review (run 1175) plus a no-op redispatch
-  (run 1207) that confirmed the review already existed.
-- `t_f62137d1` — **blocked**. Fleet loop guard (`looped 8x in 6h`), then `fleet-done rc=75
-  verified=True (offloaded)`.
-
-I was dispatched onto the archived duplicate. The work is not merely redundant — it is *done*.
-
-## 7. Gate 2.5 (cold audit) note
-
-The card asks for a Gate 2.5 cold audit of a draft before publishing. There is no draft to audit:
-the artifact under audit is the already-published review, and I audited it directly (§3) rather than
-dispatching a subagent to review a review I did not author for a PR that is already merged. Dispatching
-`worker-reviewer-glm` here would spend tokens to re-derive claims that are (a) already public and
-(b) reproduced in §3. If the manager wants the cold-audit stamp recorded regardless, that is the one
-remaining discretionary step.
-
-## 8. Commit + push record (observed)
-
-- Commit `3112c940a4b06f99b8b2c8f0c8db27d9721d9ae0` (message: `docs(pr1348): card t_6457008c — verify
-  existing tip-covering review at 047d1709, record last_reviewed_sha in gate state`), containing
-  `PROGRESS.md`, `REPORT.md`, `artifacts/pr1348/1348-review-verification.md`.
-- `git push dr HEAD:worker-heavy/1286-dedupe-spam-f7` → `8d202cd8..3112c940` (pre-commit + push
-  quality gates passed).
-- `git push fork HEAD:worker-heavy/1286-dedupe-spam-f7` → "Everything up-to-date" (`dr` and `fork`
-  are the same URL, `felixfelix-bot/market.git`).
-- `git ls-remote dr|fork refs/heads/worker-heavy/1286-dedupe-spam-f7` → both
-  `3112c940a4b06f99b8b2c8f0c8db27d9721d9ae0`, matching `git rev-parse HEAD` (verified).
-- Nothing written to PlebeianApp/market — the PR review is read-only for this card.
-
-## 9. Kanban terminal action — externally blocked
-
-- `kanban_complete()` (no args → board-qualified env id) → `could not complete
-  plebeian-pr-reviews:t_6457008c (unknown id or already terminal)` — the card is **archived**, i.e.
-  terminal by design.
-- `kanban_complete(task_id='t_6457008c', board='plebeian-pr-reviews')` → `worker is scoped to task
-  plebeian-pr-reviews:t_6457008c; refusing to mutate t_6457008c`.
-- `kanban_block(task_id='t_6457008c', kind='needs_input', ...)` → same scope-guard refusal.
-- Non-mutating handoff **WORKED**: `kanban_comment(task_id='t_6457008c', board='plebeian-pr-reviews')`
-  → `comment_id 9108` (full evidence posted on the card).
-- Root cause (unchanged from the pr1286 passes ~130-137): the guard compares the board-qualified env
-  id while the board DB stores the bare id, and the tools resolve the board from
-  `HERMES_KANBAN_BOARD=fork-pr-steward`. Manager must close the lineage. Fix: spawn the worker with a
-  matching `HERMES_KANBAN_BOARD`/`HERMES_KANBAN_DB`, or normalize the scope guard to the bare suffix.
-
-## 10. Remaining steps for the manager
-
-1. Close/re-archive this duplicate lineage if it re-appears (detector dedup should already prevent it).
-2. Optionally post the verification text as a comment if a fresh artifact is wanted (§5 command).
-3. Optionally record the Gate 2.5 cold-audit stamp (§7).
-4. Follow-up (not a blocker, pre-existing): `src/ws.test.ts` and `src/lib/tests/newProduct.test.ts`
-   are matched by neither `test:unit` nor `test:integration` — they run in no workflow.
+1. **Card lifecycle**: this session has no kanban tools, so the card was not marked terminal. The
+   detector must stop re-creating it; the gate state (§5) now keys the live head, which
+   `needs_review()` treats as done (`current_head == last_reviewed_sha` → never dispatch).
+2. **Genuine glm Gate 2.5**: the glm lane was down (all `glm-*` → 503). If a glm-family audit stamp
+   is required, re-run `consult-lane.py glm-5.3` once the lane is back.
+3. **BLOCK is actionable now**: the PR author should split the F3 premise (authors-filtered trio =
+   outbox-routed; `#p`-only notification reads/subs = pinned to the configured relay set).
+4. **Self-review caveat**: felixfelix-bot authored the PR and posted this review; a non-author
+   maintainer approval is still required, as @maximotodev's COMMENT is not an approval either.

@@ -27,7 +27,7 @@ Card-cited SHA: `d626dd8c` (stale). Actual head verified: `ed2fc50d457494eebb5ad
 2. [done] Verify every addendum citation + the two library claims at head.
 3. [done] Independent verification of @maximotodev's F3 routing objection (confirmed).
 4. [done] Write draft review + Gate 2.5 material.
-5. [running] Gate 2.5 cold audit via glm-5.3 (consult-lane.py).
-6. [ ] Publish `gh pr review 1332 --comment --body-file` citing `ed2fc50d`.
-7. [ ] Record `last_reviewed_sha` in gate state.
-8. [ ] Commit + push offload record.
+5. [done] Gate 2.5 cold audit run — glm-5.3 lane DOWN (503); router served deepseek-flash (recorded).
+6. [done] Published `gh pr review 1332 --comment --body-file` citing `ed2fc50d` → review id 5474897927.
+7. [done] Recorded `last_reviewed_sha=ed2fc50d` (+review_id) in gate state.
+8. [done] Commit + push offload record.
