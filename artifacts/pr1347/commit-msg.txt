@@ -1,0 +1,29 @@
+docs(pr1347): verify review already tip-covering at 94129b49; record last_reviewed_sha
+
+Card asks for a review of PlebeianApp/market PR #1347 (ci/e2e-gate-coverage,
+maxime-tt). PR is MERGED (2026-09-21, merge e1fb1514) and the review the card
+asks for already exists at the exact head:
+
+  review 5258605183, felixfelix-bot, COMMENTED, commit_id ==
+  94129b495c9f738c13f79326bfdd2d0f97268306, body cites the head SHA and closes
+  **APPROVED**. Maintainer Franchovy APPROVED at the same commit.
+
+No duplicate review was posted: the detector/gate cannot dispatch a merged PR
+(get_open_prs() = pulls?state=open) and reviews_by_us_at(1347, head) is already
+True. The one genuinely missing publish step, last_reviewed_sha in the gate
+state, has been recorded (backup kept).
+
+Independent re-derivation at head (detached worktree, node_modules symlinked):
+  - base c9ec53b1: gate 17 terms w/o Collection Management, invert 15 terms with
+    it -> family ran in NO workflow. Head: gate 18 terms with it. Premise true.
+  - bun test e2e-workflow-gate-membership.test.ts -> 4 pass / 0 fail / 13 expect.
+  - sensitivity probe: deleting |Collection Management| makes the new test fail
+    naming it (3 pass / 1 fail). Guard is a real detector, not a tautology.
+  - invert - gate = []; gate - invert = [Lightning Mock, OG Meta Tags,
+    Test listing labels - auctions].
+
+Gate 2.5: requested glm-5.3 lane is DOWN (all glm/kimi/minimax -> 503); the local
+router failed over to deepseek-flash. Recorded honestly; verdict
+AUDIT-PASS-WITH-NITS (no false claim, no missed BLOCK/RISK).
+
+Verdict on the PR: APPROVED. No writes to PlebeianApp/market.
