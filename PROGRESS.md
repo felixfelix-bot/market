@@ -1,40 +1,33 @@
-# PROGRESS — card t_6457008c (PR #1348 review) · pass 1
+# PROGRESS — PR #1332 review (ADR-0002 Wave 1 addendum, descriptive half)
 
-Crash-recovery map. One line per cluster: finding -> status -> files touched.
+Worker: worker-reviewer-kimi (offload) · Workspace: /home/c03rad0r/repos/market
+Offload branch: `worker-heavy/1286-dedupe-spam-f7`
+Target: PlebeianApp/market PR #1332, branch `pr/adr-0002-wave1-clarifications`, author felixfelix-bot.
+Card-cited SHA: `d626dd8c` (stale). Actual head verified: `ed2fc50d457494eebb5adfc2659451ea403c7a5a`.
 
-- Card identified -> DONE: `HERMES_KANBAN_TASK=plebeian-pr-reviews:t_6457008c`, but the card is
-  **archived** (manager comment 2026-09-19: duplicate created by the detector's broken dedup; the
-  canonical card for this title is `t_f62137d1`). Canonical work card `t_8320ecdd` is **done** — the
-  review was already published. No files touched (read-only sqlite + gh GET).
-- PR state -> DONE: #1348 **MERGED** 2026-09-21T13:34:05Z by Franchovy, merge commit
-  `e8f31b4bdc9dae24d652718253314eacaf6929f4`, head `047d1709f6bbaf0b746fbd370692f09b7a254a0f`,
-  base `auctions`, 3 files / +30 / -32. No files touched (gh GET).
-- Publish step 1 (review citing head SHA) -> ALREADY DONE: review id `5258659417`,
-  `felixfelix-bot`, `COMMENTED`, `commit_id == 047d1709…`, submitted 2026-09-20T00:54:37Z.
-- Publish step 2 (`APPROVED` in the body) -> ALREADY DONE: same review body opens `**APPROVED.**`;
-  Franchovy's native APPROVED review (`5267231959`) follows at the same SHA.
-- Publish step 3 (`last_reviewed_sha` in gate state) -> DONE THIS RUN:
-  `~/.hermes/profiles/manager/state/plebeian-pr-review-state.json` → `prs["1348"]` added with
-  `last_reviewed_sha=047d1709f6bbaf0b746fbd370692f09b7a254a0f`, `review_id=5258659417`
-  (42 → 43 prs, siblings untouched, backup `.bak-pr1348-last-reviewed-sha`).
-- Decision: do NOT re-post the review -> DONE (justified): `reviews_by_us_at(1348, head)` is already
-  True, and the detector scans OPEN PRs only, so #1348 can never be re-dispatched. A second APPROVED
-  comment on a merged PR is pure noise.
-- Independent re-derivation of the review's claims -> DONE, all CONFIRMED: messages.tsx:56 reads
-  `event.pubkey` at the reviewed SHA; glob 91 → 112 files at both base and head; message-content
-  diff = 5 fixture-shape hunks; bun.lock 1.3.4 → 1.4.2 + devDep pin; CI all green at head.
-- Deliverable written -> DONE: `artifacts/pr1348/1348-review-verification.md`, `REPORT.md`, this
-  `PROGRESS.md` (files touched: those three).
-- Commit + push -> DONE (observed): commit `3112c940`; `git push dr|fork
-  HEAD:worker-heavy/1286-dedupe-spam-f7` → `8d202cd8..3112c940`; remote sha
-  `3112c940a4b06f99b8b2c8f0c8db27d9721d9ae0` verified on BOTH via `git ls-remote`.
-- Terminal action (kanban) -> BLOCKED (external; reproduced). `HERMES_KANBAN_TASK` is
-  board-qualified (`plebeian-pr-reviews:t_6457008c`) while the board DB stores the bare id, and the
-  tools resolve the board from `HERMES_KANBAN_BOARD=fork-pr-steward`; no id/board form satisfies both.
-  `kanban_complete()` → "could not complete plebeian-pr-reviews:t_6457008c (unknown id or already
-  terminal)" (the card IS archived/terminal). `kanban_complete(task_id='t_6457008c',
-  board='plebeian-pr-reviews')` and `kanban_block(task_id='t_6457008c', ...)` → "worker is scoped to
-  task plebeian-pr-reviews:t_6457008c; refusing to mutate t_6457008c". Non-mutating handoff WORKED:
-  `kanban_comment(task_id='t_6457008c', board='plebeian-pr-reviews')` → comment_id `9108`. Manager
-  must close the lineage (fix: spawn with a matching `HERMES_KANBAN_BOARD`/`HERMES_KANBAN_DB`, or
-  normalize the scope guard to the bare suffix). No retry loop.
+## Findings -> status -> files touched
+
+| # | Finding | Status | Files / evidence |
+|---|---|---|---|
+| F1 | Card SHA `d626dd8c` is stale; live head is `ed2fc50d`. Review must cite the live head. | RESOLVED — reviewed at `ed2fc50d` | `gh pr view 1332 --json headRefOid`; `refs/remotes/fork/...` = ed2fc50d |
+| F2 | All 17 addendum `path:line` citations resolve at head. | VERIFIED | `git show ed2fc50d:<path>`; see `artifacts/pr1332/bundle.md` |
+| F3 | F4 correction (commit `ed2fc50d`) is factually accurate against pinned libs. | VERIFIED | ndk@3.0.3 dist :2457/:9510/:9874-9882/:12428/:12542; applesauce-relay@6.2.1 dist 0 `verif` hits |
+| F4 | **F3 paragraph ADR :319-325 conflates 5 `#p`-only reads with author-scoped reads and asserts they are "outbox-routed today".** | **BLOCK — change required** | `useNotificationMonitor.ts:59/74/135/161/185` are `#p`-only; `git grep authors` = only `:91`. NDK `calculateRelaySetsFromFilter` dist:2860-2908 routes by `filter.authors` only. |
+| F5 | Head checks ran green against old base `4bc7f8c0`; master now `68b1b7b9`, branch 17 behind, new synthetic merge unchecked. | RISK | `gh api .../commits/ed2fc50d/check-runs`; `gh api .../git/ref/heads/master` |
+| F6 | PR body table cites master `48714138` line numbers, stale vs head. | NIT | PR body vs `git show ed2fc50d:src/lib/nostr/ndk-events.ts` |
+
+## Files touched (offload tree only — no writes to PlebeianApp/market)
+- `artifacts/pr1332/review-1332.md` — draft/published review body
+- `artifacts/pr1332/consultant-brief.md`, `artifacts/pr1332/bundle.md` — Gate 2.5 material
+- `artifacts/pr1332/gate25-glm.md` — Gate 2.5 cold-audit output (glm-5.3)
+- `PROGRESS.md`, `REPORT.md`
+
+## Steps
+1. [done] Recon: PR facts, head SHA, branch state.
+2. [done] Verify every addendum citation + the two library claims at head.
+3. [done] Independent verification of @maximotodev's F3 routing objection (confirmed).
+4. [done] Write draft review + Gate 2.5 material.
+5. [running] Gate 2.5 cold audit via glm-5.3 (consult-lane.py).
+6. [ ] Publish `gh pr review 1332 --comment --body-file` citing `ed2fc50d`.
+7. [ ] Record `last_reviewed_sha` in gate state.
+8. [ ] Commit + push offload record.
