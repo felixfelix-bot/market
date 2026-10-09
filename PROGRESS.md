@@ -25,6 +25,8 @@ Crash-recovery map. One line per cluster: finding -> status -> files touched.
   diff = 5 fixture-shape hunks; bun.lock 1.3.4 → 1.4.2 + devDep pin; CI all green at head.
 - Deliverable written -> DONE: `artifacts/pr1348/1348-review-verification.md`, `REPORT.md`, this
   `PROGRESS.md` (files touched: those three).
-- Commit + push -> PENDING (see REPORT.md §8 for the observed record).
+- Commit + push -> DONE (observed): commit `3112c940`; `git push dr|fork
+  HEAD:worker-heavy/1286-dedupe-spam-f7` → `8d202cd8..3112c940`; remote sha
+  `3112c940a4b06f99b8b2c8f0c8db27d9721d9ae0` verified on BOTH via `git ls-remote`.
 - Terminal action (kanban) -> PENDING: known scope-guard trap (`HERMES_KANBAN_BOARD=fork-pr-steward`
   vs board-qualified env id); handoff via `kanban_comment`.

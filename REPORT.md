@@ -143,9 +143,16 @@ remaining discretionary step.
 
 ## 8. Commit + push record (observed)
 
-Filled in after the push below (see git log on `worker-heavy/1286-dedupe-spam-f7`). Targets: `dr`
-(felixfelix-bot/market) and `fork` — the same pair used by every prior pass on this offload branch.
-Nothing is written to PlebeianApp/market.
+- Commit `3112c940a4b06f99b8b2c8f0c8db27d9721d9ae0` (message: `docs(pr1348): card t_6457008c — verify
+  existing tip-covering review at 047d1709, record last_reviewed_sha in gate state`), containing
+  `PROGRESS.md`, `REPORT.md`, `artifacts/pr1348/1348-review-verification.md`.
+- `git push dr HEAD:worker-heavy/1286-dedupe-spam-f7` → `8d202cd8..3112c940` (pre-commit + push
+  quality gates passed).
+- `git push fork HEAD:worker-heavy/1286-dedupe-spam-f7` → "Everything up-to-date" (`dr` and `fork`
+  are the same URL, `felixfelix-bot/market.git`).
+- `git ls-remote dr|fork refs/heads/worker-heavy/1286-dedupe-spam-f7` → both
+  `3112c940a4b06f99b8b2c8f0c8db27d9721d9ae0`, matching `git rev-parse HEAD` (verified).
+- Nothing written to PlebeianApp/market — the PR review is read-only for this card.
 
 ## 9. Remaining steps for the manager
 
