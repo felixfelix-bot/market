@@ -58,7 +58,26 @@ Board: plebeian-my-prs. Repo: market. Worktree: /home/c03rad0r/repos/market (cwd
 
 ## Status
 - Step 1 (build/typecheck/lint/test) — DONE (above). No typecheck gate exists.
-- Step 2 (per-finding evidence) — DONE for B1/B2/B3/B4/D1/D2 (above); merge-order pending
-- Step 3 (headline falsification re-run) — pending
-- Step 4 (D1/D2 doc-vs-code) — DONE: both still contradict
-- Step 5 (push + PR comment) — BLOCKED (PR #1280 MERGED; branch never pushed; B4/D1/D2/merge-order parents incomplete)
+- Step 2 (per-finding evidence) — DONE (B1/B2/B3 fixed locally&unpushed; B4/D1/D2/merge-order NOT closed)
+- Step 3 (headline falsification re-run) — DONE: fail-safe semantics intact + non-vacuous tests pass
+- Step 4 (D1/D2 doc-vs-code) — DONE: both still contradict (byte-identical)
+- Step 5 (push + PR comment) — BLOCKED and IMPOSSIBLE AS SPECIFIED (see below)
+
+## Push analysis (step 5) — HARD BLOCKER
+- fork/feat/adr-0011-dleq-impl tip = 2386aed3 (the MERGED head).
+- Local HEAD 5970f2a6 vs fork: `rev-list --left-right --count` = 261 fork-only / 62 local-only.
+  => DIVERGED, not behind-then-ahead. Local is a STALE PRE-REBASE snapshot: the merged lineage
+  contains rebase commits 5abec8d7 / 04bdc1d8 (2026-09-24) which are NOT ancestors of local HEAD.
+- `git push --dry-run fork HEAD:refs/heads/feat/adr-0011-dleq-impl` => REJECTED (non-fast-forward).
+  Pushing would require a FORCE push, which would overwrite the merged branch tip and is not
+  authorized (AGENTS.md: "Do not ... rewrite history"; no operator directive on file).
+- PR #1280 is MERGED (state=MERGED, mergedAt 2026-09-24T23:56:08Z, merge ea7b4b12). Pushing to a
+  merged PR's head branch cannot reopen it or update the PR's merge state regardless.
+- => acceptance criterion "new head is pushed" is unsatisfiable without an authorized force-push
+  onto a merged branch. NOT DONE, and not claimed.
+
+## Verdict
+Round is NOT closed. 3 of 7 items have local evidence (B1,B2,B3) but are unpushed and sit on a
+stale, diverged, pre-rebase snapshot; 4 items (B4, D1, D2, merge-order) have NO closure evidence.
+All four parent fix tasks (t_5931ea84, t_a348f4c1, t_84050f47, t_096a525b) are still
+todo/ready with EMPTY results. Gate ran PREMATURELY.
