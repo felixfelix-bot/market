@@ -46,6 +46,14 @@ jobs:
       - name: Run unit tests
         run: bun run test:unit
 
+      # Hermetic shell regressions for the preview-deploy infrastructure: they
+      # stub ssh/ssh-keyscan and only use local ssh-keygen, so they never touch
+      # the network or the VPS.
+      - name: Run preview-infra shell tests
+        run: |
+          bash infra/preview-vps/test_write_ssh_key.sh
+          bash infra/preview-vps/test_ssh_pin.sh
+
       - name: Run integration tests with local relay and currency server
         run: |
           set -euo pipefail
