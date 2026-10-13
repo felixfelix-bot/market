@@ -159,7 +159,12 @@ test.describe('Order Details - Buyer View - Products', () => {
 
 		// Check timeline events have been registered
 		await expect(page.getByText('Order Timeline', { exact: true })).toBeVisible()
+
+		// The latest timeline state stays visible even while the timeline is collapsed
 		await expect(page.getByText('Order confirmed', { exact: true })).toBeVisible()
+
+		// Earlier events start collapsed; expand the timeline to verify them
+		await page.getByRole('button', { name: /show 1 earlier event/i }).click()
 		await expect(page.getByText('Payment request')).toBeVisible()
 	})
 
