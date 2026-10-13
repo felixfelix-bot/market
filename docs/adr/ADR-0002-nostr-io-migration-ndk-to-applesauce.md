@@ -172,6 +172,17 @@ The known overlap files between this migration and auctions work are:
 Wave C stays at the top of the stack and merges later so auctions-related work
 can land first without forcing broad rebases through the lower waves.
 
+**Addendum (Wave A2, kind-30402 listings seam):** any module introduced going
+forward — most notably the auctions module (kind 30408 / NIP-60), which does
+not exist yet on main (only forward-looking comments in
+`src/lib/v4v/splits.ts`) — MUST be applesauce-native from day one and MUST NOT
+introduce any nostr-dev-kit import. Such modules' relay I/O must route
+through the seam (`src/lib/nostr/io.ts`) primitives so the NDK bridge can be
+deleted at Wave D without touching a future auction codebase. The kind-30402
+listing read helpers added in Wave A2 (`fetchListings*`, `subscribeToListings`)
+are the reference shape: they accept raw nostr filters/keys and return plain
+`NostrEvent` objects, never NDK wrappers.
+
 #### Stacking and merge mechanics
 
 ```
