@@ -12,6 +12,7 @@ import { getProductOgMeta } from './server/ogMeta'
 import { getEventHandler } from './server'
 import { ZapInvoiceError } from './server/ZapPurchaseManager'
 import type { ZapPurchaseInvoiceRequestBody } from './server/ZapPurchaseManager'
+import { isWebSocketOriginAllowed } from './lib/security/webSocketOrigin'
 import { join } from 'path'
 import { file } from 'bun'
 
@@ -371,6 +372,13 @@ export const server = serve({
 	},
 	development: process.env.NODE_ENV !== 'production',
 	fetch(req, server) {
+		// H1: Validate Origin on WebSocket upgrade requests to prevent cross-site
+		// WebSocket hijacking. Non-upgrade requests fall through to the 500 below
+		// (unchanged behaviour); this only gates the actual WS handshake.
+		const isUpgrade = req.headers.get('upgrade')?.toLowerCase() === 'websocket'
+		if (isUpgrade && !isWebSocketOriginAllowed(req)) {
+			return new Response('Forbidden: WebSocket origin not allowed', { status: 403 })
+		}
 		if (server.upgrade(req)) {
 			return new Response()
 		}
