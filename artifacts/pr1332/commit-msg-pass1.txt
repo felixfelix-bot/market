@@ -1,0 +1,10 @@
+docs(pr1332): review pass-1 — verify ADR-0002 Wave 1 addendum citations at ed2fc50d, confirm F3 routing BLOCK
+
+Card cited stale SHA d626dd8c; live head is ed2fc50d. All 17 addendum
+path:line citations resolve at head; the ed2fc50d F4 correction is accurate
+against pinned ndk@3.0.3 / applesauce-relay@6.2.1. Independently confirmed
+@maximotodev's F3 objection: ADR :319-325 calls five #p-only reads in
+useNotificationMonitor "author-scoped"/"outbox-routed" though NDK 3.0.3
+calculateRelaySetsFromFilter routes by filter.authors only.
+
+Record only; no writes to PlebeianApp/market.
