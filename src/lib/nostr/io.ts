@@ -36,8 +36,18 @@ export interface FetchOptions {
 }
 
 export interface SubscribeOptions {
-	/** Close the subscription once relays reach EOSE. Default: false. */
+	/**
+	 * Close the subscription once relays reach EOSE. Default: false.
+	 *
+	 * Caveat (applesauce adapter): applesauce 5.2's req() emitted a virtual
+	 * EOSE after ~10s as a backstop when a relay never sent one; 6.x only
+	 * surfaces the relay's own EOSE. A closeOnEose: true subscription can
+	 * therefore hang open on a never-EOSE relay — callers that need bounded
+	 * lifetime should add their own timeout.
+	 */
 	closeOnEose?: boolean
+	/** Invoked once relays signal EOSE (end of stored events). Not a stop signal. */
+	onEose?: () => void
 	/** Restrict the subscription to these relay URLs. Default: adapter's configured relays. */
 	relayUrls?: string[]
 }
