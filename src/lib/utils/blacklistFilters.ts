@@ -1,11 +1,25 @@
 import { blacklistActions } from '@/lib/stores/blacklist'
 import { getATagFromCoords } from './coords'
-import type { NDKEvent } from '@nostr-dev-kit/ndk'
+
+/**
+ * Minimal structural event shape the blacklist filters operate on. Both the
+ * legacy `NDKEvent` wrapper and the raw nostr-tools `NostrEvent` (applesauce
+ * seam) satisfy it, so the filter helpers work regardless of which adapter is
+ * feeding them.
+ */
+export interface BlacklistableEvent {
+	pubkey: string
+	kind: number | undefined
+	tags: string[][]
+}
+
+/** Extract the `d` tag from a raw tags array (NIP-01 addressable identifier). */
+const dTagValue = (tags: string[][]): string | undefined => tags.find((t) => t[0] === 'd')?.[1]
 
 /**
  * Filter out blacklisted items from an array of events
  */
-export const filterBlacklistedEvents = <T extends NDKEvent>(events: T[]): T[] => {
+export const filterBlacklistedEvents = <T extends BlacklistableEvent>(events: T[]): T[] => {
 	if (!blacklistActions.isBlacklistLoaded()) {
 		return events // Return all if blacklist not loaded yet
 	}
@@ -18,7 +32,7 @@ export const filterBlacklistedEvents = <T extends NDKEvent>(events: T[]): T[] =>
 
 		// For products (kind 30402) and collections (kind 30405), check coordinates
 		if (event.kind === 30402 || event.kind === 30405) {
-			const dTag = event.tagValue('d')
+			const dTag = dTagValue(event.tags)
 			if (dTag) {
 				const coords = getATagFromCoords({
 					kind: event.kind,
@@ -43,7 +57,7 @@ export const filterBlacklistedEvents = <T extends NDKEvent>(events: T[]): T[] =>
 /**
  * Check if a product event is blacklisted
  */
-export const isProductEventBlacklisted = (event: NDKEvent): boolean => {
+export const isProductEventBlacklisted = (event: BlacklistableEvent): boolean => {
 	// Check author
 	if (blacklistActions.isPubkeyBlacklisted(event.pubkey)) {
 		return true
@@ -51,7 +65,7 @@ export const isProductEventBlacklisted = (event: NDKEvent): boolean => {
 
 	// Check product coordinates
 	if (event.kind === 30402) {
-		const dTag = event.tagValue('d')
+		const dTag = dTagValue(event.tags)
 		if (dTag) {
 			const coords = getATagFromCoords({
 				kind: 30402,
@@ -68,7 +82,7 @@ export const isProductEventBlacklisted = (event: NDKEvent): boolean => {
 /**
  * Check if a collection event is blacklisted
  */
-export const isCollectionEventBlacklisted = (event: NDKEvent): boolean => {
+export const isCollectionEventBlacklisted = (event: BlacklistableEvent): boolean => {
 	// Check author
 	if (blacklistActions.isPubkeyBlacklisted(event.pubkey)) {
 		return true
@@ -76,7 +90,7 @@ export const isCollectionEventBlacklisted = (event: NDKEvent): boolean => {
 
 	// Check collection coordinates
 	if (event.kind === 30405) {
-		const dTag = event.tagValue('d')
+		const dTag = dTagValue(event.tags)
 		if (dTag) {
 			const coords = getATagFromCoords({
 				kind: 30405,
