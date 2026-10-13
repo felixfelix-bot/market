@@ -33,27 +33,26 @@ Plebeian Market is a decentralized, Nostr-based e-commerce marketplace built wit
 
 ### Frontend
 
-| Technology          | Version | Purpose                  |
-| ------------------- | ------- | ------------------------ |
-| **React**           | 19.1.0  | UI framework             |
-| **TypeScript**      | Latest  | Type safety              |
-| **Bun**             | 1.2.4+  | Runtime & build tool     |
-| **TanStack Router** | 1.124.0 | File-based routing       |
-| **TanStack Query**  | 5.81.5  | Server state management  |
-| **TanStack Store**  | 0.7.1   | Client state management  |
-| **TanStack Form**   | 1.12.4  | Form handling            |
-| **Tailwind CSS**    | 4.1.11  | Styling framework        |
+| Technology          | Version  | Purpose                 |
+| ------------------- | -------- | ----------------------- |
+| **React**           | 19.2.6   | UI framework            |
+| **TypeScript**      | Latest   | Type safety             |
+| **Bun**             | 1.2.4+   | Runtime & build tool    |
+| **TanStack Router** | 1.169.2  | File-based routing      |
+| **TanStack Query**  | 5.100.10 | Server state management |
+| **TanStack Store**  | 0.11.0   | Client state management |
+| **TanStack Form**   | 1.32.0   | Form handling           |
+| **Tailwind CSS**    | 4.3.0    | Styling framework       |
 | **Radix UI**        | Various | Accessible UI components |
 
 ### Nostr & Bitcoin
 
 | Technology                    | Purpose |                         |
 | ----------------------------- | ------- | ----------------------- |
-| **@nostr-dev-kit/ndk**        | 2.18.1  | Nostr client library    |
-| **nostr-tools**               | 2.15.0  | Nostr utilities         |
-| **@nostr-dev-kit/ndk-wallet** | 0.6.2   | Wallet integrations     |
-| **bitcoinjs-lib**             | 6.1.7   | Bitcoin utilities       |
-| **@getalby/lightning-tools**  | 6.0.0   | Lightning Network tools |
+| **@nostr-dev-kit/ndk**        | 3.0.3   | Nostr client library    |
+| **nostr-tools**               | 2.23.3  | Nostr utilities         |
+| **bitcoinjs-lib**             | 7.0.1   | Bitcoin utilities       |
+| **@getalby/lightning-tools**  | 8.1.1   | Lightning Network tools |
 
 ### Development Tools
 
