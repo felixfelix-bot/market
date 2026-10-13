@@ -246,6 +246,23 @@ generateLightningPaymentDetail({
 SEED_MULTI_WALLETS=true npm run seed
 ```
 
+## CI Scripts
+
+### `check-doc-versions.ts`
+
+Detects version drift between `package.json` and the `.claude/` documentation.
+Fails (exit 1) when any key dependency's documented version no longer matches
+the real version, preventing stale version tables after dependency bumps.
+
+**Usage:**
+
+```bash
+bun run scripts/check-doc-versions.ts
+```
+
+Runs automatically in CI via `.github/workflows/doc-version-check.yml` on every
+push/PR to `master`. Unit tests: `bun test scripts/check-doc-versions.test.ts`.
+
 ## Related Documentation
 
 - [PAYMENT_DETAILS_SEEDING.md](../docs/PAYMENT_DETAILS_SEEDING.md) - Detailed payment details seeding guide
