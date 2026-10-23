@@ -1,74 +1,150 @@
-# PR #1226 Review Report
+# PR #1387 review report — feat(auctions): integrate Coco v2 wallet and auction lifecycle
 
-Target: PlebeianApp/market PR #1226 — auction order details / settlement status display
-Reviewed head: `247f9a25156832b66559d30648789d80efb9da00`
-Base: `auctions` (commit `4828c54ea99b7b015313d491f4e63005b49bf040`)
-Author: Franchovy
-Reviewer: c03rad0r (this run)
-Date: 2026-10-20
+Reviewer: worker-reviewer-ds (gate 1) / worker-reviewer-kimi (gate 2, cold audit)
+Repo: PlebeianApp/market
+PR: #1387, author maximotodev, base branch `auctions`
+Head reviewed: **7d8d1ed47fba** (`feat/coco-v2-wallet-auction-lifecycle`)
+Base merge-base: `a3a76b6c`
+Method: linus-review (correctness first; special cases are the enemy; evidence over intent)
+Verdict: **CHANGES REQUESTED** (posted as such, not APPROVED)
 
-## Head verification
+## How this was reviewed
 
-- `gh api repos/PlebeianApp/market/pulls/1226 --jq .head.sha` returned `247f9a25156832b66559d30648789d80efb9da00`.
-- The PR is now `state: closed`, `draft: true`, with `merge_commit_sha: d227bf169a50193e2bcdc277177e502c0f9a9af6`.
-- An existing review by `c03rad0r` at commit `247f9a25156832b66559d30648789d80efb9da00` exists with state `APPROVED` (review id 5190708581, submitted 2026-09-13). The scheduling premise that c03rad0r had no review at the current tip is therefore stale.
-
-## Delta inspected
-
-PR's own delta only: `git log --oneline 4828c54e..247f9a25` and `git diff --stat`.
-
-Touched files:
-- `AUCTIONS.md`
-- `e2e/ARCHITECTURE.md`
-- `e2e/scenarios/auctionOrderFixture.test.ts`
-- `e2e/scenarios/index.ts`
-- `e2e/tests/order-detail.spec.ts`
-- `package.json`
-- `src/components/orders/OrderActions.tsx`
-- `src/components/orders/OrderDataTable.tsx`
-- `src/components/orders/OrderDetailComponent.tsx`
-- `src/components/orders/orderColumns.tsx`
-- `src/components/orders/orderSettlementStatusView.ts`
-- `src/lib/__tests__/settlementDescriptor.test.ts`
-- `src/lib/auction/settlementDescriptor.ts`
-- `src/queries/__tests__/orders.test.ts`
-- `src/queries/orders.tsx`
-
-## Quality gate results
-
-- `bun test src/queries/__tests__/orders.test.ts src/lib/__tests__/settlementDescriptor.test.ts e2e/scenarios/auctionOrderFixture.test.ts`: **PASS** (all 49+ tests green).
-- `bun run build`: **PASS**.
-- `bun run format:check`: **PASS** after formatting the report files; no formatting errors remain in tracked files.
+Head extracted read-only to `/tmp/pr1387` (`git archive pr-1387-head`), base compared as
+`upstream/auctions...pr-1387-head`. Focus was the money path: bid locking, prepared-bid
+lifecycle, winner release/receive, refunds, settlement, DLEQ evidence, mode gating.
+No repository files were modified.
 
 ## Findings
 
-1. **[INFO] PR appears already merged/closed.**
-   - Evidence: `gh api repos/PlebeianApp/market/pulls/1226 --jq '{state,draft,merge_commit_sha}'` returns `{"state":"closed","draft":true,"merge_commit_sha":"d227bf169a50193e2bcdc277177e502c0f9a9af6"}`.
-   - The card requested a fresh review because the previous maintainer review was thought to be missing at the tip. The live API shows an APPROVED review by c03rad0r at exactly the current head, so the primary objective is already satisfied.
+### [RISK] 1 — the bid path creates rebid chains that release/receive then refuse
+- `src/components/AuctionBidder.tsx:217-236` computes `previousBidAmount` and rebids as a
+  delta leg; `prepareCocoAuctionBid` accepts `previousBidEventId`.
+- `src/publish/auctions.tsx:1632` (`publishCocoWinnerRelease`) and `:1680`
+  (`receiveWinner`) both throw `'Coco rebid-chain settlement is not yet enabled'` when
+  `canonical.winner.prevBidId` is set.
+- Consequence: a normal UI action (raise your bid) produces a winner the system can never
+  release or receive. Funds stay locked until locktime. This is an unexitable state created
+  by the happy path, not by an attack.
+- Fix direction: reject a second Coco bid at prepare time, or implement the chain. Do not
+  ship a bid path that can mint an unsettleable winner.
 
-2. **[NIT] `OrderDetailComponent.tsx`: `isAuctionOrder` boolean derived twice under different names.**
-   - Evidence: line ~247 computes `const isAuctionOrder = !!auctionCoordinates`; later the component also uses `isAuctionOrder` as a prop/flag for rendering. The naming is consistent, but there is also `auctionFulfillmentAuthority` and `auctionClaimFields` which use different detection paths. No bug, just redundant-looking `!!` conversions.
+### [RISK] 2 — `resetBrowserCocoAuctionTestState` deletes the wrong databases
+- Account DB name: `src/lib/coco/runtime.ts:19` → `plebeian_coco_v2_<env>_<pubkey>`
+  (underscores).
+- Reset filter: `src/lib/coco/migration/freshAuctionsdevBrowser.ts:366` →
+  `name.startsWith('plebeian-market-coco-v2-')` (hyphens).
+- So the reset wipes seed-vault / recovery / migration-control / command stores but leaves
+  the wallet DB (funds + send operations) intact. The resulting state — bid events carrying
+  `coco_operation` on the relay, no local send operation — is exactly what triggers finding 3.
+- Note `scripts/audit-coco-production-profile.ts:184` already uses the correct
+  `plebeian_coco_v2_` prefix, so the correct form exists in-repo and the reset simply does
+  not use it.
 
-3. **[NIT] `OrderDetailComponent.tsx`: settlement status `useEffect` does not include `user?.pubkey` in dependency array even though `descriptorInput` depends on it.**
-   - Evidence: `descriptorInput` `useMemo` dependency array at the end includes `user?.pubkey`, but the `useEffect` that calls `getSettlementDescriptor(descriptorInput)` only depends on `[descriptorInput]`. Because `user?.pubkey` is part of `descriptorInput`, this is technically fine, but if `descriptorInput` is stable across a user switch (e.g., same auction data), the effect won't re-run. Low risk in practice.
+### [RISK] 3 — a missing Send operation reports as a successful refund
+- `src/lib/coco/auctions/cocoEngine.ts:285`:
+  `if (!operation || operation.state === 'rolled_back') return { operationId, state: 'refunded' }`.
+- `!operation` (nothing to reclaim / local state gone) is indistinguishable from a real
+  rollback, and the dashboard toasts "Original Coco Send refunded."
+  (`bids.tsx:443-445`). A refund that moved nothing must not read as a refund: return a
+  distinct state and surface it.
 
-4. **[RISK] `OrderActions.tsx`: suppressing Cancel/Confirm for all auction orders may hide legitimate actions for legacy auction-associated orders.**
-   - Evidence: lines ~89-90 set `showCancel = canCancel && !isAuction` and `showConfirm = canConfirm && !isAuction`. The comment explicitly accepts this: "an auction order that is only auction-associated ... exposes no order-surface action at all". This is by design per the comment, but it is a UX regression for any pre-canonical-claim auction order and should be flagged as a product risk rather than a bug.
+### [RISK] 4 — publication cache discarded before the durable status write
+- `src/lib/coco/auctions/walletHost.ts:576-588`: `publisher.publish(eventId)` (which deletes
+  the cached signed event, `src/publish/auctions.tsx:1453-1465`) runs *before*
+  `commands.update(..., 'publication_ready' → 'published')`.
+- If that write fails, the command is stuck `publication_ready` with no cached event and the
+  retry throws `'Exact cached Coco kind-… is unavailable'` (`auctions.tsx:641`, `:1460`) —
+  permanently, for an event that is already on the relay.
+- Fix: mark published first, discard the cache second; republish must stay idempotent.
 
-5. **[NIT] `orderColumns.tsx`: `orderItemColumn` performs a per-row `useQuery` inside a table cell component.**
-   - Evidence: `OrderItemTitleCell` is rendered inside every `orderItemColumn` cell and calls `useQuery` twice. TanStack Table row components are fine to host hooks, but heavy per-row queries can cause many parallel fetches. The existing caching and `enabled` guards mitigate this. Not a blocker.
+### [RISK] 5 — keyset validation silently dropped in the cashu-ts v5 migration
+- `src/lib/auctionSettlementP2pk.ts:119-121`: `inspectCashuToken(input.token)` replaced
+  `getDecodedToken(token, input.mintKeysets)`.
+- `src/lib/auction/validation.ts:773`: same substitution in `validatePathRelease`.
+- Remaining checks are strong (P2PK lock pubkey must equal the xpub-derived child, per-proof
+  amount sane, amount sum maintained, duplicate bid ids rejected), so this is not an
+  exploitable hole — but nothing now binds a proof's keyset id to a mint that is supposed to
+  have issued it, and `mintKeysets` is a dead parameter. Failure moves from validation time
+  to redemption time. Reinstate the check explicitly instead of dropping it for the new
+  signature.
 
-6. **[RISK] `OrderDetailComponent.tsx`: `settlementValidating` uses `auctionError` to force "Validating…" state, which may mask a real load failure from the user.**
-   - Evidence: line ~588 `settlementValidating = isAuctionOrder && (auctionLoading || auctionError || !parsedAuctionForSettlement || descriptorFailed || !descriptorReady)`. If the auction query fails permanently, the card will remain in "Validating…" indefinitely instead of showing an error. Consider distinguishing loading, error, and validating states.
+### [NIT] 6 — `readEnv` six-arm nested ternary
+`src/lib/coco/auctions/mode.ts:22-40`. Three `if/throw`s or a
+`const PRODUCTION = { hosts, mintUrls }` table reads better and kills the
+operator-precedence trap inherent in a chain that long. Static values stay greppable.
 
-7. **[NIT] `orderSettlementStatusView.ts`: `describeOrderSettlementStatus` collapses `phase === 'closed'` into "Settlement Event Observed" but `phase === 'cancelled'` and `phase === 'reserve-not-met'` have their own labels.**
-   - Evidence: lines 45-46. The `closed` phase is a terminal phase with a settlement event observed, but it is not `settled`; mapping it to "Settlement Event Observed" is consistent with the comment. OK.
+### [NIT] 7 — pre-flip bids invisible to the rebid delta
+`src/components/AuctionBidder.tsx:219-221` filters to `coco_operation` bids, so a legacy bid
+does not count toward `previousBidAmount` and a Coco rebid locks the full amount on top of
+it. Consistent with legacy being unsupported, but the bid button says nothing; say it there.
 
-8. **[INFO] Test coverage is good for the settlement descriptor and fixture, but the E2E spec does not assert the actual settlement-status badge text.**
-   - Evidence: `e2e/tests/order-detail.spec.ts` line 346-364 checks only that Cancel/Confirm buttons are hidden for an auction order; it does not assert `data-testid="auction-settlement-status"` or any of the display states introduced by this PR. Given the PR title is "settlement status display", an E2E assertion on the badge would strengthen the feature gate.
+### [INFO] 8 — PR hygiene
+PR body's "immutable identities" (base `ea7b4b12`, head `e0e83e98`, app parent `0bdcf48c`)
+do not match the branch (base `a3a76b6c`, head `7d8d1ed4`); GitHub reports
+`mergeable: CONFLICTING`. A 741-line rewrite of `Nip60Wallet.tsx` and 195 lines of
+`src/lib/stores/nip60.ts` ride along with the auction work — a bisect hazard in the PR that
+must never lose a payment state.
 
-## Verdict
+### [INFO] 9 — legacy bids unrefundable after the flip
+`bids.tsx:359` refuses reclaims in Coco mode; the per-bid refund button is disabled without
+a `coco_operation` tag; legacy paths hard-throw. Fail-closed, acceptable for fake funds, but
+"drain in-flight bids before flipping Coco mode on" belongs in the rollout preconditions.
 
-The code under review is functionally sound, tests pass, and the build is green. However, the PR's current GitHub state is `closed`/`draft` with an existing APPROVED review by the same maintainer account at the exact scheduled head. The requested fresh review objective is therefore already satisfied, so this run records findings in `REPORT.md` and posts a comment-only review for audit trail rather than an additional approval.
+## Checked and cleared (no finding raised)
 
-Reviewed head: `247f9a25156832b66559d30648789d80efb9da00`
+- All four legacy monetary entry points are gated by `assertLegacyAuctionMoneyAllowed`:
+  `auctions.tsx:709`, `:1365`, `:1855`, `:2155`.
+- `fetchAuctionVerdicts(..., true)` call-site change is a no-op: the function takes five
+  parameters (`src/queries/auctions.tsx:589`), so both call shapes pass `undefined` for
+  `validatorPubkeys`. No verification was disabled.
+- `--no-sourcemap` is honoured: `build.ts:66-71` turns `--no-*` into `sourcemap: false`, and
+  `...cliConfig` at `build.ts:177` overrides the hardcoded `sourcemap: 'linked'`.
+- Republish cache is localStorage-backed with a post-sign identity drift guard; the
+  deterministic-id freeze is checked again after signing.
+- `resolveCocoCanonicalWinner` fails closed on: identity change, auction not ended, settlement
+  grace expired, terminal settlement present, missing DLEQ keyset evidence.
+- Mint allowlist / environment gating in `mode.ts` is fail-closed.
+
+## Not verified
+
+No test, build, typecheck, or CI run was performed. `/tmp/pr1387` was reviewed statically and
+this worktree lacks `@cashu/coco-core` from the vendored tarballs; running
+`bun install` + the suite was outside the authorized scope for this review. Nothing in the
+posted review claims otherwise.
+
+## Gate 2 (cross-family cold audit)
+
+Draft dispatched to the `worker-reviewer-kimi` lane (`HERMES_PROFILE=worker-reviewer-kimi
+hermes -z`, output at /tmp/gate2_1387_out.txt) with instructions to falsify each [RISK]
+finding and to name missed blockers. Outcome, and what I did with it:
+
+| Draft finding | Gate 2 | Action taken |
+|---|---|---|
+| 1 rebid chains unsettleable | HOLDS, "blocker" | promoted to **[BLOCK]**, evidence tightened to auctions.tsx:541-558/:620 vs :1632/:1680 |
+| 2 reset deletes wrong DBs | **WRONG** | **withdrawn** — see below |
+| 3 missing operation = refunded | HOLDS | kept as [RISK], added the timelock-ordering point |
+| 4 cache discard before status write | WEAK (no fund risk) | downgraded to [NIT] |
+| 5 keyset validation dropped | WEAK (framing wrong) | reframed as [NIT] dead `mintKeysets` parameters |
+
+Finding 2 was my error and gate 2 was right: `freshAuctionsdevBrowser.ts:365-367` filters on
+`name === accountDatabase || name.startsWith('plebeian-market-coco-v2-')`, where
+`accountDatabase` is `getCocoDatabaseName(account)` (`runtime.ts:18-19`) — the wallet DB *is*
+deleted. I had read only the `startsWith` half of the predicate. Withdrawn before posting.
+Finding 5's original framing ("nothing ties a proof's keyset to the mint") was also wrong:
+base's `getDecodedToken(token, mintKeysets)` expanded short v2 keyset IDs, it never validated
+issuance, so only the dead-parameter observation survives.
+
+## Publish
+
+- Review posted: `gh pr review 1387 --repo PlebeianApp/market --request-changes --body-file REVIEW_BODY_1387.md`
+- State: `CHANGES_REQUESTED`
+- Commit reviewed (`commit_id`): `7d8d1ed47fba0f7db1f1a40ede8aad04817459d3` (verified via
+  `gh api repos/PlebeianApp/market/pulls/1387/reviews`)
+- URL: https://github.com/PlebeianApp/market/pull/1387#pullrequestreview-5635293825
+- Gate state: `last_reviewed_sha = 7d8d1ed47fba…` recorded for PR 1387 in
+  `~/.hermes/profiles/manager/state/plebeian-pr-review-state.json`. The detector pipeline had
+  already recorded this review itself at 22:59:04Z (independent confirmation that the review
+  landed); my write re-asserted `last_reviewed_sha` plus `last_review_state`/`last_review_url`.
+- Posted body verified byte-for-byte against `REVIEW_BODY_1387.md` via
+  `gh api …/reviews/5635293825 --jq .body` (only a trailing newline differs).
