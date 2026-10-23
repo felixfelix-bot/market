@@ -226,7 +226,7 @@ Status: A=new, M=modified. `Note` is the subject of the last commit in range tou
 | +1 -0 | M | `src/components/layout/MobileMenu.tsx` | feat: add auction feature with listing, bidding, and management |
 | +1 -0 | M | `src/lib/nostr/io-ndk.ts` | refactor(auctions): route production file set through the nostr io seam |
 
-## Unit/integration tests — 109 files, +29500 / -56
+## Unit/integration tests — 97 files, +25585 / -56
 
 | +/- | st | file | note (last commit in range) |
 |---|---|---|---|
@@ -234,15 +234,12 @@ Status: A=new, M=modified. `Note` is the subject of the last commit in range tou
 | +1462 -0 | A | `src/lib/__tests__/computeValidatedBids.test.ts` | fix(auctions): spell the DLEQ pending reason and override flag consistently |
 | +1300 -0 | A | `src/lib/__tests__/auctionBidFundingSessionGuard.test.ts` | fix(auction): gate the reclaim promise on a persisted pending token |
 | +1293 -0 | A | `src/lib/__tests__/auctionValidatorLifecycle.test.ts` | test(auctions): fixture sweep for unconditional DLEQ + thread keysets through win paths |
-| +1152 -0 | A | `e2e/tests/auction-bidding-mints.spec.ts` | fix(auctions): address #1280 review — R1 keyset ingestion, R2 path-release keysets, R3 terminal-miss/caps/seller-overrid |
 | +1040 -0 | A | `src/lib/__tests__/auctionBidValidation.test.ts` | test(auctions): fixture sweep for unconditional DLEQ + thread keysets through win paths |
-| +1038 -0 | A | `e2e/tests/auction-settlement.spec.ts` | test(e2e): add an explicit recordVideo fixture option for the auth page fixtures; use it in the settlement spec |
 | +866 -0 | A | `src/lib/__tests__/auctionBidPublishRetry.test.ts` | test(auctions): keep the rebased auction-bid tests on the ADR-0011 lock contract |
 | +860 -0 | A | `src/lib/__tests__/auctionValidatorSubscriber.test.ts` | fix(auction-validator): preserve recovered bid observation time |
 | +747 -0 | A | `src/lib/__tests__/nostr/nip59.test.ts` | test(privacy): share one postcode sentinel fixture across the six privacy suites |
 | +605 -0 | A | `src/lib/__tests__/auctionValidatorContext.test.ts` | fix(auction-validator): monotonic NUT-7 writes ignore stale overlapping responses |
 | +520 -0 | A | `src/lib/__tests__/auctionValidatorSubscriberBounds.test.ts` | fix(chore):prettier fix |
-| +479 -0 | A | `e2e/tests/test-labels-auctions.spec.ts` | fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them |
 | +471 -0 | A | `src/lib/__tests__/auctionWon.test.ts` | fix(auctions): harden rebid collateral validation |
 | +462 -0 | A | `src/lib/__tests__/auctionBidFundingLifecycle.test.ts` | test(auction): drop tautological classifier combo asserts (#1235) |
 | +458 -0 | A | `src/lib/__tests__/auctionSettlementCompleteness.test.ts` | fix: rebid chain settlement validation + E2E test fixes |
@@ -264,7 +261,6 @@ Status: A=new, M=modified. `Note` is the subject of the last commit in range tou
 | +297 -0 | A | `src/lib/__tests__/nip60DepositIdentity.test.ts` | test(nip60): isolate deposit-identity suite from process-wide nip60 mock |
 | +286 -0 | A | `src/lib/__tests__/reserveGuard.test.ts` | fix(auctions): spell the DLEQ pending reason and override flag consistently |
 | +277 -0 | A | `src/lib/wallet/nip60.test.ts` | fix(auctions): address review feedback on Lightning bid funding |
-| +276 -0 | A | `e2e/tests/auction-invalid-event-gate.spec.ts` | fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them |
 | +274 -0 | A | `src/lib/__tests__/bidderPathRelease.test.ts` | fix(auction): fail-closed post-lock publish pipeline + strict bidder-record write (#1235) |
 | +269 -0 | A | `src/lib/__tests__/auctionMintSelection.test.ts` | test: allowlist order determines auto-selected mint when multiple are eligible and excludes funded but untrusted mints f |
 | +269 -0 | A | `src/lib/__tests__/auctionSettlementPhase6.test.ts` | fix: reduce ndk footprint |
@@ -274,13 +270,11 @@ Status: A=new, M=modified. `Note` is the subject of the last commit in range tou
 | +238 -0 | A | `src/lib/__tests__/instance-config.test.ts` | fix(identity): freeze the NIP-89 client tag software name (R1) |
 | +229 -0 | A | `src/lib/__tests__/auctionDLEQ.mint.integration.test.ts` | test(e2e): re-enable Direct Lightning bid funding scenarios on the DLEQ-required lock path |
 | +215 -0 | A | `src/lib/__tests__/auctionBidderStatus.test.ts` | refactor(auctions): close the round-2 non-blocking findings on the validated bid view |
-| +208 -0 | A | `e2e/tests/auction-live-chat-ui.spec.ts` | fix(live-chat): address the live activity inside the relay tag-index budget |
 | +208 -0 | A | `src/lib/__tests__/auctionValidatorNut7Poller.test.ts` | fix(settlement): review fixes — resumability, pending gate, memoization, proof map defaults, skipped tests, parse mismat |
 | +204 -0 | A | `src/queries/__tests__/auctionVerdicts.test.ts` | fix(auctions): premature "resolved" marking silently loses wins |
 | +198 -0 | A | `src/lib/__tests__/auctionBidLockDleq.test.ts` | test(auctions): fixture sweep for unconditional DLEQ + thread keysets through win paths |
 | +196 -0 | A | `src/lib/__tests__/auctionBidEventSchema.test.ts` | style(auction): prettier-format dleq_proof schema + test (ADR-0011) |
 | +186 -0 | A | `src/lib/__tests__/auctionMintSelection.integration.test.ts` | Fix/862 bidding with any mint (#886) |
-| +180 -0 | A | `e2e/tests/auction-live-chat.spec.ts` | fix(live-chat): address the live activity inside the relay tag-index budget |
 | +171 -0 | A | `src/lib/__tests__/walletStorageStrict.test.ts` | fix(auction): fail-closed post-lock publish pipeline + strict bidder-record write (#1235) |
 | +166 -0 | A | `src/lib/__tests__/auctionValidatorSpamPolicy.test.ts` | fix(auction-validator): add bounded late-settlement observation window |
 | +162 -0 | A | `src/lib/__tests__/auctions-ndk-surface-guard.test.ts` | fix(auctions): address #1343 review — signing-time created_at, scoped NDK guard with coverage, publish-result fail-close |
@@ -291,7 +285,6 @@ Status: A=new, M=modified. `Note` is the subject of the last commit in range tou
 | +139 -0 | A | `src/lib/__tests__/auctionStartingBidRequired.test.ts` | feat(auctions): structural-only bid validity, REQUIRED starting_bid (ADR-0012 Phase 1) |
 | +138 -0 | A | `src/lib/__tests__/auctionValidatorObservedAtRecovery.test.ts` | fix(auction-validator): per-bid d-tag, observed_at recovery, post-close late_arrival suppression |
 | +138 -0 | A | `src/lib/__tests__/dleqFixture.test.ts` | feat(cashu): add offline NUT-12 DLEQ test fixture |
-| +134 -0 | A | `e2e/tests/auction-home-grids.spec.ts` | fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them |
 | +130 -0 | A | `src/queries/__tests__/auctionPathReleases.test.ts` | fix(auctions): premature "resolved" marking silently loses wins |
 | +128 -0 | A | `src/lib/__tests__/verdictQuorum.test.ts` | fix(auctions): bind validator confirmation to exact bid event + auditor quorum (review #5) |
 | +127 -0 | A | `src/lib/__tests__/auctionPublishValidation.test.ts` | fix(auctions): reserve draft round-trip + treat 0 as no reserve + show bid ladder |
@@ -307,16 +300,11 @@ Status: A=new, M=modified. `Note` is the subject of the last commit in range tou
 | +106 -0 | A | `src/lib/__tests__/fetchMintKeysets.test.ts` | fix(settlement): use explicit isFailure flag for mint-keyset negative cache |
 | +105 -0 | A | `src/lib/__tests__/hashToCurveVsCashuTs.test.ts` | refactor: clean up wallet code, add dev tooling and tests |
 | +103 -0 | A | `src/lib/__tests__/server-bootstrap-persistence.test.ts` | fix(server): harden bootstrap authority |
-| +101 -0 | A | `e2e/tests/self-hosted-config.spec.ts` | test(e2e): isolate self-hosted instance configuration |
-| +100 -0 | A | `e2e/tests/media-rendering.spec.ts` | fix(media): address felixfelix-bot re-review (lightbox controls, video a11y, URL detection, e2e determinism) |
 | +91 -9 | M | `src/lib/__tests__/appSettings.test.ts` | feat(config): add self-hosted handler ID fallback for app settings |
 | +97 -0 | A | `src/lib/__tests__/auctionValidatorPolicy.test.ts` | fix(auction-validator): add bounded late-settlement observation window |
-| +94 -0 | A | `e2e/tests/cvm-config.spec.ts` | fix(cvm): add self-detection guard for CVM_SERVER_KEY matching APP_PRIVATE_KEY |
 | +93 -0 | A | `src/lib/__tests__/auctionCountdownPreStart.test.ts` | feat: countdown for auctions before start time |
 | +86 -0 | A | `src/lib/__tests__/auctionTagBuilders.test.ts` | test(auction): add dleq_proof emission tests for buildBidEventTags (B2 RED) |
 | +74 -11 | M | `src/lib/__tests__/e2e-workflow-gate-membership.test.ts` | fix(e2e): avoid Bun hot-reload port collision |
-| +80 -0 | A | `e2e/tests/auction-mint-state.spec.ts` | style: apply prettier formatting to 3 files |
-| +73 -0 | A | `e2e/tests/auction-shipping.spec.ts` | Fixed imports in test file |
 | +70 -0 | A | `src/lib/__tests__/mintCapability.test.ts` | feat(cashu): add mint NUT-12 DLEQ capability probe (mintSupportsDleq) |
 | +65 -0 | A | `src/lib/utils/cashu.test.ts` | style: apply prettier formatting to 3 files |
 | +63 -0 | A | `src/lib/__tests__/hashToCurve.test.ts` | feat(auctions): implement bidder-held-path multi-proof Cashu bids |
@@ -340,12 +328,24 @@ Status: A=new, M=modified. `Note` is the subject of the last commit in range tou
 | +1 -1 | M | `src/lib/stores/cart.test.ts` | Merge branch 'feat/1202-direct-lightning-bid-funding' of github.com:PlebeianApp/market into feat/1202-direct-lightning-b |
 | +1 -1 | M | `src/queries/__tests__/profile-validation.test.ts` | Merge remote-tracking branch 'origin/master' into auctions |
 
-## Playwright e2e + fixtures + harness — 9 files, +382 / -27
+## Playwright e2e + fixtures + harness — 21 files, +4297 / -27
 
 | +/- | st | file | note (last commit in range) |
 |---|---|---|---|
+| +1152 -0 | A | `e2e/tests/auction-bidding-mints.spec.ts` | fix(auctions): address #1280 review — R1 keyset ingestion, R2 path-release keysets, R3 terminal-miss/caps/seller-overrid |
+| +1038 -0 | A | `e2e/tests/auction-settlement.spec.ts` | test(e2e): add an explicit recordVideo fixture option for the auth page fixtures; use it in the settlement spec |
+| +479 -0 | A | `e2e/tests/test-labels-auctions.spec.ts` | fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them |
+| +276 -0 | A | `e2e/tests/auction-invalid-event-gate.spec.ts` | fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them |
+| +208 -0 | A | `e2e/tests/auction-live-chat-ui.spec.ts` | fix(live-chat): address the live activity inside the relay tag-index budget |
+| +180 -0 | A | `e2e/tests/auction-live-chat.spec.ts` | fix(live-chat): address the live activity inside the relay tag-index budget |
+| +134 -0 | A | `e2e/tests/auction-home-grids.spec.ts` | fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them |
+| +101 -0 | A | `e2e/tests/self-hosted-config.spec.ts` | test(e2e): isolate self-hosted instance configuration |
+| +100 -0 | A | `e2e/tests/media-rendering.spec.ts` | fix(media): address felixfelix-bot re-review (lightbox controls, video a11y, URL detection, e2e determinism) |
+| +94 -0 | A | `e2e/tests/cvm-config.spec.ts` | fix(cvm): add self-detection guard for CVM_SERVER_KEY matching APP_PRIVATE_KEY |
 | +90 -2 | M | `e2e/ARCHITECTURE.md` | test(e2e): isolate self-hosted instance configuration |
 | +82 -7 | M | `e2e/seed-relay.ts` | test(e2e): isolate self-hosted instance configuration |
+| +80 -0 | A | `e2e/tests/auction-mint-state.spec.ts` | style: apply prettier formatting to 3 files |
+| +73 -0 | A | `e2e/tests/auction-shipping.spec.ts` | Fixed imports in test file |
 | +63 -0 | M | `e2e/scenarios/index.ts` | fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them |
 | +51 -0 | A | `e2e/start-local-mint.sh` | feat(e2e): local Cashu mint for auction test infrastructure |
 | +43 -5 | M | `e2e/playwright.config.ts` | test(e2e): isolate self-hosted instance configuration |

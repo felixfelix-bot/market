@@ -40,8 +40,8 @@ SKIP = {
 def classify(path, st):
     base = path.rsplit("/", 1)[-1]
     if path in SKIP: return "skip"
+    if path.startswith("e2e/"): return "e2e"          # must precede the test rule: e2e/tests/*.spec.ts
     if re.search(r"(^|/)__tests__/|\.test\.(ts|tsx)$|(^|/)tests?/", path): return "test"
-    if path.startswith("e2e/"): return "e2e"
     if path.startswith("docs/") or base in ("AUCTIONS.md", "AGENTS.md", "README.md"): return "docs"
     if path.startswith(".github/"): return "ci"
     if path.startswith("scripts/"): return "script"
