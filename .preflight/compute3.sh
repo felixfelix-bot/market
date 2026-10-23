@@ -8,8 +8,10 @@ REVIEWED_LO=8bf1a35     # lower bound of published review 5328118447 range
 REVIEWED_HI=eacc4256   # reviewed head (published 2026-09-26)
 
 echo "### ordering: is the whole draft range inside the PUBLISHED review window 8bf1a35..eacc4256?"
-echo "draftbase_4828c54_ancestor_of_8bf1a35: $(git merge-base --is-ancestor $DRAFTBASE $REVIEWED_LO 2>/dev/null && echo YES || echo NO)"
-echo "drafthead_50199dc_ancestor_of_8bf1a35: $(git merge-base --is-ancestor $OLD $REVIEWED_LO 2>/dev/null && echo YES || echo NO)"
+# Containment direction: the review FLOOR must be an ancestor of the draft base,
+# and the draft head must be an ancestor of the review CEILING.
+echo "review_floor_8bf1a35_ancestor_of_draftbase_4828c54: $(git merge-base --is-ancestor $REVIEWED_LO $DRAFTBASE 2>/dev/null && echo YES || echo NO)"
+echo "drafthead_50199dc_ancestor_of_review_ceiling_eacc4256: $(git merge-base --is-ancestor $OLD $REVIEWED_HI 2>/dev/null && echo YES || echo NO)"
 echo "reviewed_hi_eacc4256_ancestor_of_head: $(git merge-base --is-ancestor $REVIEWED_HI $HEAD && echo YES || echo NO)"
 git show -s --format='8bf1a35 %cI %s' $REVIEWED_LO 2>/dev/null
 echo "commits_8bf1a35..eacc4256=$(git rev-list --count $REVIEWED_LO..$REVIEWED_HI 2>/dev/null)"
