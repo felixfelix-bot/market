@@ -1,31 +1,27 @@
-# PR #1226 Review Progress — Final
+# PROGRESS — PR #1387 review (gate 1, worker-reviewer-ds)
 
-Target: PlebeianApp/market PR #1226 — auction order details / settlement status display
-Scheduled head: 247f9a25156832b66559d30648789d80efb9da00
-Base: auctions (4828c54ea99b7b015313d491f4e63005b49bf040)
-Author: Franchovy
-Reviewer: c03rad0r
+Task: review PlebeianApp/market `feat/coco-v2-wallet-auction-lifecycle` @ `7d8d1ed47fba`
+(PR #1387, author maximotodev, base branch `auctions`).
 
-## Milestones
+| # | Finding (short) | Status | Files touched |
+|---|---|---|---|
+| 1 | Rebid chains are created by the bid path but refused by release/receive | reported [RISK] | REPORT.md, REPORT_1387_DRAFT.md |
+| 2 | Legacy in-flight bids/auctions stranded under Coco mode | reported [RISK] | same |
+| 3 | Missing Send operation returns "refunded" success | reported [RISK] | same |
+| 4 | Publication cache discarded before durable status write | reported [RISK] | same |
+| 5 | Keyset validation dropped in two validators (cashu-ts v5 swap) | reported [RISK] | same |
+| 6 | Fresh-reset DB prefix `plebeian-market-coco-v2-` never matches `plebeian_coco_v2_` | reported [NIT] | same |
+| 7 | `readEnv` 6-arm nested ternary | reported [NIT] | same |
+| 8 | Stale "immutable identities" in PR body; CONFLICTING mergeable; wallet-UI rewrite bundled | reported [INFO] | same |
 
-1. [COMPLETED] Head re-verified: head SHA is still `247f9a25156832b66559d30648789d80efb9da00`.
-2. [COMPLETED] Delta isolated and inspected: 15 files changed, ~2114 insertions / ~67 deletions.
-3. [COMPLETED] Quality gates run:
-   - Targeted unit tests (orders, settlementDescriptor, auctionOrderFixture): PASS
-   - Full `bun run test:unit`: PASS (1131 pass / 0 fail)
-   - `bun run format:check`: PASS
-   - `bun run build`: PASS
-4. [COMPLETED] Findings recorded in `REPORT.md`.
-5. [COMPLETED] Comment review posted via `gh pr review 1226 --repo PlebeianApp/market --comment --body-file PR1226_REVIEW_BODY.md`.
-6. [COMPLETED] Artifacts committed and pushed:
-   - Local commit: `557cfa42 docs(review): PR #1226 review report and progress`
-   - Pushed to: `https://github.com/felixfelix-bot/market.git` branch `pr-1226-review`
-   - (Direct push to `PlebeianApp/market` denied with 403; fallback push to felixfelix-bot fork succeeded.)
+Checked and cleared (no finding): `--no-sourcemap` CLI arg parsing (build.ts:65-72
+maps it to `sourcemap:false`), `fetchAuctionVerdicts` 6-arg call removal (function
+has 5 params; both forms pass `undefined`), republish-cache durability
+(localStorage-backed), fail-closed mint allowlist / environment gating.
 
-## Important note on PR state
+Verification status: NOT run. This worktree has no `@cashu/coco-core` installed
+(vendored tarball inputs), so unit/integration/build were not executed; no test,
+build, or CI claim is made in the review.
 
-The live GitHub API shows PR #1226 as `state: closed`, `draft: true`, with `merge_commit_sha: d227bf169a50193e2bcdc277177e502c0f9a9af6`. An `APPROVED` review by `c03rad0r` at commit `247f9a25156832b66559d30648789d80efb9da00` already existed (id 5190708581). The card's premise that the tip was unreviewed was therefore stale, but a fresh `--comment` review was posted for audit trail and the findings are recorded here.
-
-## Reviewed head
-
-`247f9a25156832b66559d30648789d80efb9da00`
+Gate 2: dispatched cold audit of the draft to worker-reviewer-kimi lane.
+Publish: see REPORT.md "Publish" section.
