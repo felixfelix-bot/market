@@ -1,0 +1,70 @@
+===== comment id=5500014039 2026-09-01T20:30:30Z felixfelix-bot =====
+Thanks @Franchovy — reviewed the delta at 8bf1a35 (docs-only: ADR-0009 rev 2, supersedes the blacklist-based rev 1). The p-tag exclusion and NIP-09 pubkey-validation requirements cleanly address the rev-1 feedback. New findings:
+
+1. **[NIT]** `docs/adr/ADR-0009-test-listing-labels-via-nip-32.md:184` — Related section still calls existing moderation "spam-only, whole-pubkey"; `BlacklistManager.ts` also maintains per-item product(30402)/collection(30405) coordinate blacklists enforced in `blacklistFilters.ts`. Carried from the #1243 rev-1 review, still inaccurate in rev 2.
+
+2. **[NIT]** `docs/adr/ADR-0009-test-listing-labels-via-nip-32.md:41-44` vs `:105-108` — "No static list maintenance" is contradicted by the authorized-labeler key set: it is itself a static app-side list that third-party consumers must replicate out-of-band, which also strains the "Implementation-independent — any client can consume" goal.
+
+3. **[NIT]** `docs/adr/ADR-0009-test-listing-labels-via-nip-32.md:123-125` vs `:134-136` — the feed-path label check (step 2) fetches kind-1985 by `#a`, but only the detail-view path (step 5) resolves kind-5 deletions per label id: a freshly un-labeled item can stay hidden in feeds until the batch path also checks deletions; the per-label-id deletion REQ pattern for feeds is unspecified.
+
+Previous 13 findings on this PR still stand. Happy to help.
+
+===== comment id=5501698822 2026-09-01T23:09:39Z felixfelix-bot =====
+CI note on the failing `e2e-grep` check at head 8bf1a35: this failure is **infra-transient, not from the PR's code**.
+
+The job died during Go module downloads:
+```
+fiatjaf.com/nostr@v0.0.0-20260625215907/nip60/client/client.go:10:2:
+github.com/elnosh/gonuts@v0.4.2: read "https://proxy.golang.org/github.com/elnosh/gonuts/@v/v0.4.2.mod":
+stream error: stream ID 151; INTERNAL_ERROR; received from peer
+```
+(proxy.golang.org returned HTTP 500-class INTERNAL_ERROR mid-transfer.)
+
+I just verified `https://proxy.golang.org/github.com/elnosh/gonuts/@v/v0.4.2.mod` now returns HTTP 200, so a re-run should go green without any code change. Two ways forward:
+
+1. **Maintainers:** `Re-run failed jobs` on the `e2e-grep` run (run 33550856227) — fastest path.
+2. **@Franchovy:** any new push to the branch will retrigger CI fresh if a re-run isn't available to you.
+
+Everything else on the run already passed (Build, Deploy to AuctionsDev, prettier). The open review items on this PR remain the docs NITs from the thread above — nothing in this CI failure relates to them.
+
+===== comment id=5546431063 2026-09-04T21:04:28Z felixfelix-bot =====
+Re-review of the unreviewed delta (`0329899..8bf1a35`, the ADR-0009 docs update) — verdict SHIP-WITH-NITS, docs-only, no code concerns, nothing new blocking. The 13 earlier auction-code findings from prior reviews remain open and are unaffected by this delta. A couple of minor spec-completeness notes were folded into the ADR-0009 follow-up list rather than the thread here.
+
+===== comment id=5718194723 2026-09-17T16:59:09Z felixfelix-bot =====
+Prepared a carrier body for this PR (I can't edit your body directly). Suggested text:
+
+## Suggested carrier body (for @Franchovy) — Auctions V1 → master
+
+> This PR is the **release carrier**: it takes the `auctions` integration branch to `master`. Every child merges into `auctions` first; this PR's head moves with each one, so it should get its full review **after** the children land. Do **not** delete `auctions` until the last child is in (deleting a branch with open child PRs can close them).
+
+### What it carries
+Auctions V1: the auction read/write layer, validator + settlement flow, DLEQ collateral verification, self-hosting config, and the `auctions`-line ADRs (ADR-0003/0004/0011/0012, ADR-0016-related edits).
+
+### Deploy path (from the workflows)
+- push to `auctions` → `deploy-auctionsdev.yml` → **AuctionsDev** (beta)
+- this PR merges `auctions` → `master` → `deploy.yml` → **Staging**
+- `promote-production.yml` (manual) tags `X.Y.Z-release` → `release.yml` → **Production**
+
+### Before merging
+- [ ] All critical-path children merged into `auctions` (they move this head).
+- [ ] `auctions` merged with master (done via #1339; this head is `9bb3230d`).
+- [ ] Full-suite green at the tagged head; `e2e-full` dispatched and artifact attached (the per-PR `e2e-grep` is an allowlist and does not run all auction families).
+- [ ] Note: `promote-production.yml` has no test gate — confirm master's push CI is green at the exact SHA before promoting.
+
+### Verification at head
+- `mergeable: MERGEABLE`; CI green on the constituent PRs' heads.
+- 307 files, +65,620 / −1,165 (the whole auctions line vs master).
+
+_Not verified by this comment: live AuctionsDev/Staging health; branch protection (token can't read it)._
+
+When the children are in, this is ready to un-draft. Our side can help with any of the checkboxes above.
+
+
+===== comment id=5718729369 2026-09-17T17:40:52Z felixfelix-bot =====
+Context for the "rid of NDK" merge-gate question — long-form note (no names; PRs/files as evidence):
+
+**Why "no NDK runtime dependency per feature" is the wrong merge gate for the auctions line**
+- njump: https://njump.me/naddr1qq0kzatrw35k7mnn94hxg6edd4jhyem994nkzar995erqv3k95crjqgmwaehxw309aex2mrp0yh8qmr9vfjkjctw9ekkzuntv46qzrthwden5te0dehhxtnvdakqz9nhwden5te0wfjkccte9ec8y6tdv9kzumn9wspzq7d7vel0nh9m4326qc54e6rskpczn07dktww9rv4nu5ptvt0s9ucqvzqqqr4guag5f5e
+- raw: `naddr1qq0kzatrw35k7mnn94hxg6edd4jhyem994nkzar995erqv3k95crjqgmwaehxw309aex2mrp0yh8qmr9vfjkjctw9ekkzuntv46qzrthwden5te0dehhxtnvdakqz9nhwden5te0wfjkccte9ec8y6tdv9kzumn9wspzq7d7vel0nh9m4326qc54e6rskpczn07dktww9rv4nu5ptvt0s9ucqvzqqqr4guag5f5e`
+
+Summary: **Bar A** (no `@nostr-dev-kit` import, no `ndkActions`/`ndkStore` in auction code — enforced by CI) is the auctions release gate. **Bar B** (no NDK at runtime for auctions) is the migration **capstone** (Wave D), tracked globally in #1028, not a per-feature precondition — because the signer seat (A3/A3b, #1252) is global and the seam's `applesauceIo.sign` throws until it lands. Evidence: ADR-0002, the #1283 review, #1340, #1252.

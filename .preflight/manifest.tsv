@@ -1,0 +1,387 @@
+24	0	.env.example	feat(config): add self-hosting instance configuration foundation
+8	1	.env.local.example	docs: clarify CVM_SERVER_PUBKEY env var alternatives
+26	0	.github/workflows/ci-instance-literals-guard.yml	feat(guardrails): add instance-literal guard and browse/cart/checkout coverage (R5)
+9	1	.github/workflows/ci-ndk-guard.yml	fix(auctions): #1343 re-review — finalization-error test + comment, ADR sign/Wave-A3 + nip60 supersession, g
+18	1	.github/workflows/ci-unit.yml	ci(unit): pin local Cashu mint to 0.19.2 (keyset-id compat with cashu-ts 2.9)
+86	11	.github/workflows/deploy-auctionsdev.yml	Added CI workflows for auctions branch
+3	11	.github/workflows/deploy.yml	Merge remote-tracking branch 'origin/master' into auctions
+82	4	.github/workflows/e2e.yml	fix(e2e): avoid Bun hot-reload port collision
+2	2	.github/workflows/prettier.yml	Added CI workflows for auctions branch
+50	2	AGENTS.md	docs(agents): state the event-validation rule and the surface taxonomy
+2671	0	AUCTIONS.md	fix(auctions): spell the DLEQ pending reason and override flag consistently
+14	0	README.md	fix(self-hosting): Implement and validate the deployment documentation
+108	41	bun.lock	test(unit): run every unit test file on the runner CI claims to use
+151	17	contextvm/server.ts	fix(auctions): make spam policy configurable
+108	0	contextvm/tools/__tests__/live-activity-worker.test.ts	feat: NIP-53 auction live chat — rebased on bidder-held-path base
+370	0	contextvm/tools/live-activity-worker.ts	fix(live-chat): address the live activity inside the relay tag-index budget
+3	7	ctxcn.config.json	style: format code and documentation with consistent spacing
+9	0	ctxcn.config.json.bak	refactor: move auction issuer logic to contextvm server
+54	0	deploy-simple/README.md	fix(self-hosting): Implement and validate the deployment documentation
+144	0	deploy-simple/RELAY_DEPLOY.md	style: format code and documentation for consistency
+2	1	deploy-simple/control.sh	chore(deploy): add auctionsdev staging target
+20	5	deploy-simple/deploy.sh	chore(deploy): add auctionsdev staging target
+37	0	deploy-simple/env/.env.production.example	fix(self-hosting): Implement and validate the deployment documentation
+20	0	deploy-simple/env/.env.staging.example	fix(self-hosting): Implement and validate the deployment documentation
+65	1	docs/adr/ADR-0002-nostr-io-migration-ndk-to-applesauce.md	docs(adr): #1343 single-emphasis runs for the two nip60 supersession notes
+419	0	docs/adr/ADR-0003-auctions-comprehensive-validation-protocol.md	docs(auctions): amend AUCTIONS.md and ADR-0003 for ADR-0012 Phase 1
+438	0	docs/adr/ADR-0004-auction-settlement-descriptor.md	fix(auctions): #1280 re-review — descriptor terminal-miss threading + test, R2 seam test, seller-override he
+7	0	docs/adr/ADR-0005-no-external-service-dependencies-in-tests.md	docs(e2e): ADR-0006 local Cashu mint, deprecate mock mint fixtures
+102	0	docs/adr/ADR-0006-local-cashu-mint-for-e2e-tests.md	fix(auctions): #1280 re-review — descriptor terminal-miss threading + test, R2 seam test, seller-override he
+286	0	docs/adr/ADR-0008-direct-lightning-bid-funding.md	fix(auction): fail closed at the pre-lock recovery-record bound
+174	2	docs/adr/ADR-0009-test-listing-labels-via-nip-32.md	fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them
+144	0	docs/adr/ADR-0011-bid-time-collateral-verification-via-nut12-dleq.md	fix(auctions): #1280 re-review — descriptor terminal-miss threading + test, R2 seam test, seller-override he
+336	0	docs/adr/ADR-0012-bid-validity-selection-and-winner-derivation.md	docs(adr): record the maintainer authorisation for ADR-0012
+202	0	docs/adr/ADR-018-instance-configuration-and-self-hosting.md	docs(ADR): self-hosted context ADR
+332	0	docs/adr/ADR-019-unified-storefront-identity-and-page-builder.md	docs(ADR): Unified Storefront Identity and Page Builder
+273	0	docs/adr/proposals/adr-0012-phase1-amendment-spec.md	docs(auctions): amend AUCTIONS.md and ADR-0003 for ADR-0012 Phase 1
+290	0	docs/adr/proposals/auction-multiparty-wire-profile.md	docs(auctions): propose multiparty payout wire profile (#1219)
+160	0	docs/handover/live-activity-addressing.md	style(docs): prettier formatting for the live-activity addressing note
+138	0	docs/ndk-to-applesauce-migration-guide.md	docs: add NDK -> applesauce port migration guide
+483	0	docs/protocol/auction-multiparty-v1.md	docs(auctions): propose multiparty payout wire profile (#1219)
+848	0	docs/protocol/fixtures/auction-multiparty-v1-invalid.json	docs(auctions): propose multiparty payout wire profile (#1219)
+703	0	docs/protocol/fixtures/auction-multiparty-v1-valid.json	docs(auctions): propose multiparty payout wire profile (#1219)
+139	0	docs/tasks/pr1144-followup-improvements.md	docs: correct item #6 — aggregate NUT-7 returns 'spent' for ANY spent proof, not all-spent
+47	0	docs/tasks/validator-nut7-winner-check.md	style: format task doc
+6	3	e2e/AGENTS.md	feat(e2e): document local mint in e2e AGENTS and point shared seed helper at it
+90	2	e2e/ARCHITECTURE.md	test(e2e): isolate self-hosted instance configuration
+30	9	e2e/fixtures/index.ts	test(e2e): add an explicit recordVideo fixture option for the auth page fixtures; use it in the settlement spe
+-	-	e2e/fixtures/tiny-video.mp4	fix(media): address felixfelix-bot re-review (lightbox controls, video a11y, URL detection, e2e determinism)
+43	5	e2e/playwright.config.ts	test(e2e): isolate self-hosted instance configuration
+63	0	e2e/scenarios/index.ts	fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them
+82	7	e2e/seed-relay.ts	test(e2e): isolate self-hosted instance configuration
+51	0	e2e/start-local-mint.sh	feat(e2e): local Cashu mint for auction test infrastructure
+17	1	e2e/test-config.ts	fix(live-chat): address the live activity inside the relay tag-index budget
+1152	0	e2e/tests/auction-bidding-mints.spec.ts	fix(auctions): address #1280 review — R1 keyset ingestion, R2 path-release keysets, R3 terminal-miss/caps/se
+134	0	e2e/tests/auction-home-grids.spec.ts	fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them
+276	0	e2e/tests/auction-invalid-event-gate.spec.ts	fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them
+208	0	e2e/tests/auction-live-chat-ui.spec.ts	fix(live-chat): address the live activity inside the relay tag-index budget
+180	0	e2e/tests/auction-live-chat.spec.ts	fix(live-chat): address the live activity inside the relay tag-index budget
+80	0	e2e/tests/auction-mint-state.spec.ts	style: apply prettier formatting to 3 files
+1038	0	e2e/tests/auction-settlement.spec.ts	test(e2e): add an explicit recordVideo fixture option for the auth page fixtures; use it in the settlement spe
+73	0	e2e/tests/auction-shipping.spec.ts	Fixed imports in test file
+94	0	e2e/tests/cvm-config.spec.ts	fix(cvm): add self-detection guard for CVM_SERVER_KEY matching APP_PRIVATE_KEY
+100	0	e2e/tests/media-rendering.spec.ts	fix(media): address felixfelix-bot re-review (lightbox controls, video a11y, URL detection, e2e determinism)
+101	0	e2e/tests/self-hosted-config.spec.ts	test(e2e): isolate self-hosted instance configuration
+479	0	e2e/tests/test-labels-auctions.spec.ts	fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them
+8	4	package.json	test(e2e): isolate self-hosted instance configuration
+155	0	scripts/check-auctions-ndk-surface.sh	fix(auctions): #1343 re-review — finalization-error test + comment, ADR sign/Wave-A3 + nip60 supersession, g
+54	0	scripts/check-instance-literals.sh	feat(guardrails): add instance-literal guard and browse/cart/checkout coverage (R5)
+131	0	scripts/dev-seed.ts	refactor: move auction issuer logic to contextvm server
+191	0	scripts/diagnose-nut7.ts	style: fix quote escaping and improve code/markdown formatting
+1	1	scripts/fetch-btc-price.ts	feat(nip53): CVM-authoritative status resolver + identity enforcement
+407	0	scripts/gen_auctions.ts	feat(auctions): add auction path release settlement flow with Cashu token support
+27	0	scripts/instance-literals-baseline.txt	feat(guardrails): add instance-literal guard and browse/cart/checkout coverage (R5)
+1	1	scripts/ndk-baseline.txt	fix(auctions): address #1343 review — signing-time created_at, scoped NDK guard with coverage, publish-resul
+267	1	scripts/seed.ts	feat(nip53): CVM-authoritative status resolver + identity enforcement
+422	0	src/components/AuctionBidProgressDialog.tsx	fix(auction): honest branding for uncertain-lock failures
+950	0	src/components/AuctionBidder.tsx	fix(e2e): retire CashuMintMock; seed settlement tests with real DLEQ collateral from the local nutshell mint; 
+256	0	src/components/AuctionBidsContainer.tsx	refactor(auctions): close the round-2 non-blocking findings on the validated bid view
+186	0	src/components/AuctionCard.tsx	refactor(auctions): route production file set through the nostr io seam
+177	0	src/components/AuctionClaimDialog.tsx	feat(auctions): add post-settlement claim order flow for winners
+189	0	src/components/AuctionCountdown.tsx	refactor(auctions): route production file set through the nostr io seam
+94	0	src/components/AuctionDisplayComponent.tsx	refactor(media): consolidate media rendering behind shared Media component
+97	0	src/components/AuctionFilters.tsx	Fixed comments from PR review
+328	0	src/components/AuctionSettlement.tsx	fix(auctions): address #1280 review — R1 keyset ingestion, R2 path-release keysets, R3 terminal-miss/caps/se
+469	0	src/components/AuctionTimelineChart.tsx	refactor(auctions): route production file set through the nostr io seam
+108	0	src/components/AuctionVerdictPanel.tsx	fix(auction): wire auditor authors filter into verdict query call sites (#1235)
+316	0	src/components/AuctionWonModal.tsx	fix(auctions): fix unavailable auctions blocking the queue
+5	5	src/components/BugReportModal.tsx	fix(config): wire trustedMints and bugRelay into their consumers (R3)
+2	1	src/components/CartItem.tsx	refactor(media): consolidate media rendering behind shared Media component
+3	2	src/components/CollectionCard.tsx	refactor(media): consolidate media rendering behind shared Media component
+2	1	src/components/CollectionDisplayComponent.tsx	refactor(media): consolidate media rendering behind shared Media component
+22	10	src/components/Comments.tsx	feat(auctions): add comments tab to auction detail
+110	0	src/components/ConfettiBurst.tsx	feat(auctions): launch confetti upward from the bottom of the screen every 3 seconds
+106	0	src/components/ConnectionStatusPill.tsx	refactor: remove old CVM auction path oracle code
+58	3	src/components/FeaturedSections.tsx	Fixed alternating style featured sections
+34	10	src/components/ImageCarousel.tsx	fix(media): address review — error reset, video fallback, lightbox, a11y
+54	34	src/components/ImageViewerModal.tsx	fix(media): address felixfelix-bot re-review (lightbox controls, video a11y, URL detection, e2e determinism)
+170	0	src/components/InvalidAuctionNotice.tsx	fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them
+28	0	src/components/LiveChatMessage.tsx	feat: NIP-53 auction live chat — rebased on bidder-held-path base
+216	0	src/components/LiveChatPanel.tsx	feat(nip53): CVM-authoritative status resolver + identity enforcement
+84	0	src/components/Media.tsx	fix(media): address felixfelix-bot re-review (lightbox controls, video a11y, URL detection, e2e determinism)
+2	1	src/components/ProductCard.tsx	Merge remote-tracking branch 'origin/master' into chore/auctions-merge-master-20260917
+2	1	src/components/ProductDisplayComponent.tsx	refactor(media): consolidate media rendering behind shared Media component
+2	1	src/components/ProductSearch.tsx	refactor(media): consolidate media rendering behind shared Media component
+5	2	src/components/ProfileWalletCheck.tsx	fix: replace hardcoded Plebeian name, logo, URLs, footer links, and support/contact details with resolved conf
+6	0	src/components/SheetRegistry.tsx	feat: add auction feature with listing, bidding, and management
+3	3	src/components/ShowTestListingsToggle.tsx	feat(labels): complete the auctions half of ADR-0009 (gating + surfaces)
+4	4	src/components/auth/NostrConnectQR.tsx	fix: replace hardcoded Plebeian name, logo, URLs, footer links, and support/contact details with resolved conf
+136	106	src/components/dialogs/TermsConditionsDialog.tsx	fix(legal): let instances supply their own Terms and Conditions (R4)
+67	41	src/components/layout/Footer.tsx	fix: replace hardcoded Plebeian name, logo, URLs, footer links, and support/contact details with resolved conf
+41	7	src/components/layout/Header.tsx	fix: replace hardcoded Plebeian name, logo, URLs, footer links, and support/contact details with resolved conf
+1	0	src/components/layout/MobileMenu.tsx	feat: add auction feature with listing, bidding, and management
+4	3	src/components/messages/ChatMessageBubble.tsx	refactor(media): swap remaining dashboard/index/chat/migration media to Media
+2	1	src/components/migration/MigrationForm.tsx	refactor(media): swap remaining dashboard/index/chat/migration media to Media
+35	0	src/components/nostr/AuctionSectionGrid.tsx	fix(auctions): reorder home grids under filter bar, drop loading spinner, match titles
+83	1	src/components/orders/OrderDetailComponent.tsx	fix(auctions): #1343 re-review — ADR-0002 Wave-A3 branch-relative + nip60 supersession notes, private-claim 
+28	0	src/components/shared/InfoTooltip.tsx	Added tooltip for set auction reserve
+152	0	src/components/shared/ProgressBar.tsx	Progress Bar Improvements
+50	0	src/components/shared/TooltipToggleGroupItem.tsx	WIP
+2	0	src/components/sheet-contents/NewAuctionContent.tsx	feat: add auction feature with listing, bidding, and management
+2023	0	src/components/sheet-contents/auctions/AuctionFormContent.tsx	feat(guardrails): add instance-literal guard and browse/cart/checkout coverage (R5)
+20	0	src/components/sheet-contents/auctions/index.tsx	feat: add auction feature with listing, bidding, and management
+2	1	src/components/sheet-contents/collections/ProductsTab.tsx	refactor(media): consolidate media rendering behind shared Media component
+6	2	src/components/sheet-contents/products/ProductWelcomeScreen.tsx	fix: replace hardcoded Plebeian name, logo, URLs, footer links, and support/contact details with resolved conf
+4	1	src/components/sheet-contents/products/index.tsx	fix: replace hardcoded Plebeian name, logo, URLs, footer links, and support/contact details with resolved conf
+83	0	src/components/ui/button-group.tsx	Progress Bar & Stylized UI for Auctions
+218	0	src/components/ui/calendar.tsx	feat(auction): add calendar component and enhanced auction time controls
+53	6	src/components/ui/image-uploader/ImageUploader.tsx	feat(setup): add owner-authorized Blossom branding uploads
+168	0	src/components/ui/input-group.tsx	Progress Bar & Stylized UI for Auctions
+83	0	src/components/ui/toggle-group.tsx	WIP
+45	0	src/components/ui/toggle.tsx	WIP
+8	0	src/config/dashboardNavigation.ts	feat(dashboard): add bids management page for auction participants
+479	34	src/feature/wallet/components/DepositLightningModal.tsx	fix(auction): deposit outcome uncertain lifecycle state
+135	5	src/feature/wallet/components/Nip60Wallet.tsx	feat(guardrails): add instance-literal guard and browse/cart/checkout coverage (R5)
+71	6	src/feature/wallet/components/SendEcashModal.tsx	Added QR Code error safeguard, QR Code optimisations
+22	108	src/frontend.tsx	Merge remote-tracking branch 'origin/master' into auctions
+961	0	src/hooks/useAuctionBidFunding.ts	fix(auction): gate the reclaim promise on a persisted pending token
+197	0	src/hooks/useAuctionWinMonitor.ts	fix(auctions): address #1280 review — R1 keyset ingestion, R2 path-release keysets, R3 terminal-miss/caps/se
+949	5	src/hooks/useNotificationMonitor.ts	fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them
+0	7	src/hooks/usePIIMonitor.ts	Removed PII logs
+83	0	src/hooks/useServiceWorker.ts	refactor(auction,ui): improve reliability and add monitoring
+32	430	src/index.tsx	Removed references to dotenv (bun automatically loads env variables)
+91	9	src/lib/__tests__/appSettings.test.ts	feat(config): add self-hosted handler ID fallback for app settings
+249	0	src/lib/__tests__/auctionAdmission.test.ts	fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them
+196	0	src/lib/__tests__/auctionBidEventSchema.test.ts	style(auction): prettier-format dleq_proof schema + test (ADR-0011)
+147	0	src/lib/__tests__/auctionBidFundingCrossLeg.test.ts	fix(auction): scope progress-dialog verdicts to the current funding session (#1235)
+462	0	src/lib/__tests__/auctionBidFundingLifecycle.test.ts	test(auction): drop tautological classifier combo asserts (#1235)
+1300	0	src/lib/__tests__/auctionBidFundingSessionGuard.test.ts	fix(auction): gate the reclaim promise on a persisted pending token
+198	0	src/lib/__tests__/auctionBidLockDleq.test.ts	test(auctions): fixture sweep for unconditional DLEQ + thread keysets through win paths
+866	0	src/lib/__tests__/auctionBidPublishRetry.test.ts	test(auctions): keep the rebased auction-bid tests on the ADR-0011 lock contract
+1040	0	src/lib/__tests__/auctionBidValidation.test.ts	test(auctions): fixture sweep for unconditional DLEQ + thread keysets through win paths
+215	0	src/lib/__tests__/auctionBidderStatus.test.ts	refactor(auctions): close the round-2 non-blocking findings on the validated bid view
+37	0	src/lib/__tests__/auctionCountdownLabels.test.ts	fix(auctions): show ended countdown label
+93	0	src/lib/__tests__/auctionCountdownPreStart.test.ts	feat: countdown for auctions before start time
+229	0	src/lib/__tests__/auctionDLEQ.mint.integration.test.ts	test(e2e): re-enable Direct Lightning bid funding scenarios on the DLEQ-required lock path
+430	0	src/lib/__tests__/auctionDLEQ.test.ts	fix(cashu): require a sat-unit keyset for DLEQ collateral (review A4)
+110	0	src/lib/__tests__/auctionEndingSoonOrder.test.ts	fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them
+343	0	src/lib/__tests__/auctionFormStorage.test.ts	test(live-chat): guard LiveChatPanel test against document-less CI runners (#1268)
+186	0	src/lib/__tests__/auctionMintSelection.integration.test.ts	Fix/862 bidding with any mint (#886)
+269	0	src/lib/__tests__/auctionMintSelection.test.ts	test: allowlist order determines auto-selected mint when multiple are eligible and excludes funded but untrust
+141	0	src/lib/__tests__/auctionP2pk.test.ts	fix(auctions): force p2pk swap for bid tokens
+127	0	src/lib/__tests__/auctionPublishValidation.test.ts	fix(auctions): reserve draft round-trip + treat 0 as no reserve + show bid ladder
+385	0	src/lib/__tests__/auctionSettlement.test.ts	fix: add strict bid amount parsing
+458	0	src/lib/__tests__/auctionSettlementCompleteness.test.ts	fix: rebid chain settlement validation + E2E test fixes
+402	0	src/lib/__tests__/auctionSettlementP2pk.test.ts	fix(auctions): reject fractional bid amounts
+269	0	src/lib/__tests__/auctionSettlementPhase6.test.ts	fix: reduce ndk footprint
+59	0	src/lib/__tests__/auctionShippingRefs.test.ts	Fix: Auction Shipping Ref Deduplication
+139	0	src/lib/__tests__/auctionStartingBidRequired.test.ts	feat(auctions): structural-only bid validity, REQUIRED starting_bid (ADR-0012 Phase 1)
+86	0	src/lib/__tests__/auctionTagBuilders.test.ts	test(auction): add dleq_proof emission tests for buildBidEventTags (B2 RED)
+605	0	src/lib/__tests__/auctionValidatorContext.test.ts	fix(auction-validator): monotonic NUT-7 writes ignore stale overlapping responses
+45	0	src/lib/__tests__/auctionValidatorIndex.test.ts	fix(chore):prettier fix
+1293	0	src/lib/__tests__/auctionValidatorLifecycle.test.ts	test(auctions): fixture sweep for unconditional DLEQ + thread keysets through win paths
+312	0	src/lib/__tests__/auctionValidatorMintReachability.test.ts	fix(auction-validator): disable mint probing by default, require explicit operator allowlist
+208	0	src/lib/__tests__/auctionValidatorNut7Poller.test.ts	fix(settlement): review fixes — resumability, pending gate, memoization, proof map defaults, skipped tests, 
+138	0	src/lib/__tests__/auctionValidatorObservedAtRecovery.test.ts	fix(auction-validator): per-bid d-tag, observed_at recovery, post-close late_arrival suppression
+122	0	src/lib/__tests__/auctionValidatorPendingBuffer.test.ts	fix(auction-validator): enforce one shared total budget across all three buffers
+97	0	src/lib/__tests__/auctionValidatorPolicy.test.ts	fix(auction-validator): add bounded late-settlement observation window
+339	0	src/lib/__tests__/auctionValidatorPublisher.test.ts	test(auctions): fixture sweep for unconditional DLEQ + thread keysets through win paths
+166	0	src/lib/__tests__/auctionValidatorSpamPolicy.test.ts	fix(auction-validator): add bounded late-settlement observation window
+860	0	src/lib/__tests__/auctionValidatorSubscriber.test.ts	fix(auction-validator): preserve recovered bid observation time
+520	0	src/lib/__tests__/auctionValidatorSubscriberBounds.test.ts	fix(chore):prettier fix
+471	0	src/lib/__tests__/auctionWon.test.ts	fix(auctions): harden rebid collateral validation
+162	0	src/lib/__tests__/auctions-ndk-surface-guard.test.ts	fix(auctions): address #1343 review — signing-time created_at, scoped NDK guard with coverage, publish-resul
+352	0	src/lib/__tests__/auctions/privateAuctionClaimMessage.test.ts	test(privacy): share one postcode sentinel fixture across the six privacy suites
+258	0	src/lib/__tests__/bidderChainRecords.test.ts	feat: add refund pubkey lookup and improve reclaim flow, update docs
+274	0	src/lib/__tests__/bidderPathRelease.test.ts	fix(auction): fail-closed post-lock publish pipeline + strict bidder-record write (#1235)
+1462	0	src/lib/__tests__/computeValidatedBids.test.ts	fix(auctions): spell the DLEQ pending reason and override flag consistently
+9	3	src/lib/__tests__/contextvm-client.integration.test.ts	feat(nip53): CVM-authoritative status resolver + identity enforcement
+108	0	src/lib/__tests__/cvm-server-key.test.ts	Reconfigured server loading CVM key to match logic on master
+138	0	src/lib/__tests__/dleqFixture.test.ts	feat(cashu): add offline NUT-12 DLEQ test fixture
+121	0	src/lib/__tests__/dleqKeysetFetch.test.ts	fix(auctions): #1280 re-review — descriptor terminal-miss threading + test, R2 seam test, seller-override he
+74	11	src/lib/__tests__/e2e-workflow-gate-membership.test.ts	fix(e2e): avoid Bun hot-reload port collision
+115	0	src/lib/__tests__/eventLike.test.ts	Fixes for CI
+106	0	src/lib/__tests__/fetchMintKeysets.test.ts	fix(settlement): use explicit isFailure flag for mint-keyset negative cache
+63	0	src/lib/__tests__/hashToCurve.test.ts	feat(auctions): implement bidder-held-path multi-proof Cashu bids
+105	0	src/lib/__tests__/hashToCurveVsCashuTs.test.ts	refactor: clean up wallet code, add dev tooling and tests
+238	0	src/lib/__tests__/instance-config.test.ts	fix(identity): freeze the NIP-89 client tag software name (R1)
+31	0	src/lib/__tests__/io.test.ts	refactor(auctions): route production file set through the nostr io seam
+70	0	src/lib/__tests__/mintCapability.test.ts	feat(cashu): add mint NUT-12 DLEQ capability probe (mintSupportsDleq)
+42	0	src/lib/__tests__/ndkZapRelays.test.ts	fix(self-hosting): union zap relays, derive the handler-id chain, trim booleans
+384	0	src/lib/__tests__/nip53.test.ts	fix(live-chat): address the live activity inside the relay tag-index budget
+297	0	src/lib/__tests__/nip60DepositIdentity.test.ts	test(nip60): isolate deposit-identity suite from process-wide nip60 mock
+302	0	src/lib/__tests__/nip60LockAuctionBidFunds.test.ts	test(auctions): fixture sweep for unconditional DLEQ + thread keysets through win paths
+747	0	src/lib/__tests__/nostr/nip59.test.ts	test(privacy): share one postcode sentinel fixture across the six privacy suites
+387	0	src/lib/__tests__/notifications.test.ts	fix(notifications): scope auction activity notifications
+358	0	src/lib/__tests__/pathReleasePipeline.test.ts	fix: rebid chain settlement validation + E2E test fixes
+161	0	src/lib/__tests__/preLockRecoveryRecordBound.test.ts	fix(auction): fail closed at the pre-lock recovery-record bound
+118	0	src/lib/__tests__/productNotificationScopes.test.ts	fix(notifications): scope auction activity notifications
+149	0	src/lib/__tests__/relay-policy.test.ts	fix(self-hosting): union zap relays, derive the handler-id chain, trim booleans
+286	0	src/lib/__tests__/reserveGuard.test.ts	fix(auctions): spell the DLEQ pending reason and override flag consistently
+103	0	src/lib/__tests__/server-bootstrap-persistence.test.ts	fix(server): harden bootstrap authority
+1540	0	src/lib/__tests__/settlementDescriptor.test.ts	fix(auctions): harden rebid collateral validation
+398	0	src/lib/__tests__/validatedBidView.unit.test.ts	test(auctions): cover the all-pending (no-quorum) validated bid set
+128	0	src/lib/__tests__/verdictQuorum.test.ts	fix(auctions): bind validator confirmation to exact bid event + auditor quorum (review #5)
+171	0	src/lib/__tests__/walletStorageStrict.test.ts	fix(auction): fail-closed post-lock publish pipeline + strict bidder-record write (#1235)
+68	44	src/lib/appSettings.ts	feat(config): add self-hosted handler ID fallback for app settings
+616	0	src/lib/auction/bidValidation.ts	fix(auctions): spell the DLEQ pending reason and override flag consistently
+344	0	src/lib/auction/bidderRecords.ts	fix(auction): fail closed at the pre-lock recovery-record bound
+246	0	src/lib/auction/constants.ts	wip(auctions): retire dleq_required — core code (tests pending)
+409	0	src/lib/auction/events.ts	wip(auctions): retire dleq_required — core code (tests pending)
+25	0	src/lib/auction/immutability.ts	fix: reduce ndk footprint
+108	0	src/lib/auction/reserveGuard.ts	fix(auctions): spell the DLEQ pending reason and override flag consistently
+1009	0	src/lib/auction/settlementDescriptor.ts	fix(auctions): harden rebid collateral validation
+405	0	src/lib/auction/tagBuilders.ts	feat(auction): emit dleq_proof tags in buildBidEventTags (ADR-0011 B2)
+99	0	src/lib/auction/useDleqKeysetPolling.ts	fix(e2e): retire CashuMintMock; seed settlement tests with real DLEQ collateral from the local nutshell mint; 
+59	0	src/lib/auction/useNut7Polling.test.ts	fix(auctions): read NUT-7 evidence from parsed bids in the seller dashboard
+115	0	src/lib/auction/useNut7Polling.ts	fix(auctions): harden the NUT-7 observer against an absent proofYs array
+70	0	src/lib/auction/validatedBidView.ts	feat(auctions): validated bid set selectors for UI gates
+1233	0	src/lib/auction/validation.ts	wip(auctions): retire dleq_required — core code (tests pending)
+72	0	src/lib/auction/verdictQuorum.ts	fix(auctions): bind validator confirmation to exact bid event + auditor quorum (review #5)
+173	0	src/lib/auction/winNotification.ts	fix(auctions): spell the DLEQ pending reason and override flag consistently
+89	0	src/lib/auctionBidderStatus.ts	refactor(auctions): route production file set through the nostr io seam
+157	0	src/lib/auctionCountdownLabels.ts	feat: add countdown timer to auction list item
+34	0	src/lib/auctionHd.ts	fix(identity): freeze the NIP-89 client tag software name (R1)
+101	0	src/lib/auctionMintSelection.ts	fix(auctions): prompt deposit when bidder has insufficient balance
+58	0	src/lib/auctionMintSync.test.ts	Fix: Trusted Mint State Ownership in Auction Form (#890)
+10	0	src/lib/auctionMintSync.ts	Fix: Trusted Mint State Ownership in Auction Form (#890)
+128	0	src/lib/auctionP2pk.ts	fix(auctions): force p2pk swap for bid tokens
+38	0	src/lib/auctionPathOracle.ts	refactor: remove old CVM auction path oracle code
+386	0	src/lib/auctionPublishValidation.ts	fix(auctions): reserve draft round-trip + treat 0 as no reserve + show bid ladder
+409	0	src/lib/auctionSettlement.ts	fix(auctions): pass validatedBidSet to badge function, add @deprecated to legacy helpers
+244	0	src/lib/auctionSettlementP2pk.ts	fix(auctions): reject fractional bid amounts
+53	0	src/lib/auctionShippingRefs.ts	fix(auctions): dedupe auction shipping refs
+465	0	src/lib/auctions/privateAuctionClaimMessage.ts	refactor(auctions): route production file set through the nostr io seam
+202	0	src/lib/boot.ts	feat(config): add self-hosting instance configuration foundation
+489	0	src/lib/cashu/dleq.ts	fix(auctions): #1280 re-review — descriptor terminal-miss threading + test, R2 seam test, seller-override he
+272	0	src/lib/cashu/dleqFixture.ts	test(auctions): fixture sweep for unconditional DLEQ + thread keysets through win paths
+105	0	src/lib/cashu/hashToCurve.ts	feat(auctions): implement bidder-held-path multi-proof Cashu bids
+98	0	src/lib/cashu/mintCapability.ts	feat(cashu): add mint NUT-12 DLEQ capability probe (mintSupportsDleq)
+210	0	src/lib/cashu/nut7.ts	fix(settlement): quorum-eligible verdicts + truthful NUT-7 evidence
+320	0	src/lib/cashu/p2pkSecret.ts	refactor: remove old CVM auction path oracle code
+36	13	src/lib/constants.ts	feat(nip53): CVM-authoritative status resolver + identity enforcement
+8	3	src/lib/constants/testLabels.ts	feat(labels): complete the auctions half of ADR-0009 (gating + surfaces)
+162	0	src/lib/ctxcn-clients/PlebeianServerClient.ts	refactor: remove old CVM auction path oracle code
+0	35	src/lib/cvm-identity.ts	feat(nip53): CVM-authoritative status resolver + identity enforcement
+202	0	src/lib/instance-config.ts	fix(self-hosting): union zap relays, derive the handler-id chain, trim booleans
+21	0	src/lib/media.ts	fix(media): address felixfelix-bot re-review (lightbox controls, video a11y, URL detection, e2e determinism)
+180	0	src/lib/nip53.ts	fix(live-chat): address the live activity inside the relay tag-index budget
+15	0	src/lib/nostr/event-signature.ts	fix(nip53): signature verification + pre-dedup validation + deterministic sort (#1228)
+30	0	src/lib/nostr/eventLike.ts	fix(ndk): add fix to retrieve tagAddresses for plain relay data
+35	1	src/lib/nostr/io-applesauce.ts	refactor(auctions): route production file set through the nostr io seam
+1	0	src/lib/nostr/io-ndk.ts	refactor(auctions): route production file set through the nostr io seam
+30	0	src/lib/nostr/io.ts	fix(auctions): address #1343 review — signing-time created_at, scoped NDK guard with coverage, publish-resul
+9	2	src/lib/nostr/nip59.test.ts	test(privacy): share one postcode sentinel fixture across the six privacy suites
+2	2	src/lib/nostr/nip59.ts	fix(nip53): signature verification + pre-dedup validation + deterministic sort (#1228)
+57	0	src/lib/nostr/useSubscriptionEvents.ts	perf(auctions): live subscriptions for home-page grids
+15	5	src/lib/orders/privateOrderMessage.test.ts	test(privacy): share one postcode sentinel fixture across the six privacy suites
+24	0	src/lib/piiSentinelFixture.ts	test(privacy): share one postcode sentinel fixture across the six privacy suites
+70	0	src/lib/productNotificationScopes.ts	fix(notifications): scope auction activity notifications
+147	0	src/lib/relay-policy.ts	fix(self-hosting): union zap relays, derive the handler-id chain, trim booleans
+26	0	src/lib/schemas/app.ts	fix: replace hardcoded Plebeian name, logo, URLs, footer links, and support/contact details with resolved conf
+160	0	src/lib/schemas/auction/auctionAdmission.ts	fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them
+282	0	src/lib/schemas/auction/auctionEvent.ts	fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them
+185	0	src/lib/schemas/auction/bidEvent.ts	fix(auctions): spell the DLEQ pending reason and override flag consistently
+49	0	src/lib/schemas/auction/common.ts	fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them
+210	0	src/lib/schemas/auction/settlementEvents.ts	fix: reduce ndk footprint
+73	0	src/lib/schemas/auction/tagAccess.ts	fix: reduce ndk footprint
+281	0	src/lib/schemas/auction/validatorEvents.ts	fix(auction-validator): add bounded late-settlement observation window
+18	2	src/lib/schemas/featured.ts	feat(auctions): add featured auctions support with hero carousel and management
+42	0	src/lib/stores/auctionWon.ts	fix(auctions): clear announcedRootEventIds when the canonical winner changes
+20	0	src/lib/stores/auth.ts	fix(auctions): cross account queue vulnerability
+1	1	src/lib/stores/cart.test.ts	Merge branch 'feat/1202-direct-lightning-bid-funding' of github.com:PlebeianApp/market into feat/1202-direct-l
+3	10	src/lib/stores/config.ts	feat(config): add self-hosting instance configuration foundation
+387	139	src/lib/stores/ndk.ts	fix(config): wire trustedMints and bugRelay into their consumers (R3)
+2127	79	src/lib/stores/nip60.ts	fix(auctions): #1280 re-review — descriptor terminal-miss threading + test, R2 seam test, seller-override he
+610	8	src/lib/stores/notifications.ts	fix(notifications): scope auction activity notifications
+2	1	src/lib/stores/ui.ts	feat: add auction feature with listing, bidding, and management
+128	2	src/lib/stores/wallet.ts	fix(wallet): pay nip60 deposits with saved nwc wallet
+168	0	src/lib/utils/auctionFormStorage.ts	fix(auctions): reserve draft round-trip + treat 0 as no reserve + show bid ladder
+182	0	src/lib/utils/auctions.ts	fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them
+3	2	src/lib/utils/blacklistFilters.ts	perf(auctions): route list queries through applesauce I/O path
+65	0	src/lib/utils/cashu.test.ts	style: apply prettier formatting to 3 files
+20	0	src/lib/utils/cashu.ts	Fix: Trusted Mint State Ownership in Auction Form (#890)
+12	18	src/lib/utils/message-content.test.ts	test(unit): run every unit test file on the runner CI claims to use
+0	2	src/lib/utils/piiScanner.ts	Removed PII logs
+8	8	src/lib/utils/testLabelFilters.ts	fix(labels): accept raw relay events in the test-label filters
+8	0	src/lib/wallet/display.ts	fix(auctions): prompt deposit when bidder has insufficient balance
+3	3	src/lib/wallet/index.ts	fix: prevent bids via already spent proofs
+277	0	src/lib/wallet/nip60.test.ts	fix(auctions): address review feedback on Lightning bid funding
+31	0	src/lib/wallet/proofs.test.ts	fix: prevent bids via already spent proofs
+40	2	src/lib/wallet/proofs.ts	Merge 'auctions' (with #1144 settlement) into 1235
+32	2	src/lib/wallet/storage.ts	fix(auction): fail-closed post-lock publish pipeline + strict bidder-record write (#1235)
+31	0	src/lib/wallet/types.ts	feat(auction): add exponential backoff and permanent failure handling for token reclaim
+30	0	src/publish/AGENTS.md	fix: Issue 1 + Issue 5 — computeValidatedBids + legLockedAmount from signed chain
+2313	0	src/publish/auctions.tsx	fix(auctions): spell the DLEQ pending reason and override flag consistently
+4	3	src/publish/comments.tsx	fix(ndk): add fix to retrieve tagAddresses for plain relay data
+141	0	src/publish/featured.tsx	Merge branch 'master' into auctions/p2pk-path-oracle-via-cvm-v1-test
+56	0	src/publish/liveChat.tsx	feat: NIP-53 auction live chat — rebased on bidder-held-path base
+47	17	src/publish/nip89.ts	fix(nip89): stop implying the handler event's r tag is conditional (R2)
+10	2	src/publish/orders.test.ts	test(privacy): share one postcode sentinel fixture across the six privacy suites
+9	0	src/publish/orders.tsx	Merge remote-tracking branch 'origin/master' into test
+2	1	src/publish/reactions.tsx	fix(ndk): add fix to retrieve tagAddresses for plain relay data
+3	1	src/publish/wallet.tsx	fix(identity): freeze the NIP-89 client tag software name (R1)
+123	0	src/queries/__tests__/LiveChatPanel.test.ts	fix(nip53): test isolation, pubkey privacy, param naming
+325	0	src/queries/__tests__/auctionAdmissionGate.test.ts	test(auctions): stop leaking an identity label gate into later test files
+107	0	src/queries/__tests__/auctionBidStream.test.ts	tests: auctions bid streaming
+241	0	src/queries/__tests__/auctionListHelpers.test.ts	test(auctions): fix list-helper tests for applesauce fetch migration
+130	0	src/queries/__tests__/auctionPathReleases.test.ts	fix(auctions): premature "resolved" marking silently loses wins
+391	0	src/queries/__tests__/auctionTestLabelGate.test.ts	fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them
+204	0	src/queries/__tests__/auctionVerdicts.test.ts	fix(auctions): premature "resolved" marking silently loses wins
+63	0	src/queries/__tests__/auctionsPrivateClaim.test.ts	fix(auctions): #1343 re-review — ADR-0002 Wave-A3 branch-relative + nip60 supersession notes, private-claim 
+9	1	src/queries/__tests__/external.test.ts	test: fix localStorage assertion for missing keys
+375	0	src/queries/__tests__/liveChat.test.ts	fix(live-chat): address the live activity inside the relay tag-index budget
+9	2	src/queries/__tests__/orders-private-details.test.ts	test(privacy): share one postcode sentinel fixture across the six privacy suites
+1	1	src/queries/__tests__/profile-validation.test.ts	Merge remote-tracking branch 'origin/master' into auctions
+1437	0	src/queries/auctions.tsx	fix(auctions): repair conflict-resolution artifacts from the #1280 rebase
+6	5	src/queries/bugReports.tsx	fix(config): wire trustedMints and bugRelay into their consumers (R3)
+5	4	src/queries/comments.tsx	fix(ndk): add fix to retrieve tagAddresses for plain relay data
+4	14	src/queries/config.tsx	feat(config): add self-hosting instance configuration foundation
+10	1	src/queries/external.tsx	Merge remote-tracking branch 'origin/master' into test
+43	1	src/queries/featured.tsx	feat: add featured auctions support and data hooks
+156	0	src/queries/liveChat.tsx	fix(live-chat): address the live activity inside the relay tag-index budget
+1	1	src/queries/messages.tsx	Fix: direct event.pubkey reference instead of event.authors?.pubkey
+36	0	src/queries/queryKeyFactory.ts	fix(auctions): gate spec-invalid events out of the feed, and stop bidding on them
+2	1	src/queries/reactions.tsx	fix(ndk): add fix to retrieve tagAddresses for plain relay data
+2	1	src/queries/testLabels.tsx	fix(labels): accept raw relay events in the test-label filters
+115	0	src/routeTree.gen.ts	fix (auctions): preflight issues
+18	0	src/routes/__root.tsx	feat(self-hosting): Make document title/favicon update after /api/config loads
+73	3	src/routes/_dashboard-layout.tsx	feat: track auction events & thread comments notifications
+49	26	src/routes/_dashboard-layout/dashboard/about.tsx	fix: replace hardcoded Plebeian name, logo, URLs, footer links, and support/contact details with resolved conf
+246	6	src/routes/_dashboard-layout/dashboard/app-settings/app-miscelleneous.tsx	fix(self-hosting):app settings authorization with server and owner signing
+256	31	src/routes/_dashboard-layout/dashboard/app-settings/featured-items.tsx	fix(e2e): stabilize checkout and order transitions
+12	0	src/routes/_dashboard-layout/dashboard/index.tsx	feat(dashboard): add bids management page for auction participants
+1245	0	src/routes/_dashboard-layout/dashboard/products/auctions.$auctionId.tsx	fix(auctions): read NUT-7 evidence from parsed bids in the seller dashboard
+713	0	src/routes/_dashboard-layout/dashboard/products/auctions.tsx	fix(auctions): gate spec-invalid events out of the feed, name them on the detail page, and stop bidding on the
+661	0	src/routes/_dashboard-layout/dashboard/products/bids.tsx	fix(auctions): address #1343 review — signing-time created_at, scoped NDK guard with coverage, publish-resul
+2	1	src/routes/_dashboard-layout/dashboard/products/collections.tsx	refactor(media): swap remaining dashboard/index/chat/migration media to Media
+11	3	src/routes/_dashboard-layout/dashboard/products/products.tsx	refactor(media): swap remaining dashboard/index/chat/migration media to Media
+1196	0	src/routes/auctions.$auctionId.tsx	fix(e2e): retire CashuMintMock; seed settlement tests with real DLEQ collateral from the local nutshell mint; 
+417	0	src/routes/auctions.index.tsx	feat(labels): complete the auctions half of ADR-0009 (gating + surfaces)
+1	1	src/routes/index.tsx	Merge branch 'master' into auctions/p2pk-path-oracle-via-cvm-v1-test
+2	1	src/routes/products.index.tsx	Merge remote-tracking branch 'origin/master' into chore/auctions-merge-master-20260917
+101	54	src/routes/setup.tsx	feat(setup): add owner-authorized Blossom branding uploads
+7	2	src/server/BootstrapManager.ts	fix(server): harden bootstrap authority
+6	1	src/server/EventHandler.ts	fix(server): harden bootstrap authority
+147	0	src/server/auction-validator/index.ts	fix(auctions): make spam policy configurable
+541	0	src/server/auction-validator/lifecycle.ts	fix(auction-validator): bound child replay and clarify policy semantics
+245	0	src/server/auction-validator/mintDestination.ts	fix(auction-validator): disable mint probing by default, require explicit operator allowlist
+106	0	src/server/auction-validator/mintReachability.ts	fix(auction-validator): disable mint probing by default, require explicit operator allowlist
+150	0	src/server/auction-validator/nut7Poller.ts	feat(auctions): structural-only bid validity, REQUIRED starting_bid (ADR-0012 Phase 1)
+174	0	src/server/auction-validator/observedAtRecovery.ts	fix(settlement): review fixes — resumability, pending gate, memoization, proof map defaults, skipped tests, 
+144	0	src/server/auction-validator/pendingBuffer.ts	fix(chore):prettier fix
+84	0	src/server/auction-validator/policy.ts	fix(auction-validator): add bounded late-settlement observation window
+196	0	src/server/auction-validator/publisher.ts	feat(auctions): structural-only bid validity, REQUIRED starting_bid (ADR-0012 Phase 1)
+276	0	src/server/auction-validator/spamPolicy.ts	fix(auction-validator): add bounded late-settlement observation window
+560	0	src/server/auction-validator/state.ts	feat: add protection at validator’s relay-facing subscriber boundary
+726	0	src/server/auction-validator/subscriber.ts	fix(auction-validator): preserve recovered bid observation time
+70	0	src/server/buildServer.ts	Merge remote-tracking branch 'origin/master' into chore/auctions-merge-master-20260917
+108	0	src/server/http/config.ts	fix(setup): resolve bootstrap handler ID from instance config
+19	0	src/server/http/nip05.ts	feat(server): add modular HTTP server with auction path oracle endpoints
+46	0	src/server/http/og.ts	Merge remote-tracking branch 'origin/master' into chore/auctions-merge-master-20260917
+48	0	src/server/http/static.ts	feat(server): add modular HTTP server with auction path oracle endpoints
+30	0	src/server/http/types.ts	feat(server): add modular HTTP server with auction path oracle endpoints
+60	0	src/server/http/zapPurchase.ts	feat(server): add modular HTTP server with auction path oracle endpoints
+6	0	src/server/index.ts	feat(server): add modular HTTP server with auction path oracle endpoints
+35	0	src/server/lightning.ts	feat(server): add modular HTTP server with auction path oracle endpoints
+39	0	src/server/ndk.ts	feat(server): add modular HTTP server with auction path oracle endpoints
+103	0	src/server/runtime.ts	feat(config): add self-hosting instance configuration foundation
+97	0	src/server/startup.ts	fix(self-hosting): union zap relays, derive the handler-id chain, trim booleans
+2	0	src/server/types.ts	fix(server): harden bootstrap authority
+23	0	src/server/util/cashu.ts	feat(server): add modular HTTP server with auction path oracle endpoints
+4	0	src/server/util/httpResponses.ts	feat(server): add modular HTTP server with auction path oracle endpoints
+41	0	src/server/util/lnurl.ts	feat(server): add modular HTTP server with auction path oracle endpoints
+8	0	src/server/util/sha256.ts	feat(server): add modular HTTP server with auction path oracle endpoints
+81	0	src/server/websocket.ts	feat(server): add modular HTTP server with auction path oracle endpoints
+2	1	src/ws.test.ts	build: update @contextvm/sdk to v0.10.0 and adjust server config
+21	3	styles/globals.css	Merge remote-tracking branch 'origin/master' into chore/auctions-merge-master-20260806
