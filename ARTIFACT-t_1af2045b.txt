@@ -1,0 +1,47 @@
+SEVERITY | file:line | canonical summary | trigger and misbehavior
+=========================================================================
+Audit: compact index maintenance half of PlebeianApp/market#1298
+Head: d205c158afe7a88a7b2d962e620bfc3b35889b20 (base 4cbe2b26, master)
+NOTE: PR is ALREADY MERGED (merge commit 3f394190). Post-merge advisory audit.
+No GitHub review/comment/approval was posted.
+
+Line numbers are diff-integration line numbers in the final head files.
+
+-------------------------------------------------------------------------
+RISK | deploy-simple/relay/internal/searchindex/index.go:L56 | Prepare installs the compact mapping only when the index directory is absent | An empty pre-existing SearchIndexDir (mkdir'd by an operator, a failed prior run, or any tool that pre-creates it) makes Prepare a silent no-op, after which the unchanged BleveBackend.Init() reaches bleve.New with the DEFAULT dynamic mapping — the compact mapping this PR exists to install is skipped and the index rebuilds in the legacy mapping with no warning.
+
+RISK | deploy-simple/relay/internal/searchindex/rebuild.go:L123 | stale .rebuild-incomplete marker permanently blocks relay startup with no in-code remedy | If a rebuild fails after markIncomplete (disk-reserve check trips inside flush, or the process is killed), the marker stays in the output dir; if an operator then promotes that dir to the active SearchIndexDir, every subsequent startup fails in Prepare at index.go:63-68 until a human deletes the file by hand.
+
+RISK | deploy-simple/relay/cmd/market-relay/main.go:L315 | write reserve enforced on save/replace but not on delete, so deletes can outrun the reserve invariant | checkWriteBudget is called only from SaveEvent (main.go:254) and ReplaceEvent (main.go:272); DeleteEvent (main.go:233) takes RLock and mutates both stores with no reserve check, and replace's internal delete-then-save path (main.go:285 then :306) can commit the raw deletion and then fail the search save — probe J observed raw(new)=1 search(old)=0 search(new)=0, i.e. both copies gone from the derived index while the raw store holds the new event.
+
+RISK | deploy-simple/relay/internal/searchindex/rebuild.go:L96 | batch flush threshold checked after appending, so one oversized event breaches the batch budget unboundedly | The comment at rebuild.go:94-95 claims "a large event can exceed the text budget once, but cannot accumulate in a batch", but the check runs only after batchBytes += len(evt.Content) and Rebuild accepts minFreeBytes==0, so a multi-MiB content event keeps the previous batch live across the append window instead of flushing before accumulating.
+
+RISK | deploy-simple/relay/internal/searchindex/index.go:L69 | index/raw consistency is checked only as "index absent", never as "index agrees with raw" | Prepare's consistency test is a single Lstat of the index path (plus a non-empty-bucket check on raw only in the absent case); a present-but-stale index (raw restored from backup, or a promotion that raced new writes) is accepted untouched, and the doc comments at rebuild.go:L19-22 and main.go:190 imply rebuild is the recovery path but nothing detects the divergence at startup — probe E shows an index holding a doc absent from raw passes Prepare cleanly.
+
+INFO | deploy-simple/relay/internal/searchindex/index.go:L23 | document() field extraction is duplicated from the pinned backend rather than shared | The c/k/p/a names, the Hex()[56:] pubkey suffix and the float64(CreatedAt) encoding are copy-pasted from fiatjaf.com/nostr@v0.0.0-20260314085316-2cec1c943486/eventstore/bleve/{helpers,save}.go; the copies agree today so there is no defect at head, but a future go.mod bump changes the backend schema silently while this copy keeps the old one.
+
+-------------------------------------------------------------------------
+REFUTED (probed, NOT findings — do not re-litigate)
+- "Prepare Lstat vs create MkdirAll divergence leaves a bare ENOENT": REFUTED.
+  Prepare on an absent nested path succeeds (create MkdirAll's the parent).
+- "QueryEvents holds RLock across yield, so a re-entrant store call deadlocks
+  against Close()'s writer": REFUTED by reading khatru at the pinned version —
+  deleting.go:66-97 defers DeleteEvent into errgroup.Go and breaks first;
+  expiration.go:109-122 and negentropy.go:33-35 never write inside the yield.
+
+-------------------------------------------------------------------------
+Verification evidence (observed tool output)
+- go test ./internal/searchindex/  -> ok, 4.564s (PR's own tests pass at head)
+- go vet ./internal/searchindex/ ./cmd/...  -> clean
+- probes A-I in internal/searchindex/probe_audit_test.go + probe2_audit_test.go
+- probe J in cmd/market-relay/probe_audit_test.go
+Not covered: full `go test -race ./...` (started, not observed to completion within
+budget — do not cite a race-clean claim from this report); CI evidence (no network
+at audit time for gh checks); any BLOCK-severity finding (none found).
+
+Findings count: 5 RISK + 1 INFO = 6. No BLOCK.
+
+Artifacts:
+- /home/c03rad0r/worktrees/market-pr1298-idx/REPORT.md (full report)
+- /home/c03rad0r/worktrees/market-pr1298-idx/PROGRESS.md
+Branch worker-heavy/t_1af2045b @ 7d0be4da, pushed to fork (verified via ls-remote).
