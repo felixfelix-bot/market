@@ -27,3 +27,4 @@ FINDINGS -> STATUS -> FILES
 - 3 fixes verified present at 22a1cebd by content (relay-policy.ts:134-137, instance-config.ts:199, :100).
 - Zero GitHub writes (6 comments on #1284, none after 2026-09-25). Zero-findings macro deliberately not posted.
 - kanban t_cb288450: comment + status -> review.
+- kanban t_cb288450: comment added + request-review -> status=review (verified). Zero GitHub writes re-confirmed (0 comments on #1284 after 2026-10-01).
