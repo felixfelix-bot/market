@@ -15,3 +15,15 @@ FINDINGS -> STATUS -> FILES
 - eligibility = NOT ELIGIBLE: duplicate exists + fixes in head + no [BLOCK]/[RISK] review (on-file review has only NITs; is_own=false satisfied) -> final -> PROGRESS_1284.md, REPORT_1284.md
 - push gate: full suite ran on new branch (remote_sha=0) -> 23 pre-existing 5000ms load timeouts, repro standalone; 0 source files in diff; cred-gate clean -> resolved WITHOUT bypass by creating fork ref at base 736b2acf so docs-only rule applied -> pushed 182d4f7a
 - kanban: comment + status -> review; 4 stale parents annotated + archived to unblock -> DONE
+
+## 2026-10-24 — live re-dispatch (t_cb288450) re-verification
+- Re-verified all of REPORT_1284.md against live GitHub; every load-bearing fact held.
+  -> findings unchanged -> REPORT_1284_final.md
+- PR #1284 MERGED 2026-09-25T12:32:41Z (head 22a1cebd, merge a3a76b6c); briefed 5963fc77 absent from the
+  PR's 22-commit list (grep -c = 0) -> not a head -> no publishable review.
+- GATE 2.5 t_cdda8b3f archived, no verdict, 4/4 runs blocked; parent t_15b38bcf produced no draft.
+- Prior review at true final head: felixfelix-bot 2026-09-25T12:23:35Z VERDICT APPROVE, "Contribution PR: none needed".
+- Contribution PR #1313 MERGED 2026-09-14T06:14:51Z, URL already on #1284 (2026-09-13T13:23:46Z) -> duplicate.
+- 3 fixes verified present at 22a1cebd by content (relay-policy.ts:134-137, instance-config.ts:199, :100).
+- Zero GitHub writes (6 comments on #1284, none after 2026-09-25). Zero-findings macro deliberately not posted.
+- kanban t_cb288450: comment + status -> review.
