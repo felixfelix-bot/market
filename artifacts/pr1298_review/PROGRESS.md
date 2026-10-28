@@ -50,6 +50,15 @@ deliverables therefore live at artifacts/pr1298_review/{PROGRESS,REPORT}.md.
   into the canonical list). Committed + pushed to fork.
 - M4 Kanban comment posted on t_0f6a0798 (board plebeian-pr-reviews) for the
   publish task. No GitHub write of any kind from this lane.
+- M5 Verification round (post-verdict) — DONE, commit 0cccbe82 (pushed to
+  fork, ls-remote verified). Probe file gofmt-cleaned (trailing newline);
+  `go vet ./cmd/market-relay/` rc=0 **with the probe present** (earlier vet ran
+  only with probes stashed); probe re-run uncached `-count=1` → PASS (103 s);
+  deliverables prettier-clean (`bunx prettier --check artifacts/pr1298_review/`
+  → all matched); raw maxime-tt review dump renamed `.md` → `.body.txt` to keep
+  its API-verbatim CRLF bytes out of prettier's reach (git rename 100%).
+  `bun run build`/`format` (TS toolchain) do not apply to the Go probe in the
+  detached head worktree; the Go toolchain is the relevant verifier there.
 
 ## Findings ledger (draft → status)
 
