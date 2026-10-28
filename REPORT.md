@@ -1,145 +1,57 @@
-# REPORT — t_1888c870: Verify PR #1280 round-4 findings closed and push new head
+# REPORT — PR #1382 review card: NO-OP duplicate at live head
 
-Board: plebeian-my-prs · Repo: PlebeianApp/market (fork: felixfelix-bot) · Branch: `feat/adr-0011-dleq-impl`
-Task workspace (declared): `/home/c03rad0r/worktrees/t_78fa7b4b` (EMPTY — never populated)
-Actual workroot used: `/home/c03rad0r/repos/market`
-Run date: 2026-10-12
+## Task
 
-## VERDICT: ROUND NOT CLOSED — 4 of 7 items have NO closure evidence; the push is impossible as specified
+Review PlebeianApp/market PR #1382, `refactor(auction-validator): publish the admission declaration as one parity-guarded projection`, authored by felixfelix-bot. Card pin: `d541ed6b3aad`. The brief asked for a comment review, cold Gate 2.5 audit, and a `last_reviewed_sha` gate record.
 
-The gate was dispatched on a false premise. I am not claiming the round is closed.
+## Outcome
 
----
+NO-OP: all three deliverables already exist at the live head. I published no second `gh pr review` and no redundant issue comment. Gate 2.5 was not re-dispatched because there was no new draft to publish; no fresh audit verdict is claimed.
 
-## 0. PR-state re-derivation (done FIRST, per the review skill's golden rule)
+The review of record is:
 
-| Claim in dispatch | Verified reality |
-|---|---|
-| "push new head" on PR #1280 | **PR #1280 is MERGED.** `gh pr view` → `state=MERGED`, `mergedAt=2026-09-24T23:56:08Z`, merge commit `ea7b4b12`, PR head at merge `2386aed3`, base `auctions`. |
-| Findings addressed by commits | Local branch DOES hold B1/B2/B3 fix commits — but they are dated **2026-10-01**, i.e. **after** the 2026-09-24 merge, and were **never pushed to any remote**. |
-| Branch state | Local HEAD `a6e4967d` (now `5970f2a6`) is a **stale pre-rebase snapshot**: rebase commits `5abec8d7`/`04bdc1d8` (2026-09-24) in the merged lineage are NOT ancestors of local HEAD. |
-| Parent fix tasks complete | **No.** All four parents (`t_5931ea84` B1, `t_a348f4c1` B2/B3/B4, `t_84050f47` D1/D2, `t_096a525b` merge-order) are still `todo`/`ready` with **EMPTY `result`**. The deliverables this gate exists to verify were never produced/recorded. |
+https://github.com/PlebeianApp/market/pull/1382#pullrequestreview-5328737171
 
-`git for-each-ref --contains a6e4967d` → **empty**: the local fix commits exist on no remote.
+## Live facts verified in this run
 
----
+- PR state: OPEN; not a draft; merge state CLEAN.
+- Head: `26a382b1feb8275c0315611a1798a0bbab4ee22d`.
+- Base: `f100daad527cc1ef5d6021de4a3533f87697281e` on `security/1112-add-relay-bid-spam-dos-protection`.
+- Card pin `d541ed6b3aad2e6c17849d3cf4117ba584188cfa` is an ancestor of live head; the intervening commit is merge commit `26a382b1`.
+- Review 5328737171: felixfelix-bot, COMMENTED, submitted 2026-09-27T03:49:37Z, `commit_id == 26a382b1feb8275c0315611a1798a0bbab4ee22d`.
+- Its body explicitly says `APPROVED — no change requests`; it contains 3 INFO and 1 NIT non-gating observations, no BLOCK/RISK. The separate state note says "3 findings" while naming 2 INFO and 1 NIT; the live review body is authoritative for the published content.
+- Its body cites the live head and records cold cross-family `reviewer_model: glm-5.3`, `VERDICT: APPROVED` for draft-v2.
+- Manager state `prs.1382.last_reviewed_sha` already equals the live head, disposition `reviewed-open-approved`, and `review_url` points to review 5328737171. No state-file write was necessary.
+- `git diff --check f100daad 26a382b1` returned exit 0.
+- `gh pr checks 1382` reported no checks; this is not claimed as CI success.
 
-## 1. Build / typecheck / lint / test — exact commands and output
+## Why not post another review
 
-| Command | Result |
-|---|---|
-| `bun --version` | `1.4.2` (node_modules present, 358 entries) |
-| typecheck (`tsc`) | **NO typecheck script exists.** `package.json` has no `typecheck`/`tsc` script, and no PR CI workflow runs `tsc` (`ci-unit.yml`, `prettier.yml`, `e2e.yml` — none). `tsc` appears only in `release.yml`/`deploy*.yml`. → **cannot be run; treat as absent, not passed.** |
-| `git diff --check` | exit 0 (clean) |
-| `bun run format:check` | **FAIL (exit 1)**, 11 files. But 6 of those are untracked (`PROGRESS.md`, `artifacts/`, `.pytest_cache/`, `e2e/baseline-results/`). On **tracked** files only: 5 files, **all** under `artifacts/pr1306_dedup/` — added by the unrelated `docs(pr1306)` commits `d3b3f006`/`82b3c9f7`, NOT the ADR-0011 surface. The ADR-0011 surface (`src/lib/auction`, `src/lib/cashu`, `src/lib/stores`, routes, publish, queries, `e2e/tests`, ADR-0011) is **prettier-clean.** |
-| `bun run test:unit` @ local head `a6e4967d` | **1277 pass / 13 fail / 1290 tests — EXIT 1** |
+The cross-family review workflow's stale-card rule is explicit: when `last_reviewed_sha == live head`, the loop is closed. Do not publish a second review or a finding-free no-op comment. Gate 2.5 guards publishing; with no draft to publish there is nothing new to cold-audit. A repeated approval would add review-thread noise, not coverage.
 
-### The 13 failures are pre-existing full-suite mock pollution, PROVEN
+## Existing coverage summary (not new test evidence)
 
-- Of the 13: 4 are `lockAuctionBidFunds ADR-0011 Blocker 2` (`auctionBidLockDleq.test.ts`) — the
-  PR's own surface — plus 8 `nip60DepositIdentity` and 1 flaky `LiveChatPanel` 5 s timeout.
-- Each failing file **passes standalone**: `auctionBidLockDleq.test.ts` 4/4, `nip60DepositIdentity.test.ts` 8/8.
-- `git diff 0fe6fc3a a6e4967d` over `auctionBidLockDleq.test.ts` and `nip60.ts` is **EMPTY** (identical to the reviewed head).
-- **Control run: full suite at the reviewed/merged head `0fe6fc3a`** (scratch worktree) →
-  **1258 pass / 12 fail / 1270 tests, EXIT 1 — the SAME 12 failures.**
+The published review records first-party execution at live head: 1343 unit tests passing, no touched-file TypeScript diagnostics, parity mutations checked in both directions, parser contract probes, Prettier and diff checks. It also discloses that Playwright e2e was not run and no PR checks were reported. Those are observations from the existing artifact, not tests re-run by this no-op preflight. This run did not execute the unit suite or claim new CI results.
 
-Conclusion: the suite is not green locally at *either* head, for a reason the repo's own
-`AGENTS.md` documents (`mock.module()` is applied process-wide for the whole run). These are **not**
-regressions from the fix commits and are **pre-existing at the shipped head**. I did **not** run
-`test:integration` (needs the local Cashu mint) or e2e (requires explicit approval).
+## Scope sanity check
 
----
+The live base-to-head diff remains four files, +384/-67:
 
-## 2. Per-finding status at the local head
+- `src/lib/auction/events.ts`
+- `src/lib/schemas/auction/validatorEvents.ts`
+- `src/server/auction-validator/policy.ts`
+- `src/lib/__tests__/auctionValidatorPolicyAdmission.test.ts`
 
-| id | Finding (reviewer) | Addressing commit | Evidence at head | CLOSED? |
-|---|---|---|---|---|
-| **B1** | Raw relay bids drive `currentPrice`/`minBid`/leader/`reserveMet`/`desiredStatus` — headline claim fails at the read path | `a6e4967d` | New `src/lib/auction/validatedBidView.ts`; route + seller dashboard derive from `computeValidatedBids`. New `validatedBidView.test.ts` (411 lines) **passes**, incl. non-vacuous fail-safe tests: *"entry ABSENT from a SUPPLIED map => pending"*, *"positive failure over COMPLETE evidence => dleq_invalid"*, *"honest DLEQ-verified bid drives price, leader, winner and reserve-met"* | **Locally yes — UNPUSHED** |
-| **B2** | `b.rawEvent()` in seller dashboard: contract violation + type error | `5e7546bc` | Uses `toRawEvent` seam; new `rawEventSeamGuard.test.ts` **passes** (`"no direct .rawEvent() call exists under src/routes/ or src/components/"`) | **Locally yes — UNPUSHED** |
-| **B3** | `dleq_required` activation not enforceable (replacement can flip) | `8e59f695` | `immutability.ts` + `bidValidation.ts` + ADR text; `auctionSettlement.test.ts` **passes** with the exact non-canonical tests the reviewer asked for: *"replacement appending a SECOND dleq_required tag is rejected"*, *"EMPTY dleq_required value is rejected"*, *"DROPPING dleq_required is rejected"*, *"IDENTICAL single tag stays compatible (no over-rejection)"* | **Locally yes — UNPUSHED** |
-| **B4** | A bid pinned `pending` forever permanently blocks `reserve_not_met` (seller DoS) | **NONE** | `resolveReserveNotMetPublish()` exists **only as an uncommitted working-tree edit** to `reserveGuard.ts`. `git grep HEAD` for `dlequEvidenceOverride`/`allowOverride` → **empty**. | **NO** |
-| **D1** | `AUCTIONS.md:1448` routes *"ok / not yet checked"* → *"bid fully valid, settlement CTAs enabled"* | **NONE** | Line is **byte-identical** at `0fe6fc3a` and `a6e4967d`: `DLEQ -->\|ok / not yet checked\| DOK[Client: bid fully valid<br/>settlement CTAs enabled]` | **NO** |
-| **D2** | `AUCTIONS.md:1115` states the lock path is DLEQ-only **unconditionally** | **NONE** | Line is **byte-identical** at both heads; still *"DLEQ-only (fail-closed): the mint MUST return NUT-12 DLEQ proofs"* with no `dleq_required` condition, while code is `params.dleqRequired === true` | **NO** |
-| **merge-order** | PR #1321 (docs split) closed/unmerged → dropping `docs/` from #1280 loses ADR-0011 §6a/§8/§8a/§8b | **NONE** | `gh pr view 1321` → `state=CLOSED`, `closedAt=2026-09-17T10:26:04Z`, **`mergedAt=null`** — exactly the state the reviewer flagged. No reopened PR; docs landed inside #1280 itself instead. | **NO** |
+The pinned-to-live delta includes the merge-forward base changes, consistent with the live PR description and review. No new defect was identified in this coverage check.
 
-**3 of 7 items closed locally (unpushed); 4 of 7 with no closure evidence.** No doc line at the
-local head contradicts the code differently for D1/D2 — the contradictions are unchanged.
+## Publication and gate accounting
 
----
+1. Review: already live at requested live head, ID 5328737171, COMMENTED, body APPROVED.
+2. Cross-family audit: existing cold glm-5.3 approval is recorded in that review; not re-run here.
+3. Gate record: already present at `/home/c03rad0r/.hermes/profiles/manager/state/plebeian-pr-review-state.json`, key `prs.1382`; verified unchanged.
+4. Evidence durability: this report and PROGRESS.md on isolated branch `review/1382-noop`, plus `/home/c03rad0r/reports/reviews/plebeian-pr-reviews-t_1ae0c852-noop-kimi.md`.
 
-## 3. Headline claim re-test (adversarial falsification lens)
+## Remaining steps
 
-The fix commits' own tests were **re-run standalone**, not trusted (`bun test` on
-`computeValidatedBids`, `auctionSettlement`, `reserveGuard`, `auctionDLEQ`, `validatedBidView`,
-`auctionBidderStatus`, `rawEventSeamGuard`) → **all pass**, including the four fail-safe cases:
-
-| Fail-safe case | Result at local head | Test |
-|---|---|---|
-| no `dleqKeysets` map | → `pending` (`bidValidation.ts:551-556`) | `validatedBidView` fail-safe suite + `computeValidatedBids.test.ts:818` |
-| entry absent from supplied map | → `pending`, `pendingReason='dlequ_evidence_unavailable'` (`bidValidation.ts:568-574`) | `computeValidatedBids.test.ts:1104`; `validatedBidView` *"entry ABSENT from a SUPPLIED map => pending"* |
-| positive failure over complete evidence | → `dleq_invalid` (`bidValidation.ts:591-600`) | `auctionBidValidation.test.ts:785-841`; `validatedBidView` *"positive failure over COMPLETE evidence => dleq_invalid"* |
-| non-canonical `dleq_required` (dup/multi/empty/dropped) | fails closed to **required** | `auctionSettlement.test.ts:398-440` |
-
-`pending` remains excluded from `validBids` and from the winner. **On the surfaces the fix commits
-touch, the headline claim holds and the fail-safe cases are intact.**
-
-**BUT the claim is NOT globally closed**, because the reviewer's B1 concern was exactly that the
-*other* read surfaces (public route price/floor, seller's `reserveMet`→`desiredStatus`) were
-unvalidated — and the B4 path (a `pending` reserve-meeting bid permanently blocking
-`reserve_not_met`) is still open in committed code. So "no path may allow unbound collateral to win"
-is satisfied for winner selection but the seller-DoS half of B1/B4 is unclosed.
-
----
-
-## 4. D1/D2 doc-vs-code confirmation
-
-Confirmed above: **no doc line at the local head contradicts the code *differently*** — both
-contradictions remain verbatim. Neither D1 nor D2 was addressed by any commit (`t_84050f47` empty).
-
----
-
-## 5. Push + PR comment — ATTEMPTED, BLOCKED, NOT CLAIMED
-
-- `fork/feat/adr-0011-dleq-impl` tip = `2386aed3` (the merged head).
-- `git rev-list --left-right --count fork/…...HEAD` = **261 / 62** → **diverged**, not behind.
-- `git push --dry-run --porcelain fork HEAD:refs/heads/feat/adr-0011-dleq-impl` →
-  **`[rejected] (non-fast-forward)`**.
-- A successful push would require a **force-push onto the branch tip of a MERGED PR** — which
-  cannot reopen or update the PR, and is **not authorized** (AGENTS.md: do not rewrite history
-  without authorization; no operator directive on file). I did **not** force-push.
-- I therefore **did not post a resolution summary to PR #1280** — posting "round closed" there
-  would be false. No comment was posted.
-
-Local savepoints committed (on the stale local branch, **unpushed**):
-- `5970f2a6` docs(pr1280): record round-4 verification progress and blockers
-
----
-
-## 6. Acceptance criteria — status
-
-| Criterion | Status |
-|---|---|
-| all six finding ids + merge-order have recorded evidence of closure | **NOT MET** — B1/B2/B3 evidence exists (local only); B4/D1/D2/merge-order have none |
-| CI-relevant commands pass locally | **PARTIAL/NOT MET** — no typecheck gate exists; `format:check` fails only on unrelated `artifacts/pr1306_dedup/`; `test:unit` has 12 pre-existing full-suite mock-pollution failures at *both* heads |
-| the new head is pushed | **NOT DONE** — non-fast-forward; force-push unauthorized and pointless on a merged PR |
-| a resolution summary is posted on PR #1280 | **NOT DONE** — would be a false claim |
-
----
-
-## 7. What should happen next (for the operator/manager)
-
-The gate ran **prematurely**: its four parent fix tasks are `todo`/`ready` with empty results, and
-the PR it targets is already merged. Recommended routing:
-
-1. Reopen/route the four parent tasks so B4, D1, D2 and merge-order actually get implemented
-   (B4's `resolveReserveNotMetPublish` is already drafted in the working tree but uncommitted).
-2. Decide the target: PR #1280 is merged — a follow-up PR from the current `auctions` tip is the
-   only non-destructive way to land B1/B2/B3/B4/D1/D2. Do **not** force-push the merged branch.
-3. If the *round-4 gate* is still wanted, re-dispatch it **after** the parents complete and
-   against a head that is actually on a remote.
-
-### Honesty statement
-Everything above is from commands I ran and output I observed. Things I did **not** do and am
-**not** claiming: no force-push, no push of any kind succeeded, no PR comment posted, no
-integration/e2e run, no typecheck (none exists). The only push attempt was a `--dry-run` that was
-**rejected**.
+- Commit and push only this evidence branch, then verify its remote tip.
+- No GitHub PR mutation is owed.
