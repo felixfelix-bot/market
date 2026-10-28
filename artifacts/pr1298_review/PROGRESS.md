@@ -59,6 +59,12 @@ deliverables therefore live at artifacts/pr1298_review/{PROGRESS,REPORT}.md.
   its API-verbatim CRLF bytes out of prettier's reach (git rename 100%).
   `bun run build`/`format` (TS toolchain) do not apply to the Go probe in the
   detached head worktree; the Go toolchain is the relevant verifier there.
+- M6 Harness verification round — DONE. `hermes verify --skip-start --json` in
+  the head worktree module (Go recipe detected: build `go build ./...`, test
+  `go test ./...`): **ok:true**, build rc=0 (7.4 s), full `go test ./...` rc=0
+  (41.9 s) **with this lane's probe present** (prior-lane scratch probes
+  stashed, then restored). Standalone probe re-run `-count=1` → PASS (6.0 s).
+  Recorded as the workspace verification evidence for the changed path.
 
 ## Findings ledger (draft → status)
 
