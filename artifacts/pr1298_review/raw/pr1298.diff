@@ -1,0 +1,1233 @@
+diff --git a/deploy-simple/relay/README.md b/deploy-simple/relay/README.md
+index 017ca782d..f1e66b355 100644
+--- a/deploy-simple/relay/README.md
++++ b/deploy-simple/relay/README.md
+@@ -6,9 +6,11 @@ This directory contains the declarative relay deployment assets for both
+ ## Layout
+ 
+ - `cmd/market-relay/main.go` - Repo-owned `khatru` relay application
++- `internal/searchindex/` - Compatible compact mapping and offline rebuild
+ - `config/*.env` - Committed stage configuration
+ - `systemd/market-relay.service` - Systemd unit template used on every host
+ - `install-relay.sh` - Idempotent remote installer used by GitHub Actions
++- `install-staging-relay.sh` - Guarded manual staging activation, preserving the live environment
+ 
+ ## Deployment Model
+ 
+@@ -22,14 +24,79 @@ Each deploy uploads:
+ - committed stage config
+ - install script
+ 
+-Then the install script converges the VPS to the desired state:
++Staging activation is manual. `install-staging-relay.sh` checks the existing
++service, disk space, and rollback files, replaces the binary and unit, preserves
++the live environment, then observes runtime identity and disk growth after a
++controlled restart. Production uses `install-relay.sh`, which also installs its
++committed environment file. Neither installer deletes relay data.
+ 
+-1. install binary
+-2. install config
+-3. install systemd unit
+-4. create data directories
+-5. restart `market-relay`
+-6. verify local NIP-11
++Ordinary starts and updates preserve existing raw events and search indexes.
++Missing/corrupt index metadata now fails startup instead of deleting the index.
++A missing index over existing raw events also requires explicit recovery.
++Shutdown closes both storage backends before exit.
++
++## Resource Controls
++
++- The systemd unit defaults to `GOMEMLIMIT=1GiB`; `/etc/market-relay.env` can
++  override this. This is a soft Go-runtime budget, not a process RSS limit or
++  proof that an OOM is impossible. Memory mappings and other VPS processes
++  still need headroom. See the [Go GC guide](https://go.dev/doc/gc-guide#Memory_limit).
++- `RELAY_MIN_FREE_BYTES` defaults to `536870912` (512 MiB). New event saves and
++  replacements check both data filesystems and fail before writing when either
++  is below the reserve. Reads remain available; no events are pruned. Setting
++  this to `0` disables the check. Background compaction and other processes can
++  still consume disk, so this does not replace monitoring.
++- Relay journal messages are limited to 200 per 30 seconds. This bounds bursts,
++  not total journal retention across the host. Journal retention remains an
++  operator setting.
++
++## Compact Search Index
++
++New indexes use explicit fields with duplicate stored content, term vectors,
++doc values, and catch-all indexing disabled. The field names and analyzers stay
++compatible with the pinned `eventstore/bleve` backend. Existing indexes keep
++their original mapping until explicitly rebuilt.
++
++To rebuild, first follow the backup, disk-space, and downtime requirements in
++[the operations runbook](../../docs/ops/relay-pruning.md#offline-compact-index-rebuild).
++The installed binary must include the rebuild command:
++
++```bash
++# With the relay stopped and an off-host raw-event backup already verified:
++GOMEMLIMIT=1GiB /usr/local/bin/market-relay \
++  --rebuild-search-to /var/lib/market-relay/search-compact
++```
++
++This command opens `raw/events.db` read-only, respects the running relay's lock,
++requires a new output path, checks for at least 2 GiB free before each bounded
++batch, and verifies the document count. It never activates the new index,
++changes raw events, or removes the old index. Failed output is retained with an
++incomplete marker and cannot be used by the relay.
++
++The fixture regression test measures roughly 88% less index storage with the
++same search results. This is not a projection of savings on staging's full data.
++
++## Khatru Upgrade Compatibility
++
++The September 2, 2026 `fiatjaf.com/nostr` version
++`v0.0.0-20260902034142-316ef6591fa2` was inspected. Its Bleve backend requires
++language configuration, changes content fields from `c` to language-specific
++fields, changes timestamp representation, and defaults to a kind allowlist
++that omits marketplace products. Its event-store replacement API also changed.
++Upgrading it directly would not preserve current search behavior. Keep the
++existing dependency pinned until an explicit migration covers those changes;
++do not reset the live index to make an upgrade start.
++
++## Validation
++
++```bash
++go test -race ./...
++go vet ./...
++```
++
++Tests cover damaged-index preservation, store shutdown/reopen, disk-pressure
++write rejection with continuing reads, read-only rebuilds, output/lock safety,
++incomplete rebuild rejection, and legacy/compact search compatibility.
+ 
+ ## Stage Config
+ 
+diff --git a/deploy-simple/relay/cmd/market-relay/main.go b/deploy-simple/relay/cmd/market-relay/main.go
+index 8773c9fd6..d4bbda6c0 100644
+--- a/deploy-simple/relay/cmd/market-relay/main.go
++++ b/deploy-simple/relay/cmd/market-relay/main.go
+@@ -3,6 +3,7 @@ package main
+ import (
+ 	"context"
+ 	"errors"
++	"flag"
+ 	"fmt"
+ 	"iter"
+ 	"log"
+@@ -12,6 +13,7 @@ import (
+ 	"path/filepath"
+ 	"strconv"
+ 	"strings"
++	"sync"
+ 	"syscall"
+ 	"time"
+ 
+@@ -22,6 +24,7 @@ import (
+ 	"fiatjaf.com/nostr/khatru"
+ 	"fiatjaf.com/nostr/khatru/policies"
+ 	"fiatjaf.com/nostr/nip11"
++	"github.com/PlebeianTech/market/deploy-simple/relay/internal/searchindex"
+ )
+ 
+ var version = "dev"
+@@ -38,6 +41,7 @@ type config struct {
+ 	SearchIndexDir  string
+ 	RawEventStore   string
+ 	MaxQueryLimit   int
++	MinFreeBytes    uint64
+ 	SupportedNIPs   []int
+ 	ReadHeaderMs    time.Duration
+ 	ShutdownTimeout time.Duration
+@@ -46,13 +50,26 @@ type config struct {
+ type compositeStore struct {
+ 	raw    *eventstoreboltdb.BoltBackend
+ 	search *eventstorebleve.BleveBackend
++	config config
++	mu     sync.RWMutex
++	closed bool
+ }
+ 
+ func main() {
++	rebuildTo := flag.String("rebuild-search-to", "", "Build a compact search index in a new directory while the relay is stopped; preserve the existing index and raw events")
++	flag.Parse()
+ 	cfg, err := loadConfig()
+ 	if err != nil {
+ 		log.Fatal(err)
+ 	}
++	if *rebuildTo != "" {
++		count, err := searchindex.Rebuild(filepath.Join(cfg.RawEventStore, "events.db"), *rebuildTo, 2<<30)
++		if err != nil {
++			log.Fatal(err)
++		}
++		log.Printf("compact search index complete: %d events at %s; active index unchanged", count, *rebuildTo)
++		return
++	}
+ 
+ 	store, cleanup, err := openStore(cfg)
+ 	if err != nil {
+@@ -121,6 +138,10 @@ func main() {
+ }
+ 
+ func loadConfig() (config, error) {
++	minFreeBytes, err := strconv.ParseUint(envOr("RELAY_MIN_FREE_BYTES", "536870912"), 10, 64)
++	if err != nil {
++		return config{}, fmt.Errorf("invalid RELAY_MIN_FREE_BYTES: %w", err)
++	}
+ 	cfg := config{
+ 		Name:            envOr("RELAY_NAME", "Plebeian Market Relay"),
+ 		Description:     envOr("RELAY_DESCRIPTION", "Plebeian Market application relay"),
+@@ -133,6 +154,7 @@ func loadConfig() (config, error) {
+ 		SearchIndexDir:  envOr("RELAY_SEARCH_INDEX_DIR", "/var/lib/market-relay/search"),
+ 		RawEventStore:   envOr("RELAY_RAW_DB_DIR", "/var/lib/market-relay/raw"),
+ 		MaxQueryLimit:   envOrInt("RELAY_MAX_QUERY_LIMIT", 500),
++		MinFreeBytes:    minFreeBytes,
+ 		SupportedNIPs:   envOrInts("RELAY_SUPPORTED_NIPS", []int{1, 11, 50}),
+ 		ReadHeaderMs:    time.Duration(envOrInt("RELAY_READ_HEADER_TIMEOUT_MS", 10000)) * time.Millisecond,
+ 		ShutdownTimeout: time.Duration(envOrInt("RELAY_SHUTDOWN_TIMEOUT_MS", 10000)) * time.Millisecond,
+@@ -154,41 +176,26 @@ func openStore(cfg config) (eventstore.Store, func(), error) {
+ 	if err := rawStore.Init(); err != nil {
+ 		return nil, nil, fmt.Errorf("init BoltDB raw store: %w", err)
+ 	}
++	if err := searchindex.Prepare(cfg.SearchIndexDir, rawStore.DB); err != nil {
++		rawStore.Close()
++		return nil, nil, err
++	}
+ 
+ 	searchStore := &eventstorebleve.BleveBackend{
+ 		Path:          cfg.SearchIndexDir,
+ 		RawEventStore: rawStore,
+ 	}
+ 	if err := searchStore.Init(); err != nil {
+-		if strings.Contains(err.Error(), "metadata missing") {
+-			if removeErr := os.RemoveAll(cfg.SearchIndexDir); removeErr != nil {
+-				return nil, nil, fmt.Errorf("reset invalid Bleve index %s: %w", cfg.SearchIndexDir, removeErr)
+-			}
+-			if retryErr := searchStore.Init(); retryErr != nil {
+-				return nil, nil, fmt.Errorf("reinit Bleve search store after reset: %w", retryErr)
+-			}
+-		} else {
+-			return nil, nil, fmt.Errorf("init Bleve search store: %w", err)
+-		}
+-	}
+-
+-	cleanup := func() {
+-		closeMaybe(searchStore)
+-		closeMaybe(rawStore)
++		rawStore.Close()
++		return nil, nil, fmt.Errorf("open Bleve search store (existing data preserved; recovery requires an explicit rebuild): %w", err)
+ 	}
+ 
+-	return &compositeStore{
++	store := &compositeStore{
+ 		raw:    rawStore,
+ 		search: searchStore,
+-	}, cleanup, nil
+-}
+-
+-func closeMaybe(v any) {
+-	if closer, ok := v.(interface{ Close() error }); ok {
+-		if err := closer.Close(); err != nil {
+-			log.Printf("close failed: %v", err)
+-		}
++		config: cfg,
+ 	}
++	return store, store.Close, nil
+ }
+ 
+ func (s *compositeStore) Init() error {
+@@ -196,18 +203,39 @@ func (s *compositeStore) Init() error {
+ }
+ 
+ func (s *compositeStore) Close() {
+-	closeMaybe(s.search)
+-	closeMaybe(s.raw)
++	// WebSocket handlers can outlive http.Server.Shutdown. Drain their active
++	// store operations and refuse new ones before closing either backend.
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	if s.closed {
++		return
++	}
++	s.closed = true
++	s.search.Close()
++	s.raw.Close()
+ }
+ 
+ func (s *compositeStore) QueryEvents(filter nostr.Filter, maxLimit int) iter.Seq[nostr.Event] {
+-	if len(strings.TrimSpace(filter.Search)) >= 2 {
+-		return s.search.QueryEvents(filter, maxLimit)
++	return func(yield func(nostr.Event) bool) {
++		s.mu.RLock()
++		defer s.mu.RUnlock()
++		if s.closed {
++			return
++		}
++		if len(strings.TrimSpace(filter.Search)) >= 2 {
++			s.search.QueryEvents(filter, maxLimit)(yield)
++		} else {
++			s.raw.QueryEvents(filter, maxLimit)(yield)
++		}
+ 	}
+-	return s.raw.QueryEvents(filter, maxLimit)
+ }
+ 
+ func (s *compositeStore) DeleteEvent(id nostr.ID) error {
++	s.mu.RLock()
++	defer s.mu.RUnlock()
++	if s.closed {
++		return errors.New("relay store is closed")
++	}
+ 	if err := s.raw.DeleteEvent(id); err != nil {
+ 		return err
+ 	}
+@@ -218,6 +246,14 @@ func (s *compositeStore) DeleteEvent(id nostr.ID) error {
+ }
+ 
+ func (s *compositeStore) SaveEvent(evt nostr.Event) error {
++	s.mu.RLock()
++	defer s.mu.RUnlock()
++	if s.closed {
++		return errors.New("relay store is closed")
++	}
++	if err := s.checkWriteBudget(); err != nil {
++		return err
++	}
+ 	if err := s.raw.SaveEvent(evt); err != nil {
+ 		return err
+ 	}
+@@ -228,6 +264,14 @@ func (s *compositeStore) SaveEvent(evt nostr.Event) error {
+ }
+ 
+ func (s *compositeStore) ReplaceEvent(evt nostr.Event) error {
++	s.mu.RLock()
++	defer s.mu.RUnlock()
++	if s.closed {
++		return errors.New("relay store is closed")
++	}
++	if err := s.checkWriteBudget(); err != nil {
++		return err
++	}
+ 	filter := nostr.Filter{Kinds: []nostr.Kind{evt.Kind}, Authors: []nostr.PubKey{evt.PubKey}}
+ 	if evt.Kind.IsAddressable() {
+ 		filter.Tags = nostr.TagMap{"d": []string{evt.Tags.GetD()}}
+@@ -268,12 +312,26 @@ func (s *compositeStore) ReplaceEvent(evt nostr.Event) error {
+ }
+ 
+ func (s *compositeStore) CountEvents(filter nostr.Filter) (uint32, error) {
++	s.mu.RLock()
++	defer s.mu.RUnlock()
++	if s.closed {
++		return 0, errors.New("relay store is closed")
++	}
+ 	if len(strings.TrimSpace(filter.Search)) >= 2 {
+ 		return 0, errors.New("count with search filter is not supported")
+ 	}
+ 	return s.raw.CountEvents(filter)
+ }
+ 
++func (s *compositeStore) checkWriteBudget() error {
++	for _, path := range []string{s.config.RawEventStore, s.config.SearchIndexDir} {
++		if err := searchindex.CheckFreeSpace(path, s.config.MinFreeBytes); err != nil {
++			return fmt.Errorf("error: relay storage reserve reached; retry later: %w", err)
++		}
++	}
++	return nil
++}
++
+ func envOr(key, fallback string) string {
+ 	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+ 		return value
+diff --git a/deploy-simple/relay/cmd/market-relay/main_test.go b/deploy-simple/relay/cmd/market-relay/main_test.go
+new file mode 100644
+index 000000000..c9ce49049
+--- /dev/null
++++ b/deploy-simple/relay/cmd/market-relay/main_test.go
+@@ -0,0 +1,250 @@
++package main
++
++import (
++	"errors"
++	"fmt"
++	"math"
++	"os"
++	"path/filepath"
++	"slices"
++	"testing"
++	"time"
++
++	"fiatjaf.com/nostr"
++	eventstoreboltdb "fiatjaf.com/nostr/eventstore/boltdb"
++	"go.etcd.io/bbolt"
++)
++
++func testStoreConfig(t *testing.T) config {
++	t.Helper()
++	root := t.TempDir()
++	cfg := config{
++		DataDir: root, RawEventStore: filepath.Join(root, "raw"),
++		SearchIndexDir: filepath.Join(root, "search"),
++	}
++	if err := os.MkdirAll(cfg.RawEventStore, 0700); err != nil {
++		t.Fatal(err)
++	}
++	return cfg
++}
++
++func TestDiskReserveRejectsWritesWithoutLosingExistingEvents(t *testing.T) {
++	cfg := testStoreConfig(t)
++	store, cleanup, err := openStore(cfg)
++	if err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(cleanup)
++	evt := testEvent(t)
++	if err := store.SaveEvent(evt); err != nil {
++		t.Fatal(err)
++	}
++	store.(*compositeStore).config.MinFreeBytes = math.MaxUint64
++	next := evt
++	next.Kind = 30023
++	next.CreatedAt++
++	next.Content = "new event during disk pressure"
++	if err := next.Sign(nostr.MustSecretKeyFromHex("0000000000000000000000000000000000000000000000000000000000000001")); err != nil {
++		t.Fatal(err)
++	}
++	if err := store.SaveEvent(next); err == nil {
++		t.Error("low disk did not reject event save")
++	}
++	if err := store.ReplaceEvent(next); err == nil {
++		t.Error("low disk did not reject event replacement")
++	}
++	if found := slices.Collect(store.QueryEvents(nostr.Filter{IDs: []nostr.ID{next.ID}}, 1)); len(found) != 0 {
++		t.Fatal("rejected event was written to the raw store")
++	}
++	for _, filter := range []nostr.Filter{{IDs: []nostr.ID{evt.ID}}, {Search: "persistent"}} {
++		found := slices.Collect(store.QueryEvents(filter, 10))
++		if len(found) != 1 || found[0].ID != evt.ID {
++			t.Fatal("disk pressure prevented reading existing events")
++		}
++	}
++	store.(*compositeStore).config.MinFreeBytes = 0
++	if err := store.SaveEvent(next); err != nil {
++		t.Fatalf("writes did not recover after disk pressure was lifted: %v", err)
++	}
++}
++
++func TestMissingIndexOverExistingEventsRequiresExplicitRebuild(t *testing.T) {
++	cfg := testStoreConfig(t)
++	raw := &eventstoreboltdb.BoltBackend{Path: filepath.Join(cfg.RawEventStore, "events.db")}
++	if err := raw.Init(); err != nil {
++		t.Fatal(err)
++	}
++	if err := raw.SaveEvent(testEvent(t)); err != nil {
++		raw.Close()
++		t.Fatal(err)
++	}
++	raw.Close()
++	if _, _, err := openStore(cfg); err == nil {
++		t.Fatal("startup created an empty search index over existing events")
++	}
++	if _, err := os.Stat(cfg.SearchIndexDir); !os.IsNotExist(err) {
++		t.Fatal("startup created a replacement index without approval")
++	}
++	if err := raw.Init(); err != nil {
++		t.Fatalf("failed startup kept the raw database locked: %v", err)
++	}
++	raw.Close()
++}
++
++func testEvent(t *testing.T) nostr.Event {
++	t.Helper()
++	evt := nostr.Event{Kind: 1, CreatedAt: 1700000000, Content: "persistent catalog fixture", Tags: nostr.Tags{}}
++	if err := evt.Sign(nostr.MustSecretKeyFromHex("0000000000000000000000000000000000000000000000000000000000000001")); err != nil {
++		t.Fatal(err)
++	}
++	return evt
++}
++
++func TestStoreShutdownAndReopenPreservesEventsAndSearch(t *testing.T) {
++	cfg := testStoreConfig(t)
++	store, cleanup, err := openStore(cfg)
++	if err != nil {
++		t.Fatal(err)
++	}
++	composite := store.(*compositeStore)
++	// Explicit cleanup also releases resources when testing the broken helper.
++	t.Cleanup(func() {
++		if _, err := composite.search.CountEvents(nostr.Filter{}); err == nil {
++			composite.search.Close()
++		}
++		composite.raw.Close()
++	})
++	evt := testEvent(t)
++	if err := store.SaveEvent(evt); err != nil {
++		t.Fatal(err)
++	}
++	cleanup()
++	cleanup() // Shutdown paths may converge; closing twice must be harmless.
++	if err := composite.raw.DB.View(func(*bbolt.Tx) error { return nil }); !errors.Is(err, bbolt.ErrDatabaseNotOpen) {
++		t.Errorf("shutdown left the raw event database open: %v", err)
++	}
++	if _, err := composite.search.CountEvents(nostr.Filter{}); err == nil {
++		t.Error("shutdown left the search index open")
++	}
++	if t.Failed() {
++		return
++	}
++
++	reopened, closeReopened, err := openStore(cfg)
++	if err != nil {
++		t.Fatalf("reopen after shutdown: %v", err)
++	}
++	t.Cleanup(closeReopened)
++	for _, filter := range []nostr.Filter{{IDs: []nostr.ID{evt.ID}}, {Search: "persistent"}} {
++		found := slices.Collect(reopened.QueryEvents(filter, 10))
++		if len(found) != 1 || found[0].ID != evt.ID {
++			t.Errorf("stored event missing after reopen for %s: %v", filter, found)
++		}
++	}
++}
++
++func TestShutdownDrainsAcceptedWrites(t *testing.T) {
++	cfg := testStoreConfig(t)
++	store, cleanup, err := openStore(cfg)
++	if err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(cleanup)
++	first := testEvent(t)
++	if err := store.SaveEvent(first); err != nil {
++		t.Fatal(err)
++	}
++	results := make(chan nostr.ID, 100)
++	go func() {
++		defer close(results)
++		for i := range 100 {
++			evt := first
++			evt.Content = fmt.Sprintf("persistent concurrent write %d", i)
++			if err := evt.Sign(nostr.MustSecretKeyFromHex("0000000000000000000000000000000000000000000000000000000000000001")); err != nil {
++				break
++			}
++			if err := store.SaveEvent(evt); err != nil {
++				break
++			}
++			results <- evt.ID
++		}
++	}()
++	firstConcurrent, ok := <-results
++	if !ok {
++		t.Fatal("concurrent writer failed before shutdown")
++	}
++	cleanup()
++	accepted := []nostr.ID{first.ID, firstConcurrent}
++	for id := range results {
++		accepted = append(accepted, id)
++	}
++	if err := store.SaveEvent(first); err == nil {
++		t.Fatal("store accepted writes after shutdown")
++	}
++	reopened, closeReopened, err := openStore(cfg)
++	if err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(closeReopened)
++	searchable := make(map[nostr.ID]bool)
++	for evt := range reopened.QueryEvents(nostr.Filter{Search: "persistent"}, 200) {
++		searchable[evt.ID] = true
++	}
++	for _, id := range accepted {
++		if found := slices.Collect(reopened.QueryEvents(nostr.Filter{IDs: []nostr.ID{id}}, 1)); len(found) != 1 || !searchable[id] {
++			t.Fatalf("shutdown lost an accepted event from raw storage or search: %s", id.Hex())
++		}
++	}
++}
++
++func TestOpenStorePreservesInvalidSearchIndexAndReleasesRawStore(t *testing.T) {
++	for _, metadata := range []string{"missing", "invalid"} {
++		t.Run(metadata, func(t *testing.T) {
++			cfg := testStoreConfig(t)
++			raw := &eventstoreboltdb.BoltBackend{Path: filepath.Join(cfg.RawEventStore, "events.db")}
++			if err := raw.Init(); err != nil {
++				t.Fatal(err)
++			}
++			evt := testEvent(t)
++			if err := raw.SaveEvent(evt); err != nil {
++				raw.Close()
++				t.Fatal(err)
++			}
++			raw.Close()
++			if err := os.Mkdir(cfg.SearchIndexDir, 0700); err != nil {
++				t.Fatal(err)
++			}
++			sentinel := filepath.Join(cfg.SearchIndexDir, "existing.segment")
++			original := []byte("existing index must survive a failed startup")
++			if err := os.WriteFile(sentinel, original, 0600); err != nil {
++				t.Fatal(err)
++			}
++			if metadata == "invalid" {
++				if err := os.WriteFile(filepath.Join(cfg.SearchIndexDir, "index_meta.json"), []byte("not JSON"), 0600); err != nil {
++					t.Fatal(err)
++				}
++			}
++
++			store, _, err := openStore(cfg)
++			if err == nil {
++				t.Error("startup silently replaced the invalid search index")
++				composite := store.(*compositeStore)
++				composite.search.Close()
++				composite.raw.Close()
++			}
++			if actual, err := os.ReadFile(sentinel); err != nil || !slices.Equal(actual, original) {
++				t.Errorf("startup changed existing index data: %q, %v", actual, err)
++			}
++			db, err := bbolt.Open(raw.Path, 0600, &bbolt.Options{Timeout: 50 * time.Millisecond})
++			if err != nil {
++				t.Fatalf("failed startup left the raw database locked: %v", err)
++			}
++			raw.DB = db
++			defer raw.Close()
++			found := slices.Collect(raw.QueryEvents(nostr.Filter{IDs: []nostr.ID{evt.ID}}, 1))
++			if len(found) != 1 || found[0].ID != evt.ID {
++				t.Fatal("failed startup changed the stored raw event")
++			}
++		})
++	}
++}
+diff --git a/deploy-simple/relay/go.mod b/deploy-simple/relay/go.mod
+index 3b914efc7..153762ba9 100644
+--- a/deploy-simple/relay/go.mod
++++ b/deploy-simple/relay/go.mod
+@@ -2,7 +2,12 @@ module github.com/PlebeianTech/market/deploy-simple/relay
+ 
+ go 1.25.0
+ 
+-require fiatjaf.com/nostr v0.0.0-20260314085316-2cec1c943486
++require (
++	fiatjaf.com/nostr v0.0.0-20260314085316-2cec1c943486
++	github.com/blevesearch/bleve/v2 v2.4.4
++	go.etcd.io/bbolt v1.4.2
++	golang.org/x/sys v0.35.0
++)
+ 
+ require (
+ 	github.com/FastFilter/xorfilter v0.2.1 // indirect
+@@ -11,7 +16,6 @@ require (
+ 	github.com/andybalholm/brotli v1.1.1 // indirect
+ 	github.com/bep/debounce v1.2.1 // indirect
+ 	github.com/bits-and-blooms/bitset v1.17.0 // indirect
+-	github.com/blevesearch/bleve/v2 v2.4.4 // indirect
+ 	github.com/blevesearch/bleve_index_api v1.1.12 // indirect
+ 	github.com/blevesearch/geo v0.1.20 // indirect
+ 	github.com/blevesearch/go-faiss v1.0.24 // indirect
+@@ -63,12 +67,10 @@ require (
+ 	github.com/valyala/bytebufferpool v1.0.0 // indirect
+ 	github.com/valyala/fasthttp v1.59.0 // indirect
+ 	github.com/x448/float16 v0.8.4 // indirect
+-	go.etcd.io/bbolt v1.4.2 // indirect
+ 	golang.org/x/crypto v0.39.0 // indirect
+ 	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394 // indirect
+ 	golang.org/x/net v0.41.0 // indirect
+ 	golang.org/x/sync v0.15.0 // indirect
+-	golang.org/x/sys v0.35.0 // indirect
+ 	google.golang.org/protobuf v1.33.0 // indirect
+ 	gopkg.in/yaml.v3 v3.0.1 // indirect
+ )
+diff --git a/deploy-simple/relay/internal/searchindex/index.go b/deploy-simple/relay/internal/searchindex/index.go
+new file mode 100644
+index 000000000..140dd6cbe
+--- /dev/null
++++ b/deploy-simple/relay/internal/searchindex/index.go
+@@ -0,0 +1,89 @@
++// Package searchindex owns the compact mapping and offline rebuild of the
++// relay's derived search index. Raw events always remain in BoltDB.
++package searchindex
++
++import (
++	"errors"
++	"fmt"
++	"os"
++	"path/filepath"
++	"strconv"
++
++	"fiatjaf.com/nostr"
++	bleve "github.com/blevesearch/bleve/v2"
++	"github.com/blevesearch/bleve/v2/mapping"
++	"go.etcd.io/bbolt"
++)
++
++// These field names and types match the pinned eventstore/bleve backend.
++// Keep them compatible so existing indexes can be opened without a migration.
++func document(evt nostr.Event) map[string]any {
++	return map[string]any{
++		"c": evt.Content, "k": strconv.Itoa(int(evt.Kind)),
++		"p": evt.PubKey.Hex()[56:], "a": float64(evt.CreatedAt),
++	}
++}
++
++func indexMapping() *mapping.IndexMappingImpl {
++	m := mapping.NewIndexMapping()
++	doc := mapping.NewDocumentStaticMapping()
++	for _, name := range []string{"c", "k", "p"} {
++		field := mapping.NewTextFieldMapping()
++		// Retain the legacy standard analyzer, including tokenization of kinds
++		// and author suffixes; changing it would change existing query results.
++		field.Store = false
++		field.IncludeTermVectors = false
++		field.IncludeInAll = false
++		field.DocValues = false
++		doc.AddFieldMappingsAt(name, field)
++	}
++	createdAt := mapping.NewNumericFieldMapping()
++	createdAt.Store = false
++	createdAt.IncludeInAll = false
++	createdAt.DocValues = false
++	doc.AddFieldMappingsAt("a", createdAt)
++	m.DefaultMapping = doc
++	return m
++}
++
++func create(path string) (bleve.Index, error) {
++	// Reserve the exact directory atomically, including against symlinks.
++	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
++		return nil, err
++	}
++	if err := os.Mkdir(path, 0700); err != nil {
++		return nil, fmt.Errorf("create new search output %s: %w", path, err)
++	}
++	return bleve.New(path, indexMapping())
++}
++
++// Prepare creates a compact index only for an empty raw store. It never
++// replaces an existing index, nor silently opens an empty index over old data.
++func Prepare(path string, raw *bbolt.DB) error {
++	if _, err := os.Lstat(filepath.Join(path, incompleteFile)); !errors.Is(err, os.ErrNotExist) {
++		if err != nil {
++			return err
++		}
++		return fmt.Errorf("search rebuild is incomplete at %s; preserve the current index and rebuild into a new directory", path)
++	}
++	if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) {
++		return err
++	}
++	if err := raw.View(func(tx *bbolt.Tx) error {
++		bucket := tx.Bucket([]byte("rawEventStore"))
++		if bucket == nil {
++			return fmt.Errorf("unrecognized raw event store")
++		}
++		if key, _ := bucket.Cursor().First(); key != nil {
++			return fmt.Errorf("search index is missing but raw events exist; build a replacement with --rebuild-search-to before starting the relay")
++		}
++		return nil
++	}); err != nil {
++		return err
++	}
++	index, err := create(path)
++	if err != nil {
++		return fmt.Errorf("create compact search index: %w", err)
++	}
++	return index.Close()
++}
+diff --git a/deploy-simple/relay/internal/searchindex/index_test.go b/deploy-simple/relay/internal/searchindex/index_test.go
+new file mode 100644
+index 000000000..eda2d6737
+--- /dev/null
++++ b/deploy-simple/relay/internal/searchindex/index_test.go
+@@ -0,0 +1,208 @@
++package searchindex
++
++import (
++	"crypto/sha256"
++	"fmt"
++	"io/fs"
++	"math"
++	"os"
++	"path/filepath"
++	"slices"
++	"strings"
++	"sync"
++	"testing"
++
++	"fiatjaf.com/nostr"
++	eventstorebleve "fiatjaf.com/nostr/eventstore/bleve"
++	eventstoreboltdb "fiatjaf.com/nostr/eventstore/boltdb"
++	"go.etcd.io/bbolt"
++)
++
++func newRawStore(t *testing.T) *eventstoreboltdb.BoltBackend {
++	t.Helper()
++	raw := &eventstoreboltdb.BoltBackend{Path: filepath.Join(t.TempDir(), "events.db")}
++	if err := raw.Init(); err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(raw.Close)
++	return raw
++}
++
++func fixture(i int) nostr.Event {
++	return nostr.Event{
++		ID:     nostr.ID(sha256.Sum256([]byte(fmt.Sprintf("index fixture %d", i)))),
++		PubKey: nostr.PubKey(sha256.Sum256([]byte("fixture author"))),
++		Kind:   nostr.Kind(1 + i%2), CreatedAt: nostr.Timestamp(1700000000 + i),
++		Content: fmt.Sprintf("catalog listing %d ", i) + strings.Repeat("handmade durable useful product description ", 200),
++		Tags:    nostr.Tags{},
++	}
++}
++
++func fileHash(t *testing.T, path string) [32]byte {
++	t.Helper()
++	data, err := os.ReadFile(path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	return sha256.Sum256(data)
++}
++
++func directoryBytes(t *testing.T, path string) int64 {
++	t.Helper()
++	var size int64
++	if err := filepath.WalkDir(path, func(_ string, entry fs.DirEntry, err error) error {
++		if err != nil {
++			return err
++		}
++		if !entry.IsDir() {
++			info, err := entry.Info()
++			if err != nil {
++				return err
++			}
++			size += info.Size()
++		}
++		return nil
++	}); err != nil {
++		t.Fatal(err)
++	}
++	return size
++}
++
++func TestCompactRebuildPreservesLegacySearchAndRawEvents(t *testing.T) {
++	raw := newRawStore(t)
++	oldPath := filepath.Join(t.TempDir(), "legacy")
++	legacy := &eventstorebleve.BleveBackend{Path: oldPath, RawEventStore: raw}
++	if err := legacy.Init(); err != nil {
++		t.Fatal(err)
++	}
++	closeLegacy := sync.OnceFunc(legacy.Close)
++	t.Cleanup(closeLegacy)
++	const eventCount = 150
++	for i := range eventCount {
++		evt := fixture(i)
++		if err := raw.SaveEvent(evt); err != nil {
++			t.Fatal(err)
++		}
++		if err := legacy.SaveEvent(evt); err != nil {
++			t.Fatal(err)
++		}
++	}
++	filters := []nostr.Filter{
++		{Search: "handmade"},
++		{Search: "handmade", Kinds: []nostr.Kind{1}},
++		{Search: "handmade", Since: 1700000100, Until: 1700000125},
++		{Search: "absentword"},
++	}
++	ids := func(index *eventstorebleve.BleveBackend, filter nostr.Filter) []string {
++		var result []string
++		for evt := range index.QueryEvents(filter, eventCount+1) {
++			result = append(result, evt.ID.Hex())
++		}
++		slices.Sort(result)
++		return result
++	}
++	var expected [][]string
++	for _, filter := range filters {
++		expected = append(expected, ids(legacy, filter))
++	}
++	closeLegacy()
++	raw.Close()
++	rawBefore := fileHash(t, raw.Path)
++	oldBytes := directoryBytes(t, oldPath)
++	oldMetadata := fileHash(t, filepath.Join(oldPath, "index_meta.json"))
++	newPath := filepath.Join(t.TempDir(), "compact")
++	count, err := Rebuild(raw.Path, newPath, 0)
++	if err != nil || count != eventCount {
++		t.Fatalf("rebuild: count=%d error=%v", count, err)
++	}
++	if fileHash(t, raw.Path) != rawBefore || fileHash(t, filepath.Join(oldPath, "index_meta.json")) != oldMetadata || directoryBytes(t, oldPath) != oldBytes {
++		t.Fatal("offline rebuild changed the raw store or old index")
++	}
++	newBytes := directoryBytes(t, newPath)
++	t.Logf("same %d events: legacy=%d bytes compact=%d bytes (%.1f%% reduction)", eventCount, oldBytes, newBytes, 100*(1-float64(newBytes)/float64(oldBytes)))
++	if newBytes >= oldBytes/2 {
++		t.Errorf("compact mapping did not remove redundant storage: legacy=%d compact=%d", oldBytes, newBytes)
++	}
++	if err := raw.Init(); err != nil {
++		t.Fatal(err)
++	}
++	compact := &eventstorebleve.BleveBackend{Path: newPath, RawEventStore: raw}
++	if err := compact.Init(); err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(compact.Close)
++	for i, filter := range filters {
++		if actual := ids(compact, filter); !slices.Equal(actual, expected[i]) {
++			t.Errorf("rebuild changed search results for %s", filter)
++		}
++	}
++	// The unmodified eventstore backend must continue writing the compact schema.
++	next := fixture(eventCount)
++	if err := raw.SaveEvent(next); err != nil {
++		t.Fatal(err)
++	}
++	if err := compact.SaveEvent(next); err != nil {
++		t.Fatal(err)
++	}
++	if hits := ids(compact, nostr.Filter{Search: "handmade", Since: next.CreatedAt}); len(hits) != 1 || hits[0] != next.ID.Hex() {
++		t.Fatal("new events were not searchable after the rebuild")
++	}
++}
++
++func TestRebuildRefusesLiveRawStoreAndExistingOutput(t *testing.T) {
++	raw := newRawStore(t)
++	output := filepath.Join(t.TempDir(), "replacement")
++	if _, err := Rebuild(raw.Path, output, 0); err == nil {
++		t.Fatal("rebuild ignored the running relay's database lock")
++	}
++	if _, err := os.Stat(output); !os.IsNotExist(err) {
++		t.Fatal("blocked rebuild created output")
++	}
++	raw.Close()
++	for _, useSymlink := range []bool{false, true} {
++		path := filepath.Join(t.TempDir(), "existing")
++		if useSymlink {
++			if err := os.Symlink(raw.Path, path); err != nil {
++				t.Fatal(err)
++			}
++		} else if err := os.WriteFile(path, []byte("preserve"), 0600); err != nil {
++			t.Fatal(err)
++		}
++		before := fileHash(t, path)
++		if _, err := Rebuild(raw.Path, path, 0); err == nil {
++			t.Fatal("rebuild accepted an existing output path")
++		}
++		if fileHash(t, path) != before {
++			t.Fatal("rebuild changed existing output")
++		}
++	}
++	if _, err := Rebuild(raw.Path, output, math.MaxUint64); err == nil {
++		t.Fatal("rebuild ignored disk reserve")
++	}
++	if _, err := os.Stat(output); !os.IsNotExist(err) {
++		t.Fatal("rebuild created output despite insufficient disk")
++	}
++}
++
++func TestFailedRebuildCannotBeOpenedByRelay(t *testing.T) {
++	raw := newRawStore(t)
++	if err := raw.DB.Update(func(tx *bbolt.Tx) error {
++		return tx.Bucket([]byte("rawEventStore")).Put([]byte("invalid"), []byte("corrupt data"))
++	}); err != nil {
++		t.Fatal(err)
++	}
++	raw.Close()
++	output := filepath.Join(t.TempDir(), "partial")
++	if _, err := Rebuild(raw.Path, output, 0); err == nil {
++		t.Fatal("rebuild silently skipped corrupt raw data")
++	}
++	if _, err := os.Stat(filepath.Join(output, incompleteFile)); err != nil {
++		t.Fatal("failed rebuild lost its incomplete marker")
++	}
++	if err := raw.Init(); err != nil {
++		t.Fatal(err)
++	}
++	if err := Prepare(output, raw.DB); err == nil {
++		t.Fatal("relay accepted an incomplete rebuild")
++	}
++}
+diff --git a/deploy-simple/relay/internal/searchindex/rebuild.go b/deploy-simple/relay/internal/searchindex/rebuild.go
+new file mode 100644
+index 000000000..063bc49e8
+--- /dev/null
++++ b/deploy-simple/relay/internal/searchindex/rebuild.go
+@@ -0,0 +1,161 @@
++package searchindex
++
++import (
++	"errors"
++	"fmt"
++	"os"
++	"path/filepath"
++	"time"
++
++	"fiatjaf.com/nostr"
++	"fiatjaf.com/nostr/eventstore/codec/betterbinary"
++	bleve "github.com/blevesearch/bleve/v2"
++	"go.etcd.io/bbolt"
++	"golang.org/x/sys/unix"
++)
++
++const incompleteFile = ".rebuild-incomplete"
++
++// Rebuild reads the pinned BoltDB raw-event format without migrations or
++// writes. The relay must be stopped: its exclusive database lock is respected.
++// Only the new output directory is written. Failed output is retained and
++// marked incomplete; it must never be promoted to the active index.
++func Rebuild(rawPath, output string, minFreeBytes uint64) (count uint64, resultErr error) {
++	raw, err := bbolt.Open(rawPath, 0600, &bbolt.Options{ReadOnly: true, Timeout: time.Second})
++	if err != nil {
++		return 0, fmt.Errorf("open raw events read-only (stop the relay before rebuilding): %w", err)
++	}
++	rawClosed := false
++	defer func() {
++		if !rawClosed {
++			resultErr = errors.Join(resultErr, raw.Close())
++		}
++	}()
++	if err := raw.View(func(tx *bbolt.Tx) error {
++		if tx.Bucket([]byte("rawEventStore")) == nil {
++			return fmt.Errorf("unrecognized raw event store; refusing to build an empty replacement")
++		}
++		return nil
++	}); err != nil {
++		return 0, err
++	}
++	if err := CheckFreeSpace(filepath.Dir(output), minFreeBytes); err != nil {
++		return 0, err
++	}
++	// Reserve output before writing the incomplete marker. Bleve accepts this
++	// newly created directory, but no valid index exists until after the marker
++	// is durable. Even an interruption during setup cannot leave usable partial
++	// output without a marker.
++	if err := os.Mkdir(output, 0700); err != nil {
++		return 0, fmt.Errorf("create new rebuild output: %w", err)
++	}
++	marker := filepath.Join(output, incompleteFile)
++	if err := markIncomplete(output); err != nil {
++		return 0, err
++	}
++	index, err := bleve.New(output, indexMapping())
++	if err != nil {
++		return 0, err
++	}
++	closed := false
++	defer func() {
++		if !closed {
++			resultErr = errors.Join(resultErr, index.Close())
++		}
++	}()
++
++	batch := index.NewBatch()
++	batchBytes := 0
++	flush := func() error {
++		if batch.Size() == 0 {
++			return nil
++		}
++		if err := CheckFreeSpace(output, minFreeBytes); err != nil {
++			return err
++		}
++		if err := index.Batch(batch); err != nil {
++			return err
++		}
++		batch = index.NewBatch()
++		batchBytes = 0
++		return nil
++	}
++	err = raw.View(func(tx *bbolt.Tx) error {
++		return tx.Bucket([]byte("rawEventStore")).ForEach(func(_, value []byte) error {
++			var evt nostr.Event
++			if err := betterbinary.Unmarshal(value, &evt); err != nil {
++				return fmt.Errorf("decode raw event %d: %w", count+1, err)
++			}
++			if err := batch.Index(evt.ID.Hex(), document(evt)); err != nil {
++				return err
++			}
++			count++
++			batchBytes += len(evt.Content)
++			// Bound both document count and text volume. A large event can
++			// exceed the text budget once, but cannot accumulate in a batch.
++			if batch.Size() >= 100 || batchBytes >= 1<<20 {
++				return flush()
++			}
++			return nil
++		})
++	})
++	if err != nil {
++		return count, err
++	}
++	if err := flush(); err != nil {
++		return count, err
++	}
++	indexed, err := index.DocCount()
++	if err != nil {
++		return count, err
++	}
++	if indexed != count {
++		return count, fmt.Errorf("rebuild count mismatch: raw=%d indexed=%d", count, indexed)
++	}
++	closed = true
++	if err := index.Close(); err != nil {
++		return count, err
++	}
++	rawClosed = true
++	if err := raw.Close(); err != nil {
++		return count, err
++	}
++	if err := os.Remove(marker); err != nil {
++		return count, err
++	}
++	return count, nil
++}
++
++func markIncomplete(output string) error {
++	file, err := os.OpenFile(filepath.Join(output, incompleteFile), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
++	if err != nil {
++		return err
++	}
++	_, writeErr := file.WriteString("Rebuild incomplete. Do not activate this index.\n")
++	if err := errors.Join(writeErr, file.Sync(), file.Close()); err != nil {
++		return err
++	}
++	dir, err := os.Open(output)
++	if err != nil {
++		return err
++	}
++	return errors.Join(dir.Sync(), dir.Close())
++}
++
++// CheckFreeSpace applies a reserve to the filesystem containing path. It does
++// not reserve blocks against other processes or background index compaction.
++// A zero minimum explicitly disables the check.
++func CheckFreeSpace(path string, minimum uint64) error {
++	if minimum == 0 {
++		return nil
++	}
++	var stat unix.Statfs_t
++	if err := unix.Statfs(path, &stat); err != nil {
++		return fmt.Errorf("read free disk space: %w", err)
++	}
++	free := stat.Bavail * uint64(stat.Bsize)
++	if free < minimum {
++		return fmt.Errorf("insufficient free disk: %d bytes available, %d required", free, minimum)
++	}
++	return nil
++}
+diff --git a/deploy-simple/relay/systemd/market-relay.service b/deploy-simple/relay/systemd/market-relay.service
+index 619bca0e7..cec2f2baa 100644
+--- a/deploy-simple/relay/systemd/market-relay.service
++++ b/deploy-simple/relay/systemd/market-relay.service
+@@ -7,11 +7,17 @@ After=network-online.target
+ Type=simple
+ User=deployer
+ Group=deployer
++# Soft Go-runtime budget; the environment file may override it. File mappings
++# and the other VPS services also need RAM, so this is below physical capacity.
++Environment=GOMEMLIMIT=1GiB
+ EnvironmentFile=/etc/market-relay.env
+ WorkingDirectory=/home/deployer
+ ExecStart=/usr/local/bin/market-relay
+ Restart=on-failure
+ RestartSec=5
++TimeoutStopSec=120
++LogRateLimitIntervalSec=30s
++LogRateLimitBurst=200
+ LimitNOFILE=65536
+ 
+ [Install]
+diff --git a/docs/ops/relay-pruning.md b/docs/ops/relay-pruning.md
+index 673513268..3bd9b45c0 100644
+--- a/docs/ops/relay-pruning.md
++++ b/docs/ops/relay-pruning.md
+@@ -3,6 +3,27 @@
+ This runbook defines a safe, maintainer-approved approach for keeping the
+ Plebeian Market relay host lean without accidentally deleting user data.
+ 
++## Investigation Snapshot — September 11, 2026
++
++Read-only staging checks found 29 GiB available on the 79 GiB root filesystem
++(62% used), with approximately 17 GiB in the search index, 4.1 GiB in raw events,
++and 2.2 GiB in the system journal. There was no immediate disk shortage in this
++snapshot. Historical disk growth was not measured.
++
++The relay reported version `d9947f799f32`. Systemd recorded 39 cumulative
++automatic restarts, with the current process running since September 8 at
++17:30:29 UTC. At 17:30:23 UTC the kernel explicitly killed `market-relay` for
++global memory exhaustion after approximately 3.4 GiB anonymous resident memory
++on a 3.8 GiB VPS. Earlier restarts had the same OOM evidence. These are memory
++failures; the snapshot does not establish which allocation path caused them.
++
++The deployed source uses Bleve's dynamic mapping and skips closing both
++backends because its close helper checks the wrong method signature. It also
++deletes the search directory on missing metadata without rebuilding old events.
++The storage-preservation fixes and compact mapping have local regression tests;
++actual staging savings and elimination of memory failures require an explicit
++rollout and observation under representative traffic.
++
+ ## Immediate Ops Rule
+ 
+ Until disk pressure is resolved:
+@@ -187,6 +208,69 @@ Potential future pruning categories, only after maintainer agreement:
+ Raw event deletion may erase relay history and should never happen as an
+ implicit disk cleanup step.
+ 
++## Offline Compact Index Rebuild
++
++The relay now provides `--rebuild-search-to <new-directory>`. This is an
++explicit maintenance operation, never part of an ordinary deploy or startup.
++Install and verify the compatible relay binary first, preserving the existing
++index. The current dependency remains pinned and supports both index mappings.
++
++Before rebuilding:
++
++1. Agree a maintenance window. The relay must remain stopped while its BoltDB
++   file is read; do not bypass the database lock or copy a live BoltDB file with
++   ordinary filesystem tools.
++2. Verify a complete, consistent raw-event backup off the VPS. The market-event
++   export described above is not a complete raw-event backup.
++3. Allow space for the current index and its replacement at the same time, plus
++   at least 2 GiB free. The command checks the reserve between batches, but
++   compaction can allocate additional space. Small-fixture savings do not
++   establish the full-data size, memory requirement, or rebuild duration.
++4. Record service state, restart history, disk allocation, and representative
++   raw-event IDs/search queries. Historical `NRestarts` are not automatically
++   cleared by this procedure; the staging installer may refuse activation
++   until the previous failures have been investigated.
++
++The following example assumes the documented default paths and that neither
++`search-compact` nor `search-before-compact` already exists. Run the rebuild as
++the service user. These commands stop/start the service and write a new index:
++
++```bash
++sudo systemctl stop market-relay
++GOMEMLIMIT=1GiB /usr/local/bin/market-relay \
++  --rebuild-search-to /var/lib/market-relay/search-compact
++```
++
++The command reports the count after all raw events have been decoded, indexed,
++and the index has closed successfully. It never skips corrupt raw records.
++On failure, keep using the old index; do not activate output containing
++`.rebuild-incomplete`. Output from an interrupted/failed run is retained for
++inspection, and a retry must use another new directory.
++
++After a successful rebuild, while the relay is still stopped, a maintainer may
++activate the replacement by renaming directories on the same filesystem:
++
++```bash
++set -e
++test -d /var/lib/market-relay/search-compact
++test ! -e /var/lib/market-relay/search-compact/.rebuild-incomplete
++test ! -e /var/lib/market-relay/search-before-compact
++mv -T /var/lib/market-relay/search /var/lib/market-relay/search-before-compact
++mv -T /var/lib/market-relay/search-compact /var/lib/market-relay/search
++sudo systemctl start market-relay
++```
++
++Check local NIP-11, representative raw-event lookups and searches, restart/OOM
++history, memory, and disk growth before declaring the migration successful.
++Keep the previous index until full-data verification is complete. Deleting that
++backup is a separate approved cleanup step, not an automatic deploy action.
++
++Binary rollback can keep the compact index: its fields are compatible with the
++old backend. The retained old index is a snapshot of search state before the
++switch; after new events arrive, blindly restoring it would omit those events
++from search even though they remain in the raw store. Any index rollback after
++new writes requires reconciliation against the current raw store.
++
+ ## Non-Goals
+ 
+ This runbook does not:

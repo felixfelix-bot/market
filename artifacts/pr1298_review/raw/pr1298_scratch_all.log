@@ -1,0 +1,38 @@
+=== RUN   TestScratchCloseDrainBlockedByStalledSubscriber
+    scratch_close_drain_probe_test.go:78: CONFIRMED: Close() blocked until the stalled subscriber's iteration finished, then completed
+--- PASS: TestScratchCloseDrainBlockedByStalledSubscriber (29.87s)
+=== RUN   TestScratchCloseDrainBlocksNewQueriesBehindIt
+    scratch_close_drain_probe_test.go:128: CONFIRMED: new queries queue behind the blocked Close drain
+--- PASS: TestScratchCloseDrainBlocksNewQueriesBehindIt (0.59s)
+=== RUN   TestScratchFirstBootCrashWindowLeavesUnrecoverableEmptyIndexDir
+    scratch_firstboot_crash_test.go:45: CONFIRMED: every restart fails closed: open Bleve search store (existing data preserved; recovery requires an explicit rebuild): error opening index: cannot open index, metadata missing
+--- PASS: TestScratchFirstBootCrashWindowLeavesUnrecoverableEmptyIndexDir (0.09s)
+=== RUN   TestScratchSearchFailureAfterRawCommitDivergesAndRetryCannotHeal
+    scratch_partial_write_divergence_probe_test.go:59: SaveEvent surfaced error (client sees OK-fail): failed to index 'id::a472b247f51953657f6dd49498282da53bb008c77f1b6abbd60f70e83c93a4f4' document: index is closed
+    scratch_partial_write_divergence_probe_test.go:80: retry returned ErrDupEvent -> khatru adding.go:39-40 maps it to accepted/OK
+--- FAIL: TestScratchSearchFailureAfterRawCommitDivergesAndRetryCannotHeal (0.24s)
+panic: close of closed channel [recovered, repanicked]
+
+goroutine 101 [running]:
+testing.tRunner.func1.2({0xbc04e0, 0xe53030})
+	/home/c03rad0r/repos/plebeian-pr-reviews/.1298-head/.gomodcache/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/testing/testing.go:1872 +0x237
+testing.tRunner.func1()
+	/home/c03rad0r/repos/plebeian-pr-reviews/.1298-head/.gomodcache/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/testing/testing.go:1875 +0x35b
+panic({0xbc04e0?, 0xe53030?})
+	/home/c03rad0r/repos/plebeian-pr-reviews/.1298-head/.gomodcache/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/runtime/panic.go:783 +0x132
+github.com/blevesearch/bleve/v2/index/scorch.(*Scorch).Close(0xc0001d6488)
+	/home/c03rad0r/repos/plebeian-pr-reviews/.1298-head/.gomodcache/github.com/blevesearch/bleve/v2@v2.4.4/index/scorch/scorch.go:343 +0x85
+github.com/blevesearch/bleve/v2.(*indexImpl).Close(0xc0001682a0)
+	/home/c03rad0r/repos/plebeian-pr-reviews/.1298-head/.gomodcache/github.com/blevesearch/bleve/v2@v2.4.4/index_impl.go:936 +0x8d
+fiatjaf.com/nostr/eventstore/bleve.(*BleveBackend).Close(...)
+	/home/c03rad0r/repos/plebeian-pr-reviews/.1298-head/.gomodcache/fiatjaf.com/nostr@v0.0.0-20260314085316-2cec1c943486/eventstore/bleve/lib.go:30
+github.com/PlebeianTech/market/deploy-simple/relay/cmd/market-relay.(*compositeStore).Close(0xc0001d47e0)
+	/home/c03rad0r/worktrees/pr1298-consistency/deploy-simple/relay/cmd/market-relay/main.go:214 +0x86
+github.com/PlebeianTech/market/deploy-simple/relay/cmd/market-relay.TestScratchSearchFailureAfterRawCommitDivergesAndRetryCannotHeal(0xc000103c00)
+	/home/c03rad0r/worktrees/pr1298-consistency/deploy-simple/relay/cmd/market-relay/scratch_partial_write_divergence_probe_test.go:84 +0x9ed
+testing.tRunner(0xc000103c00, 0xd8aaa0)
+	/home/c03rad0r/repos/plebeian-pr-reviews/.1298-head/.gomodcache/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/testing/testing.go:1934 +0xea
+created by testing.(*T).Run in goroutine 1
+	/home/c03rad0r/repos/plebeian-pr-reviews/.1298-head/.gomodcache/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/testing/testing.go:1997 +0x465
+FAIL	github.com/PlebeianTech/market/deploy-simple/relay/cmd/market-relay	30.807s
+FAIL
