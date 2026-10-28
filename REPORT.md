@@ -51,7 +51,14 @@ The pinned-to-live delta includes the merge-forward base changes, consistent wit
 3. Gate record: already present at `/home/c03rad0r/.hermes/profiles/manager/state/plebeian-pr-review-state.json`, key `prs.1382`; verified unchanged.
 4. Evidence durability: this report and PROGRESS.md on isolated branch `review/1382-noop`, plus `/home/c03rad0r/reports/reviews/plebeian-pr-reviews-t_1ae0c852-noop-kimi.md`.
 
+## Completion
+
+- Evidence commit: `0229b2e178df309ade12a8d90ab41ccd9bed2afa`.
+- Pushed to `https://github.com/felixfelix-bot/market/tree/review/1382-noop`; `git ls-remote` returned the same commit as local HEAD.
+- An initial push to the `c03rad0r` remote was rejected with HTTP 403 because the active identity is felixfelix-bot. The subsequent authorized `fork` push succeeded; no force-push was used.
+- Isolated worktree is clean. The original main checkout and its unrelated edits were untouched.
+- No GitHub PR mutation is owed or was made.
+
 ## Remaining steps
 
-- Commit and push only this evidence branch, then verify its remote tip.
-- No GitHub PR mutation is owed.
+None. Existing review coverage and gate record close this duplicate card.
