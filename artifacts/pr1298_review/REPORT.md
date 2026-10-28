@@ -6,7 +6,7 @@
   the head checkout, the pinned dependency sources, or execution at head.
 - Draft under verification: `reviews/1298-draft.md` (fleet lane t_e736bb4b).
 - PR: PlebeianApp/market#1298 `fix(relay): preserve stores and add compact
-  index maintenance`.
+index maintenance`.
 - Head confirmed live this session (`gh pr view 1298 --json ...`):
   **d205c158afe7a88a7b2d962e620bfc3b35889b20**, state **MERGED**
   2026-09-19T20:41:28Z (merge commit 3f394190338d2ca514a0b86d35a60de15ad79021),
@@ -40,7 +40,7 @@ That body fails all three bars for a publishable review:
      data loss in search).
    - `cmd/market-relay/main.go:266` — `ReplaceEvent` deletes every previously
      stored event from the search index with no `nostr.IsOlder` comparator, so
-     an *older* replacement evicts the newest live event from search while raw
+     an _older_ replacement evicts the newest live event from search while raw
      keeps it.
    - `internal/searchindex/index.go:54-57` — `create()` leaves a marker-less
      directory behind when `bleve.New` fails, wedging startup fail-closed.
@@ -58,7 +58,7 @@ That body fails all three bars for a publishable review:
    exists anywhere". Both committed artifacts exist on disk
    (`reviews/1298-index-store-consistency.md` (0d821ac) and
    `reviews/1298-compact-index-build-eviction-audit.md` (86792c5), both dated
-   2026-09-27, i.e. *after* the draft's 2026-09-24 write) — the draft's
+   2026-09-27, i.e. _after_ the draft's 2026-09-24 write) — the draft's
    provenance was stale when written and is false now.
 
 REJECTED therefore means: **the draft must not be published.** The publish task
@@ -94,15 +94,15 @@ correct merge should have carried (board comment on t_56477136, 2026-09-26
 1. **[KEEP] RISK | `deploy-simple/relay/internal/searchindex/index.go:69` |
    index adoption ignores the raw store (no parity check at activation)**
    - (a) REAL: verified at head (index.go:69-71: `if _, err := os.Lstat(path);
-     !errors.Is(err, os.ErrNotExist) { return err }` — existing directory
+!errors.Is(err, os.ErrNotExist) { return err }` — existing directory
      returns nil). Reproduced at head this session:
      `TestScratchStaleActivationAfterPostRebuildWrites` PASS — after the
      documented rebuild → restart → publish → runbook rename-swap → restart
      sequence, `search for 'persistent' returned 1 events; late event present
-     in search: false` while the same event IS found by raw ID lookup;
+in search: false` while the same event IS found by raw ID lookup;
      `openStore` raised no error.
    - (b) NOT DEDUPED: no prior issue names missing parity at adoption. Maxime's
-     item 5 is a *readability* nit on the same branch explicitly asserting it
+     item 5 is a _readability_ nit on the same branch explicitly asserting it
      "behaves correctly" — different root cause, different conclusion.
    - (c) NOT SPAM: concrete trigger, silent permanent misbehavior, executed
      reproduction.
@@ -118,7 +118,7 @@ correct merge should have carried (board comment on t_56477136, 2026-09-26
      bleve.New, no marker ever written, no cleanup on failure): reproduced at
      head (`TestScratchFirstBootCrashWindowLeavesUnrecoverableEmptyIndexDir`
      PASS — every restart fails closed `metadata missing`, never repairs).
-     The `markIncomplete`-failure-at-rebuild.go:53 clause is *not* demonstrated
+     The `markIncomplete`-failure-at-rebuild.go:53 clause is _not_ demonstrated
      (this lane could not force a `file.Sync()` EIO deterministically) and the
      claim "the next start adopts it" is wrong for that clause: a marker-less
      rebuild output sits at `search-compact`, which the next start never opens
@@ -136,9 +136,9 @@ correct merge should have carried (board comment on t_56477136, 2026-09-26
 ## Missing issues (step 3 — inverse check)
 
 - **M1 (ADD as its own finding, RISK) — `main.go:266` replace-eviction ignores
-  `nostr.IsOlder`.** The canonical merged list (t_56477136 comment,
+  `nostr.IsOlder`.** The canonical merged list (t*56477136 comment,
   2026-09-26 23:00 UTC) carries only 2 findings; the second, superseding audit
-  (86792c5, committed 2026-09-27 21:44 CEST, i.e. ~21h *after* the merge
+  (86792c5, committed 2026-09-27 21:44 CEST, i.e. ~21h \_after* the merge
   comment) added this RISK plus a `create()` RISK, and the merge consumed the
   stale r1 (INFO-only) version. So this RISK never entered any draft or
   canonical list. This lane reproduced it independently with its own probe
@@ -168,7 +168,7 @@ correct merge should have carried (board comment on t_56477136, 2026-09-26
   bug in a scratch test, not product behavior; PR's own tests are green).
   This one is also **pre-existing** at base (same ordering, no lock) — but the
   PR's own `checkWriteBudget` probe at main.go:254-256 makes the search-side
-  failure *more* reachable post-PR (free-space exhaustion now returns errors
+  failure _more_ reachable post-PR (free-space exhaustion now returns errors
   on the write path). Suggest folding it into the RISK as an additional
   trigger, or reporting with an explicit pre-existing caveat.
 - **M3 (REPORT as availability limitation) — diff-introduced unbounded

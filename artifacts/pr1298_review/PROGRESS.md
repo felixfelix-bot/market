@@ -11,7 +11,7 @@ deliverables therefore live at artifacts/pr1298_review/{PROGRESS,REPORT}.md.
 ## Milestones
 
 - M1 Evidence gathering — DONE. Files: raw/pr1298_diff_fetch_20261028.diff,
-  raw/maxime_tt_review_5653225909.md, raw/{pr1298_test_own,pr1298_vet,
+  raw/maxime_tt_review_5653225909.body.txt, raw/{pr1298_test_own,pr1298_vet,
   pr1298_scratch_all}.log, probe_zzz_glm_probe_replace_older_test.go.
   - Head confirmed live: d205c158... state MERGED 2026-09-19T20:41:28Z (merge
     3f394190), 9 files, +965/-40; fresh `gh pr diff` byte-identical to the
@@ -73,8 +73,8 @@ deliverables therefore live at artifacts/pr1298_review/{PROGRESS,REPORT}.md.
 - artifacts/pr1298_review/PROGRESS.md (this file)
 - artifacts/pr1298_review/REPORT.md
 - artifacts/pr1298_review/raw/pr1298_diff_fetch_20261028.diff
-- artifacts/pr1298_review/raw/maxime_tt_review_5653225909.md
-- artifacts/pr1298_review/raw/pr1298_{test_own,vet,scratch_all}.log
+- artifacts/pr1298_review/raw/maxime_tt_review_5653225909.body.txt
+- artifacts/pr1298*review/raw/pr1298*{test_own,vet,scratch_all}.log
 - artifacts/pr1298_review/probe_zzz_glm_probe_replace_older_test.go
 - (untracked, head worktree only, no commit):
   /home/c03rad0r/worktrees/pr1298-consistency/.../zzz_glm_probe_replace_older_test.go
