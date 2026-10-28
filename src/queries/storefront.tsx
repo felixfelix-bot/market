@@ -1,4 +1,5 @@
 import { parseStorefrontPage, type StorefrontPage } from '@/lib/schemas/storefront'
+import { verifyNostrEventSignature } from '@/lib/nostr/event-signature'
 import { fetchEvents, subscribe } from '@/lib/nostr/io'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
@@ -41,7 +42,14 @@ export async function fetchStorefrontPage(pubkey: string): Promise<StorefrontPag
 	const candidates = events
 		.filter(
 			(event) =>
-				event.kind === 30024 && event.pubkey === pubkey && event.tags.some((tag) => tag[0] === 'd' && tag[1] === 'storefront-page'),
+				event.kind === 30024 &&
+				event.pubkey === pubkey &&
+				event.tags.some((tag) => tag[0] === 'd' && tag[1] === 'storefront-page') &&
+				// Verify at the parse boundary: a relay can serve an event with the
+				// correct pubkey/kind/d-tag and a forged signature. NDK's own
+				// verification is sampling-based, so check explicitly before the
+				// seller's content is rendered on a public /{name} page.
+				verifyNostrEventSignature(event as Parameters<typeof verifyNostrEventSignature>[0]),
 		)
 		.sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))
 
