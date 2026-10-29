@@ -75,4 +75,14 @@ Only these two tracked task artifacts were changed at the worktree root:
 - `/home/c03rad0r/repos/market/PROGRESS.md`
 - `/home/c03rad0r/repos/market/REPORT.md`
 
-Their previous task-specific contents remain available in branch history. The existing modified/untracked files named by `git status` were left untouched. The initial milestone commit hash and remote read-back are appended to `PROGRESS.md` after execution; the subsequent evidence amendment is committed and pushed separately rather than pre-claimed here.
+Their previous task-specific contents remain available in branch history. The existing modified/untracked files named by `git status` were left untouched.
+
+Initial commit `33defec0ebed97e77f96a2ac66730066e220b6bb` was created with only `REPORT.md` and `PROGRESS.md` staged and pushed to `fork/review/pr1272-noop-20261029`. `git ls-remote fork refs/heads/review/pr1272-noop-20261029` returned that exact SHA. Task-scoped `git diff --check` and `bunx prettier --check REPORT.md PROGRESS.md` passed before that commit. This progress-evidence amendment is committed and pushed separately; its own SHA is verified by remote read-back rather than predicted here.
+
+## Final disposition
+
+No remaining PR-review, Gate 2.5, or gate-state action is required. The only new writes are the two documentation commits on the dedicated review branch. No duplicate review was posted.
+
+PR #1272: https://github.com/PlebeianApp/market/pull/1272
+Existing at-head review: https://github.com/PlebeianApp/market/pull/1272#pullrequestreview-5258972236
+Delivery branch: https://github.com/felixfelix-bot/market/tree/review/pr1272-noop-20261029
