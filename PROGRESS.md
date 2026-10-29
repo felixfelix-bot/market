@@ -33,3 +33,14 @@ finding -> status -> files touched
 - path overlap: 11 of 14 paths are named by ADR-019 (status **Proposed**, commit 2874195f) -> downstream should cite it as a proposal, not accepted architecture -> docs/adr/
 - `git apply --check --3way` fails only on `src/routeTree.gen.ts` (local worktree already dirty there) -> downstream checkout must use a clean tree at 2ae85b6f -> none
 - zero gh writes: only `pr view`, `pr diff`, `api GET commits/<sha>` -> done -> none
+
+## 2026-10-29 — Dedup recon A: kanban grep for existing PR #1284 coverage (card t_75341e70)
+
+finding -> status -> files touched
+
+- `plebeian` board: exact `grep "PR #1284"`, loose `grep -i 1284`, and loose+`--archived` ALL no match (exit 1; board listed 113 / 124 lines) -> done -> artifacts/pr1284_dedupa/{exact,loose,archived}_grep.txt
+- `plebeian-my-prs`: exact no match; loose 1 hit t_587ecb9f (blocked); archived-loose 2 hits (adds t_58015366 archived) — both are PR #1313 cards containing `fix(#1284)`, NOT #1284 coverage -> done -> same files
+- `plebeian-pr-reviews`: exact 11 hits, loose identical, archived-loose 14 hits (adds t_8b491872/t_cf9c28a1 archived, t_fee3df1d archived) -> done -> same files
+- No board errored; zero stderr across all nine commands -> done -> n/a
+- `DEDUP A` comment posted to t_75341e70 via `hermes kanban --board plebeian-pr-reviews comment` — "Comment added to t_75341e70"; show confirms `commented {'author': 'worker-heavy', 'len': 9493}` vs 9494 submitted (trailing newline only, no --max-len trim) -> done -> artifacts/pr1284_dedupa/dedup_a_comment.md, post_comment.py
+- VERDICT: YES — already covered by t_84b7c185 (done/closed) "Publish approved review for PR #1284 and run contribution-PR dedup"; live publish path t_3ead2add (ready) + draft t_15b38bcf (ready); contrib follow-up was t_fee3df1d (archived) -> no new #1284 card warranted -> done -> REPORT.md
