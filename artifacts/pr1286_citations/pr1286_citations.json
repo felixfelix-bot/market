@@ -1,0 +1,194 @@
+[
+  {
+    "claim_id": "C1",
+    "claim_text": "The PR's overall shape (one name driving NIP-05 + vanity URL + a signed page) is the right shape, and its schema-first block model reads cleanly.",
+    "file_path": null,
+    "cited_line": null,
+    "cited_line_end": null,
+    "raw_quote_from_draft": "one name driving NIP-05 + vanity URL + a signed page is the right shape, and the schema-first block model reads cleanly"
+  },
+  {
+    "claim_id": "C2",
+    "claim_text": "The new findings are stated at head 2ae85b6f; the ten previously-raised review items still stand and are not repeated in this draft.",
+    "file_path": null,
+    "cited_line": null,
+    "cited_line_end": null,
+    "raw_quote_from_draft": "New findings at 2ae85b6f; the ten earlier items still stand and are not repeated"
+  },
+  {
+    "claim_id": "C3",
+    "claim_text": "`heroBlock.image` reuses `safeLink`, which only requires an `https:` scheme on any host.",
+    "file_path": "src/lib/schemas/storefront.ts",
+    "cited_line": 28,
+    "cited_line_end": null,
+    "raw_quote_from_draft": "src/lib/schemas/storefront.ts:28 — `heroBlock.image` reuses `safeLink`, which only requires `https:` on *any* host"
+  },
+  {
+    "claim_id": "C4",
+    "claim_text": "A signed page event can therefore make every visitor's browser fetch an arbitrary third-party URL.",
+    "file_path": null,
+    "cited_line": null,
+    "cited_line_end": null,
+    "raw_quote_from_draft": "so a signed page event can make every visitor's browser fetch an arbitrary third-party URL"
+  },
+  {
+    "claim_id": "C5",
+    "claim_text": "`parseStorefrontPage` accepts a hero block whose `image` is an arbitrary attacker host, as demonstrated with `{\"type\":\"hero\",\"title\":\"Hi\",\"image\":\"https://attacker.example/pixel.png?u=1\"}`.",
+    "file_path": null,
+    "cited_line": null,
+    "cited_line_end": null,
+    "raw_quote_from_draft": "Verified: `parseStorefrontPage` accepts `{\"type\":\"hero\",\"title\":\"Hi\",\"image\":\"https://attacker.example/pixel.png?u=1\"}`"
+  },
+  {
+    "claim_id": "C6",
+    "claim_text": "`StorefrontRenderer` puts that image value straight into `<img src>`.",
+    "file_path": "StorefrontRenderer.tsx",
+    "cited_line": 26,
+    "cited_line_end": null,
+    "raw_quote_from_draft": "`StorefrontRenderer.tsx:26` puts it straight into `<img src>`"
+  },
+  {
+    "claim_id": "C7",
+    "claim_text": "A seller, or anyone holding a 30024 they can get rendered, obtains a per-visitor tracking pixel and every visitor's IP/timestamp on a page served as the project's own.",
+    "file_path": null,
+    "cited_line": null,
+    "cited_line_end": null,
+    "raw_quote_from_draft": "so a seller (or anyone holding a 30024 they can get rendered) gets a per-visitor tracking pixel and every visitor's IP/timestamp on a page we serve as ours"
+  },
+  {
+    "claim_id": "C8",
+    "claim_text": "ADR-019 states that images resolve through the existing Blossom/NIP-96 host allowlist.",
+    "file_path": "ADR-019",
+    "cited_line": 146,
+    "cited_line_end": 147,
+    "raw_quote_from_draft": "ADR-019:146-147 says images resolve through the existing Blossom/NIP-96 host allowlist"
+  },
+  {
+    "claim_id": "C9",
+    "claim_text": "No such allowlist exists in this diff, and `src/lib/blossom.ts` only lists servers with no predicate.",
+    "file_path": "src/lib/blossom.ts",
+    "cited_line": null,
+    "cited_line_end": null,
+    "raw_quote_from_draft": "there is no such allowlist in this diff (and `src/lib/blossom.ts` only lists servers, no predicate)"
+  },
+  {
+    "claim_id": "C10",
+    "claim_text": "`fetchStorefrontPage` never Schnorr-verifies the 30024 event at the parse boundary.",
+    "file_path": "src/queries/storefront.tsx",
+    "cited_line": 40,
+    "cited_line_end": null,
+    "raw_quote_from_draft": "src/queries/storefront.tsx:40 — `fetchStorefrontPage` never Schnorr-verifies the 30024 event at the parse boundary"
+  },
+  {
+    "claim_id": "C11",
+    "claim_text": "It filters on `kind`, `pubkey` and the `d` tag only, then hands `event.content` to `parseStorefrontPage`.",
+    "file_path": null,
+    "cited_line": null,
+    "cited_line_end": null,
+    "raw_quote_from_draft": "It filters on `kind`, `pubkey`, and the `d` tag only, then hands `event.content` to `parseStorefrontPage`"
+  },
+  {
+    "claim_id": "C12",
+    "claim_text": "Without a signature check, a forged event with the right pubkey/kind/`d` and a bad signature renders on a public `/{name}` page.",
+    "file_path": null,
+    "cited_line": null,
+    "cited_line_end": null,
+    "raw_quote_from_draft": "Without it a forged event with the right pubkey/kind/`d` and a bad signature renders on a public `/{name}` page"
+  },
+  {
+    "claim_id": "C13",
+    "claim_text": "The repo already states the rule for this case: NDK's sampling verification may skip forged events, so events are verified explicitly.",
+    "file_path": null,
+    "cited_line": null,
+    "cited_line_end": null,
+    "raw_quote_from_draft": "\"NDK's sampling verification may skip forged events, so we verify explicitly\""
+  },
+  {
+    "claim_id": "C14",
+    "claim_text": "`src/queries/liveChat.tsx` calls `verifyNostrEventSignature` before parsing, as the existing precedent.",
+    "file_path": "src/queries/liveChat.tsx",
+    "cited_line": 93,
+    "cited_line_end": 99,
+    "raw_quote_from_draft": "`src/queries/liveChat.tsx:93-99` calls `verifyNostrEventSignature` before parsing"
+  },
+  {
+    "claim_id": "C15",
+    "claim_text": "`src/queries/AGENTS.md` requires validating signature assumptions before treating an event as application state.",
+    "file_path": "src/queries/AGENTS.md",
+    "cited_line": null,
+    "cited_line_end": null,
+    "raw_quote_from_draft": "`src/queries/AGENTS.md` requires validating \"signature assumptions before treating an event as application state\""
+  },
+  {
+    "claim_id": "C16",
+    "claim_text": "The dashboard storefront editor textarea is unconditionally overwritten whenever `publishedPage` changes, with no dirty guard.",
+    "file_path": "src/routes/_dashboard-layout/dashboard/account/storefront.tsx",
+    "cited_line": 56,
+    "cited_line_end": 58,
+    "raw_quote_from_draft": "src/routes/_dashboard-layout/dashboard/account/storefront.tsx:56-58 — the editor textarea is unconditionally overwritten whenever `publishedPage` changes, with no dirty guard"
+  },
+  {
+    "claim_id": "C17",
+    "claim_text": "`useStorefrontPage`'s subscription invalidates on any incoming 30024 from this pubkey, so a draft being typed is silently replaced by the relay copy.",
+    "file_path": "src/queries/storefront.tsx",
+    "cited_line": 59,
+    "cited_line_end": 63,
+    "raw_quote_from_draft": "`useStorefrontPage`'s subscription (`src/queries/storefront.tsx:59-63`) invalidates on *any* incoming 30024 from this pubkey, so a draft being typed is silently replaced by the relay copy"
+  },
+  {
+    "claim_id": "C18",
+    "claim_text": "The overwrite triggers in practice when publishing from a second device/tab while the first is mid-edit.",
+    "file_path": null,
+    "cited_line": null,
+    "cited_line_end": null,
+    "raw_quote_from_draft": "e.g. publishing from a second device/tab while the first is mid-edit"
+  },
+  {
+    "claim_id": "C19",
+    "claim_text": "`StorefrontRenderer` renders a `<main>` inside the `<main>` at the root route, giving a storefront document two main landmarks, contrary to the a11y rule of exactly one per document.",
+    "file_path": "src/components/storefront/StorefrontRenderer.tsx",
+    "cited_line": 74,
+    "cited_line_end": null,
+    "raw_quote_from_draft": "src/components/storefront/StorefrontRenderer.tsx:74 — this renders a `<main>` inside the `<main>`"
+  },
+  {
+    "claim_id": "C19",
+    "claim_text": "`StorefrontRenderer` renders a `<main>` inside the `<main>` at the root route, giving a storefront document two main landmarks, contrary to the a11y rule of exactly one per document.",
+    "file_path": "src/routes/__root.tsx",
+    "cited_line": 102,
+    "cited_line_end": null,
+    "raw_quote_from_draft": "at `src/routes/__root.tsx:102`"
+  },
+  {
+    "claim_id": "C20",
+    "claim_text": "`ProfilePage` returns a `<div>` rather than a `<main>` for the same nested-landmark reason.",
+    "file_path": null,
+    "cited_line": null,
+    "cited_line_end": null,
+    "raw_quote_from_draft": "`ProfilePage` returns a `<div>` for the same reason"
+  },
+  {
+    "claim_id": "C21",
+    "claim_text": "ADR-019 promises two guards for R5: a renderer unit test asserting a hostile page renders inert, and an e2e path purchase → publish → `/{name}` → NIP-05.",
+    "file_path": "docs/adr/ADR-019-unified-storefront-identity-and-page-builder.md",
+    "cited_line": 163,
+    "cited_line_end": 166,
+    "raw_quote_from_draft": "docs/adr/ADR-019-unified-storefront-identity-and-page-builder.md:163-166 promises two guards for R5"
+  },
+  {
+    "claim_id": "C22",
+    "claim_text": "This PR ships only a parser-level test at `src/lib/schemas/storefront.test.ts`.",
+    "file_path": "src/lib/schemas/storefront.test.ts",
+    "cited_line": null,
+    "cited_line_end": null,
+    "raw_quote_from_draft": "This PR ships only `src/lib/schemas/storefront.test.ts` (parser-level)"
+  },
+  {
+    "claim_id": "C23",
+    "claim_text": "No e2e scenario references storefront or 30024, so the render layer is unverified for the exact threats the ADR enumerates.",
+    "file_path": null,
+    "cited_line": null,
+    "cited_line_end": null,
+    "raw_quote_from_draft": "and no e2e scenario references storefront or 30024. So the render layer is unverified for the exact threats the ADR enumerates"
+  }
+]
