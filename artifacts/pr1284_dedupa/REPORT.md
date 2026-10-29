@@ -44,7 +44,6 @@ recording three now-stale claims in it:
   t_8b491872 / t_cf9c28a1 / t_fee3df1d are archived. That earlier sweep never used
   `--archived`, which is exactly why the archived cards were invisible to it.
 
-
 No card was created, edited, transitioned, archived or closed. The only writes to the
 kanban DB are the two comments on the target card (main DEDUP A + addendum).
 
@@ -58,11 +57,11 @@ kanban DB are the two comments on the target card (main DEDUP A + addendum).
 
 ## Findings per board
 
-| board | exact `PR #1284` | loose `1284` | loose + `--archived` |
-|---|---|---|---|
-| plebeian | no match (exit 1) | no match (exit 1) | no match (exit 1) |
-| plebeian-my-prs | no match (exit 1) | 1 hit (t_587ecb9f) | 2 hits (adds t_58015366) |
-| plebeian-pr-reviews | 11 hits | 11 hits (identical) | 14 hits |
+| board               | exact `PR #1284`  | loose `1284`        | loose + `--archived`     |
+| ------------------- | ----------------- | ------------------- | ------------------------ |
+| plebeian            | no match (exit 1) | no match (exit 1)   | no match (exit 1)        |
+| plebeian-my-prs     | no match (exit 1) | 1 hit (t_587ecb9f)  | 2 hits (adds t_58015366) |
+| plebeian-pr-reviews | 11 hits           | 11 hits (identical) | 14 hits                  |
 
 Board line counts prove each board actually listed (empty grep ≠ failed command):
 plebeian 113 lines / 124 with `--archived`; plebeian-my-prs 449 / 576;
@@ -106,5 +105,14 @@ The live publish path is also held by `t_3ead2add` (ready) with draft `t_15b38bc
   No `show` was run against any other card — titles/statuses come only from `ls` output,
   which is what the task asked for.
 - The archived sweep is an addition to the prescribed steps, disclosed as such above.
-- `PROGRESS.md` (root) is appended; this file replaces the previous root `REPORT.md`,
-  following the fleet convention that the root report describes the current offload run.
+- The root `REPORT.md` is a shared, single-slot file on this worktree and a concurrent
+  worker (card t_6a82b4dc, PR #1286 citation inventory) took it over at 05:31, committing
+  226ecc13. Their content is intact and was NOT reverted by me. This file —
+  `artifacts/pr1284_dedupa/REPORT.md` — is therefore the authoritative copy of this run's
+  report; the root file no longer describes this task.
+- My `PROGRESS.md` section survives inside that same commit at line 28.
+- Formatting: `prettier --check` is unsatisfied on this board's artifacts at baseline
+  (25 files fail on HEAD~2, including unrelated committed artifacts), so the repo does not
+  enforce it there. I prettier-formatted this report copy only; `dedup_a_comment.md` is
+  deliberately left byte-exact because its indented `ls` output is evidence and prettier
+  would collapse that whitespace.
