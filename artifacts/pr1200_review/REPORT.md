@@ -20,12 +20,14 @@ The `gh pr review` step of the task is therefore discharged by the existing revi
 ## What the review-of-record carries (12 distinct open items at head)
 
 Review 4981547214 body (4 new items):
+
 1. [RISK] Workflow doesn't distinguish exit code 75 (readiness timeout, process up, operator review) from 70 (structural failure) — the installer invocation in deploy-relay.yml has no `id:`/output capture/conditional; any non-zero exit fails the step identically.
 2. [NIT] `check_growth` error messages lack the context prefix that `check_runtime_sample`'s direct errors carry (can't tell which phase a growth failure came from).
 3. [NIT] `validate_payload()` extracted for testability but has zero test coverage (missing binary, symlinked artifact, mismatched unit all untested).
 4. [NIT] `rollback()` performs `du`/`df` I/O (install-staging-relay.sh:333-335) while the service is stopped — outage clock ticking during measurement.
 
 Issue comment 5354414353 (8 consolidated items):
+
 1. [BLOCK] `observe()` remains untested and un-testable — uses bash `SECONDS` + bare `sleep "$SAMPLE_SECONDS"`, not the `readiness_now`/`readiness_sleep` seams the PR itself introduces; zero `observe_case` among the 33 tests. Testability is the PR's headline, so its refactored steady-state function being outside the harness is the main gap.
 2. [RISK] Workflow public-endpoint `sleep 5` (deploy-relay.yml:152 staging / :219 production) — the fixed-sleep assumption the PR argues against, left half-applied in the same workflow.
 3. [RISK] No upper bound on `RELAY_READINESS_SECONDS` — validate_config (install-staging-relay.sh:53-58) checks `> 0` only; a typo like 60000 blocks the activation gate until the job timeout.
@@ -60,6 +62,7 @@ Both live in this report only — deliberately NOT posted to the PR, per the ded
 The card's named gate-2 profile `worker-reviewer-ds` does not exist on this node (only worker-reviewer-glm/-kimi/-qwen). Discharged as an independent fresh-context delegate audit of the draft verdict — same family as the drafter, disclosed, no cross-family token claimed.
 
 Verdict: **CONFIRMED_W_AMENDMENTS** (artifacts/pr1200_review/audit-1200.md). Three amendments, all applied before the gate-state write and to this report:
+
 1. The 8-item enumeration lives in issue comment 5354414353, not review 4981547214's body; the review body carries 4 different items — 12 distinct open items total, not 8.
 2. My "new" exit-75 observation was a false novelty claim — it duplicates the review-of-record's RISK #1; dropped/re-labeled.
 3. Evidence hygiene: draft cited raw/pr_meta.json before the file was copied into the repo's raw/ dir (now present, byte-copied from the live API pull).
@@ -68,7 +71,7 @@ The auditor also independently confirmed: live head/decision, all 5 review ids +
 
 ## Actions taken
 
-1. Recovered full review history (raw/review_*.md, raw/issuecomment_*.md) — byte-verified against the live API.
+1. Recovered full review history (raw/review*\*.md, raw/issuecomment*\*.md) — byte-verified against the live API.
 2. Re-verified live PR state, head SHA, review decision, CI at head.
 3. Verified the head in an isolated worktree: syntax, tests, shellcheck, carried-item line cites.
 4. Ran my own linus-method sweep for genuinely new issues; cold-audited the draft (CONFIRMED_W_AMENDMENTS, applied).

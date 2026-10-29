@@ -16,16 +16,19 @@ Verification steps below, appended incrementally.
 ## Step 1: Live PR state — CONFIRMED
 
 `gh pr view 1200 --json state,headRefOid,reviewDecision,mergedAt,closedAt`:
+
 - state=OPEN, headRefOid=6b8aeb6ea1b4f2d7f9704e2d2d34e43cc87eff93, reviewDecision=CHANGES_REQUESTED, mergedAt=null, closedAt=null.
 - Matches draft exactly (head == claimed head, OPEN, CHANGES_REQUESTED).
 
 ## Step 2: Review-of-record + consolidated comment — CONFIRMED (existence)
 
 `gh api .../pulls/1200/reviews` (5 reviews total, all at commit 6b8aeb6ea1b4):
+
 - felixfelix-bot id 4981547214, CHANGES_REQUESTED, commit 6b8aeb6ea1b4, at 2026-08-20T10:13:10Z → EXISTS, matches draft.
 - History matches draft: APPROVED 4851923082 (felixfelix-bot, 2026-08-04), COMMENTED 4852408282 (maxime-tt, 2026-08-04), CHANGES_REQUESTED 4852771391 (Franchovy, 2026-08-04), COMMENTED 4936204000 (felixfelix-bot, 2026-08-14, not mentioned in draft but immaterial), CHANGES_REQUESTED 4981547214 (2026-08-20). Review-of-record is the latest review and is CHANGES_REQUESTED at live head.
 
 `gh api .../issues/1200/comments`:
+
 - felixfelix-bot comment id 5354414353 at 2026-08-20T10:04:27Z → EXISTS, matches draft's timestamp.
 - felixfelix-bot comment id 5604800185 at 2026-09-09T15:56:29Z → EXISTS; body confirms contribution PR maximotodev/market#10 offering fixes.
 
@@ -34,17 +37,19 @@ Verification steps below, appended incrementally.
 `gh api .../reviews/4981547214 --jq .body > /tmp/rev498.md` then diff vs raw/review_4981547214_body.md → IDENTICAL. Local evidence is a byte-exact copy of the live review body.
 
 **FINDING on review-body content (draft amendment #1):** The live review 4981547214 body does NOT itself enumerate the 8 consolidated items. It carries **4 new numbered items**:
+
 1. RISK — Workflow doesn't distinguish exit code 75 from 70 (installer step has no id:/output capture/conditional)
 2. NIT — check_growth error messages lack context prefix
 3. NIT — validate_payload extracted but untested
 4. NIT — rollback() performs du/df I/O during service downtime
-…plus an "Already covered (not repeated)" cross-reference list pointing at maxime-tt's 8 items and felixfelix-bot's earlier review items.
+   …plus an "Already covered (not repeated)" cross-reference list pointing at maxime-tt's 8 items and felixfelix-bot's earlier review items.
 
 The **8 consolidated items** (1 BLOCK + 3 RISK + 4 NIT) live in **issue comment 5354414353**. The draft's line "Its body carries 8 items: BLOCK..., RISK..., NITs..." is a MIS-ATTRIBUTION — that enumeration matches the comment, not the review body. (Draft line 12 separately and correctly attributes the 8 items to the comment.) Net effect: **12 distinct open items** (8 carried + 4 from the review body), which strengthens rather than weakens the CHANGES_REQUESTED stance.
 
 ## Step 4: Tests at head — CONFIRMED
 
 `bash /tmp/wt1200/deploy-simple/relay/tests/install-staging-relay-readiness.test.sh`:
+
 - rc=0, 33 `ok` lines, 0 `not ok` lines, final line `1..33` → 33/33 pass. Matches draft.
 - Worktree HEAD verified: 6b8aeb6ea1b4f2d7f9704e2d2d34e43cc87eff93 (detached; only untracked artifacts/audit files).
 - `bash -n` on installer and test file: both clean. Matches draft.
@@ -65,12 +70,14 @@ The **8 consolidated items** (1 BLOCK + 3 RISK + 4 NIT) live in **issue comment 
 ## Step 6: Draft's two "new INFO" claims
 
 (a) Readiness test not wired into PR-branch CI — **CONFIRMED (genuinely new)**:
+
 - `grep -n 'pull_request' deploy-relay.yml` → no matches; triggers are `push: branches: [master]` (paths-filtered) + `workflow_dispatch` only.
 - `grep -rn 'install-staging-relay-readiness' .github/workflows/` → only deploy-relay.yml:55.
 - ci-unit.yml runs on `pull_request` (line 9) but contains no reference to the relay test (`grep -rn 'install-staging-relay' ci-unit.yml` → no matches).
 - Neither the 8 carried items nor the review body's 4 items raised this. Novel observation, substance verified.
 
 (b) Exit 75 invisible to workflow caller — substance CONFIRMED, novelty **REFUTED** (draft amendment #2):
+
 - Substance: deploy-relay.yml:146 `"$deploy_dir/install-staging-relay.sh" "$deploy_dir"` sits inside the "Install relay on staging" appleboy/ssh-action step (:137) with no `id:`, no `continue-on-error:`, no output capture; installer :27 `READINESS_TIMEOUT_STATUS=75` preserved by on_exit (:411-452). CONFIRMED.
 - Novelty: the draft asserts "felixfelix-bot's Aug-20 review-of-record did NOT raise this" — **FALSE**. Review-of-record 4981547214 item #1 is exactly this issue ("RISK — Workflow doesn't distinguish exit code 75 from 70", citing the same missing id:/output capture), graded RISK not INFO. Comment 5604800185 also lists "exit 75-vs-70 distinction" among the review items its contribution PR addresses. The draft's second "new" observation duplicates the review-of-record and must not be presented as new; its RISK grade in the review-of-record also stands over the draft's INFO re-grade.
 
@@ -84,7 +91,7 @@ The **8 consolidated items** (1 BLOCK + 3 RISK + 4 NIT) live in **issue comment 
 
 ## Minor evidence-citation error (draft amendment #3)
 
-Draft line 9 cites "raw/pr_meta.json" — no such file exists in raw/ (15 files, none named pr_meta*). Live state was independently re-verified here and matches the draft's numbers, so the error is citation-hygiene only, not a factual error.
+Draft line 9 cites "raw/pr_meta.json" — no such file exists in raw/ (15 files, none named pr_meta\*). Live state was independently re-verified here and matches the draft's numbers, so the error is citation-hygiene only, not a factual error.
 
 ## Verdict
 

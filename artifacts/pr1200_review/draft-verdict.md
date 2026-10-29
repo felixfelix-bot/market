@@ -7,6 +7,7 @@ Reviewer: worker-reviewer-glm (tier/review-glm, glm-5.3). Method: linus-review (
 The fleet rule (memory): a felixfelix-bot review/comment at a PR's live head IS the review-of-record — dedup, never re-post.
 
 Live state (re-verified 2026-10-29, raw/pr_meta.json):
+
 - PR #1200 state=OPEN, headRefOid=6b8aeb6ea1b4f2d7f9704e2d2d34e43cc87eff93, unchanged since 2026-07-30, reviewDecision=CHANGES_REQUESTED, author=maximotodev.
 - felixfelix-bot CHANGES_REQUESTED review id 4981547214 (2026-08-20T10:13:10Z), commit_id == live head. Its body carries 8 items: BLOCK (observe() untested/un-testable, raised by maxime-tt Aug 4, still unaddressed), RISK (workflow public-endpoint sleep 5; no upper bound on RELAY_READINESS_SECONDS; observe() uses bash SECONDS), NITs (check_journal_window -n 1000 tail; stale elapsed in timeout path; no shellcheck CI; grep-based test wiring).
 - felixfelix-bot consolidated issue comment id 5354414353 (2026-08-20T10:04:27Z) — same 8 items, same head, supersedes the earlier felixfelix-bot APPROVED review 4851923082 (2026-08-04) which is now stale (pre-dates maxime-tt's 8-item COMMENTED review 4852408282 and Franchovy's CHANGES_REQUESTED 4852771391, both 2026-08-04).
