@@ -16,15 +16,37 @@ Comment added to t_75341e70
 Verification from `hermes kanban --board plebeian-pr-reviews show t_75341e70`:
 
 ```
+  Comments (6):
+  ...
+  [2026-10-29 05:21] worker-heavy: DEDUP A
+  ...
+  [2026-10-29 05:26] worker-heavy: DEDUP A — addendum: cross-check against the pre-existing DEDUP A comment on this card
+
+  Events (11):
   [2026-10-29 05:21] commented {'author': 'worker-heavy', 'len': 9493}
+  [2026-10-29 05:26] commented {'author': 'worker-heavy', 'len': 1339}
 ```
 
-9493 chars stored vs 9494 chars submitted (one trailing newline), so the body landed
-verbatim — no `--max-len` trimming occurred. Comment text source of truth:
-`artifacts/pr1284_dedupa/dedup_a_comment.md`.
+The main comment stored 9493 chars vs 9494 submitted (one trailing newline), so the body
+landed verbatim — no `--max-len` trimming occurred. Comment text source of truth:
+`artifacts/pr1284_dedupa/dedup_a_comment.md` and `dedup_a_addendum.md`.
 
-No card was created, edited, transitioned, archived or closed. The only write to the
-kanban DB is the one comment on the target card.
+## Pre-existing DEDUP A comment found on this same card
+
+The card was dedup-swept BEFORE this run: a `DEDUP A` comment already existed at
+`[2026-09-26 21:13] market-master` (len 5048) reaching the same YES verdict. The 2026-10-29
+run therefore re-ran every command live instead of trusting it, and posted an addendum
+recording three now-stale claims in it:
+
+- t_587ecb9f is described as **done** there; current `ls` shows **blocked**.
+- t_84b7c185 is described as **scheduled** there; current `ls` shows **done (closed)**.
+- It states "None blocked/archived"; today t_cb288450 + t_cdda8b3f are blocked and
+  t_8b491872 / t_cf9c28a1 / t_fee3df1d are archived. That earlier sweep never used
+  `--archived`, which is exactly why the archived cards were invisible to it.
+
+
+No card was created, edited, transitioned, archived or closed. The only writes to the
+kanban DB are the two comments on the target card (main DEDUP A + addendum).
 
 ## Raw evidence files
 
