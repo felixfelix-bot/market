@@ -1,0 +1,925 @@
+diff --git a/src/components/storefront/StorefrontRenderer.tsx b/src/components/storefront/StorefrontRenderer.tsx
+new file mode 100644
+index 000000000..5252e7ff3
+--- /dev/null
++++ b/src/components/storefront/StorefrontRenderer.tsx
+@@ -0,0 +1,80 @@
++import type { StorefrontBlock, StorefrontPage } from '@/lib/schemas/storefront'
++
++interface StorefrontRendererProps {
++	page: StorefrontPage
++}
++
++function SafeLink({ href, children }: { href: string; children: React.ReactNode }) {
++	const external = href.startsWith('https://')
++	return (
++		<a
++			href={href}
++			target={external ? '_blank' : undefined}
++			rel={external ? 'noreferrer' : undefined}
++			className="text-primary underline underline-offset-4 hover:opacity-80"
++		>
++			{children}
++		</a>
++	)
++}
++
++function StorefrontBlockView({ block }: { block: StorefrontBlock }) {
++	switch (block.type) {
++		case 'hero':
++			return (
++				<section className="overflow-hidden rounded-lg border bg-card">
++					{block.image ? <img src={block.image} alt="" className="max-h-80 w-full object-cover" /> : null}
++					<div className="space-y-3 p-6">
++						<h1 className="text-3xl font-semibold tracking-tight">{block.title}</h1>
++						{block.text ? <p className="max-w-2xl text-muted-foreground">{block.text}</p> : null}
++						{block.link ? <SafeLink href={block.link}>Explore</SafeLink> : null}
++					</div>
++				</section>
++			)
++		case 'text':
++			return <p className="whitespace-pre-wrap text-base leading-7">{block.text}</p>
++		case 'linkList':
++			return (
++				<nav aria-label="Storefront links" className="grid gap-3 sm:grid-cols-2">
++					{block.links.map((link) => (
++						<SafeLink key={`${link.label}-${link.url}`} href={link.url}>
++							{link.label}
++						</SafeLink>
++					))}
++				</nav>
++			)
++		case 'contact':
++			return (
++				<section className="border-l-2 border-primary pl-4">
++					<h2 className="font-medium">{block.label}</h2>
++					<p className="mt-1 whitespace-pre-wrap text-muted-foreground">{block.text}</p>
++				</section>
++			)
++		case 'productGrid':
++			return (
++				<section className="space-y-3">
++					<h2 className="text-xl font-semibold">Featured products</h2>
++					<p className="text-sm text-muted-foreground">{block.products.length} product references published by this seller.</p>
++					<SafeLink href="/products">Browse products</SafeLink>
++				</section>
++			)
++		case 'collectionRow':
++			return (
++				<section className="space-y-3">
++					<h2 className="text-xl font-semibold">Collection</h2>
++					<p className="text-sm text-muted-foreground">A published collection from this seller.</p>
++					<SafeLink href="/community">Browse collection</SafeLink>
++				</section>
++			)
++	}
++}
++
++export function StorefrontRenderer({ page }: StorefrontRendererProps) {
++	return (
++		<main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
++			{page.blocks.map((block, index) => (
++				<StorefrontBlockView key={`${block.type}-${index}`} block={block} />
++			))}
++		</main>
++	)
++}
+diff --git a/src/config/dashboardNavigation.ts b/src/config/dashboardNavigation.ts
+index 448c99d80..6cdc2f09c 100644
+--- a/src/config/dashboardNavigation.ts
++++ b/src/config/dashboardNavigation.ts
+@@ -61,12 +61,8 @@ export const dashboardNavigation: NavSection[] = [
+ 		title: 'ACCOUNT',
+ 		items: [
+ 			{
+-				title: '✨ Vanity URL',
+-				path: '/dashboard/account/vanity-url',
+-			},
+-			{
+-				title: '📧 Nostr Address',
+-				path: '/dashboard/account/nostr-address',
++				title: '✨ Storefront',
++				path: '/dashboard/account/storefront',
+ 			},
+ 			{
+ 				title: '👤 Profile',
+diff --git a/src/lib/schemas/storefront.test.ts b/src/lib/schemas/storefront.test.ts
+new file mode 100644
+index 000000000..1ec8413df
+--- /dev/null
++++ b/src/lib/schemas/storefront.test.ts
+@@ -0,0 +1,28 @@
++import { describe, expect, test } from 'bun:test'
++import { parseStorefrontPage } from './storefront'
++
++describe('parseStorefrontPage', () => {
++	test('keeps valid blocks and drops unsafe or unknown blocks', () => {
++		const page = parseStorefrontPage(
++			JSON.stringify({
++				version: 1,
++				blocks: [
++					{ type: 'text', text: 'Welcome' },
++					{ type: 'linkList', links: [{ label: 'Shop', url: '/products' }] },
++					{ type: 'text', text: '<script src="https://evil.example/x.js">' },
++					{ type: 'linkList', links: [{ label: 'Bad', url: 'javascript:alert(1)' }] },
++					{ type: 'unknown', value: 'ignored' },
++					{ type: 'text', text: 'x'.repeat(5001) },
++				],
++			}),
++		)
++
++		expect(page?.blocks).toHaveLength(2)
++		expect(page?.blocks[0]).toEqual({ type: 'text', text: 'Welcome' })
++	})
++
++	test('rejects malformed documents', () => {
++		expect(parseStorefrontPage('{"version":2,"blocks":[]}')).toBeNull()
++		expect(parseStorefrontPage('not json')).toBeNull()
++	})
++})
+diff --git a/src/lib/schemas/storefront.ts b/src/lib/schemas/storefront.ts
+new file mode 100644
+index 000000000..feda32eab
+--- /dev/null
++++ b/src/lib/schemas/storefront.ts
+@@ -0,0 +1,98 @@
++import { z } from 'zod'
++
++const safeLink = z
++	.string()
++	.max(2048)
++	.refine((value) => {
++		if (value.startsWith('/')) return !value.startsWith('//')
++		try {
++			return new URL(value).protocol === 'https:'
++		} catch {
++			return false
++		}
++	}, 'Only in-app paths and https URLs are allowed')
++
++const productCoordinate = z.string().regex(/^30402:[0-9a-f]{64}:.+$/, 'Invalid product coordinate')
++const safeText = (max: number) =>
++	z
++		.string()
++		.trim()
++		.min(1)
++		.max(max)
++		.refine((value) => !/<[a-z!/]/i.test(value), 'Raw HTML is not allowed')
++
++const heroBlock = z.object({
++	type: z.literal('hero'),
++	title: z.string().trim().min(1).max(160),
++	text: safeText(500).optional(),
++	image: safeLink.optional(),
++	link: safeLink.optional(),
++})
++
++const textBlock = z.object({
++	type: z.literal('text'),
++	text: safeText(5000),
++})
++
++const productGridBlock = z.object({
++	type: z.literal('productGrid'),
++	products: z.array(productCoordinate).min(1).max(24),
++})
++
++const collectionRowBlock = z.object({
++	type: z.literal('collectionRow'),
++	collection: z.string().regex(/^30405:[0-9a-f]{64}:.+$/, 'Invalid collection coordinate'),
++})
++
++const linkListBlock = z.object({
++	type: z.literal('linkList'),
++	links: z
++		.array(
++			z.object({
++				label: z.string().trim().min(1).max(80),
++				url: safeLink,
++			}),
++		)
++		.min(1)
++		.max(12),
++})
++
++const contactBlock = z.object({
++	type: z.literal('contact'),
++	label: z.string().trim().min(1).max(80),
++	text: safeText(500),
++})
++
++export const StorefrontBlockSchema = z.discriminatedUnion('type', [
++	heroBlock,
++	textBlock,
++	productGridBlock,
++	collectionRowBlock,
++	linkListBlock,
++	contactBlock,
++])
++
++export const StorefrontPageSchema = z.object({
++	version: z.literal(1),
++	blocks: z.array(StorefrontBlockSchema).max(40),
++})
++
++export type StorefrontBlock = z.infer<typeof StorefrontBlockSchema>
++export type StorefrontPage = z.infer<typeof StorefrontPageSchema>
++
++/** Parse a page defensively: malformed individual blocks do not take down the page. */
++export function parseStorefrontPage(content: string): StorefrontPage | null {
++	try {
++		const raw = JSON.parse(content) as { version?: unknown; blocks?: unknown }
++		if (raw.version !== 1 || !Array.isArray(raw.blocks)) return null
++
++		const blocks = raw.blocks.flatMap((block) => {
++			const parsed = StorefrontBlockSchema.safeParse(block)
++			return parsed.success ? [parsed.data] : []
++		})
++
++		return StorefrontPageSchema.parse({ version: 1, blocks })
++	} catch {
++		return null
++	}
++}
+diff --git a/src/lib/zapPurchase.ts b/src/lib/zapPurchase.ts
+index 6041b1ed3..a0b5d894c 100644
+--- a/src/lib/zapPurchase.ts
++++ b/src/lib/zapPurchase.ts
+@@ -92,3 +92,16 @@ export async function purchaseNip05ForPubkey(
+ 		amountSats: options.amountSats,
+ 	})
+ }
++
++export async function purchaseStorefrontIdentity(
++	ctx: PurchaseContext,
++	options: { name: string; amountSats: number },
++): Promise<ZapPurchaseInvoiceResult> {
++	return zapPurchase({
++		...ctx,
++		zapLabel: 'storefront-register',
++		registryTag: 'name',
++		registryKey: options.name.toLowerCase(),
++		amountSats: options.amountSats,
++	})
++}
+diff --git a/src/publish/storefront-page.ts b/src/publish/storefront-page.ts
+new file mode 100644
+index 000000000..3558f2676
+--- /dev/null
++++ b/src/publish/storefront-page.ts
+@@ -0,0 +1,17 @@
++import { StorefrontPageSchema, type StorefrontPage } from '@/lib/schemas/storefront'
++import { getNostrIo } from '@/lib/nostr/io'
++
++export async function publishStorefrontPage(page: StorefrontPage) {
++	const validatedPage = StorefrontPageSchema.parse(page)
++	const user = await getNostrIo().getUser()
++	if (!user) throw new Error('No active user')
++
++	const event = await getNostrIo().sign({
++		kind: 30024,
++		content: JSON.stringify(validatedPage),
++		tags: [['d', 'storefront-page']],
++		created_at: Math.floor(Date.now() / 1000),
++	})
++	await getNostrIo().publish(event)
++	return event
++}
+diff --git a/src/queries/queryKeyFactory.ts b/src/queries/queryKeyFactory.ts
+index 3481641f9..77d18da53 100644
+--- a/src/queries/queryKeyFactory.ts
++++ b/src/queries/queryKeyFactory.ts
+@@ -92,6 +92,11 @@ export const configKeys = {
+ 	featuredUsers: (appPubkey: string) => [...configKeys.all, 'featuredUsers', appPubkey] as const,
+ } as const
+ 
++export const storefrontKeys = {
++	all: ['storefront'] as const,
++	page: (pubkey: string) => [...storefrontKeys.all, 'page', pubkey] as const,
++} as const
++
+ export const appSettingsKeys = {
+ 	all: ['appSettings'] as const,
+ } as const
+diff --git a/src/queries/storefront.tsx b/src/queries/storefront.tsx
+new file mode 100644
+index 000000000..dd4b04e1b
+--- /dev/null
++++ b/src/queries/storefront.tsx
+@@ -0,0 +1,74 @@
++import { parseStorefrontPage, type StorefrontPage } from '@/lib/schemas/storefront'
++import { fetchEvents, subscribe } from '@/lib/nostr/io'
++import { useQuery, useQueryClient } from '@tanstack/react-query'
++import { useEffect } from 'react'
++import { storefrontKeys } from './queryKeyFactory'
++
++export interface StorefrontIdentityEntry {
++	name: string
++	pubkey: string
++	validUntil: number
++}
++
++export interface StorefrontPageData {
++	page: StorefrontPage
++	eventId: string
++	createdAt: number
++}
++
++export async function fetchStorefrontIdentities(appPubkey: string): Promise<StorefrontIdentityEntry[]> {
++	const events = await fetchEvents({ kinds: [30000], authors: [appPubkey], '#d': ['storefront-names'], limit: 20 })
++	const latest = events.sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))[0]
++	if (!latest) return []
++	return latest.tags.flatMap((tag) => {
++		if (tag[0] !== 'name' || !tag[1] || !tag[2] || !tag[3]) return []
++		const validUntil = Number.parseInt(tag[3], 10)
++		return Number.isFinite(validUntil) ? [{ name: tag[1].toLowerCase(), pubkey: tag[2], validUntil }] : []
++	})
++}
++
++export function useStorefrontIdentities(appPubkey: string | undefined) {
++	return useQuery({
++		queryKey: storefrontKeys.all,
++		queryFn: () => fetchStorefrontIdentities(appPubkey as string),
++		enabled: Boolean(appPubkey),
++		staleTime: 30_000,
++	})
++}
++
++export async function fetchStorefrontPage(pubkey: string): Promise<StorefrontPageData | null> {
++	const events = await fetchEvents({ kinds: [30024], authors: [pubkey], '#d': ['storefront-page'], limit: 20 })
++	const candidates = events
++		.filter(
++			(event) =>
++				event.kind === 30024 && event.pubkey === pubkey && event.tags.some((tag) => tag[0] === 'd' && tag[1] === 'storefront-page'),
++		)
++		.sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))
++
++	for (const event of candidates) {
++		const page = parseStorefrontPage(event.content)
++		if (page) return { page, eventId: event.id, createdAt: event.created_at ?? 0 }
++	}
++
++	return null
++}
++
++export function useStorefrontPage(pubkey: string | null | undefined) {
++	const queryClient = useQueryClient()
++
++	useEffect(() => {
++		if (!pubkey) return
++		return subscribe(
++			{ kinds: [30024], authors: [pubkey], '#d': ['storefront-page'] },
++			() => void queryClient.invalidateQueries({ queryKey: storefrontKeys.page(pubkey) }),
++			{ closeOnEose: false },
++		)
++	}, [pubkey, queryClient])
++
++	return useQuery({
++		queryKey: storefrontKeys.page(pubkey ?? ''),
++		queryFn: () => fetchStorefrontPage(pubkey as string),
++		enabled: Boolean(pubkey),
++		staleTime: 60_000,
++	})
++}
+diff --git a/src/routeTree.gen.ts b/src/routeTree.gen.ts
+index f556691dc..db5c75663 100644
+--- a/src/routeTree.gen.ts
++++ b/src/routeTree.gen.ts
+@@ -43,6 +43,7 @@ import { Route as DashboardLayoutDashboardAppSettingsBlacklistsRouteImport } fro
+ import { Route as DashboardLayoutDashboardAppSettingsAppMiscelleneousRouteImport } from './routes/_dashboard-layout/dashboard/app-settings/app-miscelleneous'
+ import { Route as DashboardLayoutDashboardAccountYourPurchasesRouteImport } from './routes/_dashboard-layout/dashboard/account/your-purchases'
+ import { Route as DashboardLayoutDashboardAccountVanityUrlRouteImport } from './routes/_dashboard-layout/dashboard/account/vanity-url'
++import { Route as DashboardLayoutDashboardAccountStorefrontRouteImport } from './routes/_dashboard-layout/dashboard/account/storefront'
+ import { Route as DashboardLayoutDashboardAccountReceivingPaymentsRouteImport } from './routes/_dashboard-layout/dashboard/account/receiving-payments'
+ import { Route as DashboardLayoutDashboardAccountProfileRouteImport } from './routes/_dashboard-layout/dashboard/account/profile'
+ import { Route as DashboardLayoutDashboardAccountPreferencesRouteImport } from './routes/_dashboard-layout/dashboard/account/preferences'
+@@ -225,6 +226,11 @@ const DashboardLayoutDashboardAccountVanityUrlRoute = DashboardLayoutDashboardAc
+ 	path: '/dashboard/account/vanity-url',
+ 	getParentRoute: () => DashboardLayoutRoute,
+ } as any)
++const DashboardLayoutDashboardAccountStorefrontRoute = DashboardLayoutDashboardAccountStorefrontRouteImport.update({
++	id: '/dashboard/account/storefront',
++	path: '/dashboard/account/storefront',
++	getParentRoute: () => DashboardLayoutRoute,
++} as any)
+ const DashboardLayoutDashboardAccountReceivingPaymentsRoute = DashboardLayoutDashboardAccountReceivingPaymentsRouteImport.update({
+ 	id: '/dashboard/account/receiving-payments',
+ 	path: '/dashboard/account/receiving-payments',
+@@ -311,6 +317,7 @@ export interface FileRoutesByFullPath {
+ 	'/dashboard/account/preferences': typeof DashboardLayoutDashboardAccountPreferencesRoute
+ 	'/dashboard/account/profile': typeof DashboardLayoutDashboardAccountProfileRoute
+ 	'/dashboard/account/receiving-payments': typeof DashboardLayoutDashboardAccountReceivingPaymentsRoute
++	'/dashboard/account/storefront': typeof DashboardLayoutDashboardAccountStorefrontRoute
+ 	'/dashboard/account/vanity-url': typeof DashboardLayoutDashboardAccountVanityUrlRoute
+ 	'/dashboard/account/your-purchases': typeof DashboardLayoutDashboardAccountYourPurchasesRoute
+ 	'/dashboard/app-settings/app-miscelleneous': typeof DashboardLayoutDashboardAppSettingsAppMiscelleneousRoute
+@@ -358,6 +365,7 @@ export interface FileRoutesByTo {
+ 	'/dashboard/account/preferences': typeof DashboardLayoutDashboardAccountPreferencesRoute
+ 	'/dashboard/account/profile': typeof DashboardLayoutDashboardAccountProfileRoute
+ 	'/dashboard/account/receiving-payments': typeof DashboardLayoutDashboardAccountReceivingPaymentsRoute
++	'/dashboard/account/storefront': typeof DashboardLayoutDashboardAccountStorefrontRoute
+ 	'/dashboard/account/vanity-url': typeof DashboardLayoutDashboardAccountVanityUrlRoute
+ 	'/dashboard/account/your-purchases': typeof DashboardLayoutDashboardAccountYourPurchasesRoute
+ 	'/dashboard/app-settings/app-miscelleneous': typeof DashboardLayoutDashboardAppSettingsAppMiscelleneousRoute
+@@ -407,6 +415,7 @@ export interface FileRoutesById {
+ 	'/_dashboard-layout/dashboard/account/preferences': typeof DashboardLayoutDashboardAccountPreferencesRoute
+ 	'/_dashboard-layout/dashboard/account/profile': typeof DashboardLayoutDashboardAccountProfileRoute
+ 	'/_dashboard-layout/dashboard/account/receiving-payments': typeof DashboardLayoutDashboardAccountReceivingPaymentsRoute
++	'/_dashboard-layout/dashboard/account/storefront': typeof DashboardLayoutDashboardAccountStorefrontRoute
+ 	'/_dashboard-layout/dashboard/account/vanity-url': typeof DashboardLayoutDashboardAccountVanityUrlRoute
+ 	'/_dashboard-layout/dashboard/account/your-purchases': typeof DashboardLayoutDashboardAccountYourPurchasesRoute
+ 	'/_dashboard-layout/dashboard/app-settings/app-miscelleneous': typeof DashboardLayoutDashboardAppSettingsAppMiscelleneousRoute
+@@ -456,6 +465,7 @@ export interface FileRouteTypes {
+ 		| '/dashboard/account/preferences'
+ 		| '/dashboard/account/profile'
+ 		| '/dashboard/account/receiving-payments'
++		| '/dashboard/account/storefront'
+ 		| '/dashboard/account/vanity-url'
+ 		| '/dashboard/account/your-purchases'
+ 		| '/dashboard/app-settings/app-miscelleneous'
+@@ -503,6 +513,7 @@ export interface FileRouteTypes {
+ 		| '/dashboard/account/preferences'
+ 		| '/dashboard/account/profile'
+ 		| '/dashboard/account/receiving-payments'
++		| '/dashboard/account/storefront'
+ 		| '/dashboard/account/vanity-url'
+ 		| '/dashboard/account/your-purchases'
+ 		| '/dashboard/app-settings/app-miscelleneous'
+@@ -551,6 +562,7 @@ export interface FileRouteTypes {
+ 		| '/_dashboard-layout/dashboard/account/preferences'
+ 		| '/_dashboard-layout/dashboard/account/profile'
+ 		| '/_dashboard-layout/dashboard/account/receiving-payments'
++		| '/_dashboard-layout/dashboard/account/storefront'
+ 		| '/_dashboard-layout/dashboard/account/vanity-url'
+ 		| '/_dashboard-layout/dashboard/account/your-purchases'
+ 		| '/_dashboard-layout/dashboard/app-settings/app-miscelleneous'
+@@ -834,6 +846,13 @@ declare module '@tanstack/react-router' {
+ 			preLoaderRoute: typeof DashboardLayoutDashboardAccountVanityUrlRouteImport
+ 			parentRoute: typeof DashboardLayoutRoute
+ 		}
++		'/_dashboard-layout/dashboard/account/storefront': {
++			id: '/_dashboard-layout/dashboard/account/storefront'
++			path: '/dashboard/account/storefront'
++			fullPath: '/dashboard/account/storefront'
++			preLoaderRoute: typeof DashboardLayoutDashboardAccountStorefrontRouteImport
++			parentRoute: typeof DashboardLayoutRoute
++		}
+ 		'/_dashboard-layout/dashboard/account/receiving-payments': {
+ 			id: '/_dashboard-layout/dashboard/account/receiving-payments'
+ 			path: '/dashboard/account/receiving-payments'
+@@ -982,6 +1001,7 @@ interface DashboardLayoutRouteChildren {
+ 	DashboardLayoutDashboardAccountPreferencesRoute: typeof DashboardLayoutDashboardAccountPreferencesRoute
+ 	DashboardLayoutDashboardAccountProfileRoute: typeof DashboardLayoutDashboardAccountProfileRoute
+ 	DashboardLayoutDashboardAccountReceivingPaymentsRoute: typeof DashboardLayoutDashboardAccountReceivingPaymentsRoute
++	DashboardLayoutDashboardAccountStorefrontRoute: typeof DashboardLayoutDashboardAccountStorefrontRoute
+ 	DashboardLayoutDashboardAccountVanityUrlRoute: typeof DashboardLayoutDashboardAccountVanityUrlRoute
+ 	DashboardLayoutDashboardAccountYourPurchasesRoute: typeof DashboardLayoutDashboardAccountYourPurchasesRoute
+ 	DashboardLayoutDashboardAppSettingsAppMiscelleneousRoute: typeof DashboardLayoutDashboardAppSettingsAppMiscelleneousRoute
+@@ -1009,6 +1029,7 @@ const DashboardLayoutRouteChildren: DashboardLayoutRouteChildren = {
+ 	DashboardLayoutDashboardAccountPreferencesRoute: DashboardLayoutDashboardAccountPreferencesRoute,
+ 	DashboardLayoutDashboardAccountProfileRoute: DashboardLayoutDashboardAccountProfileRoute,
+ 	DashboardLayoutDashboardAccountReceivingPaymentsRoute: DashboardLayoutDashboardAccountReceivingPaymentsRoute,
++	DashboardLayoutDashboardAccountStorefrontRoute: DashboardLayoutDashboardAccountStorefrontRoute,
+ 	DashboardLayoutDashboardAccountVanityUrlRoute: DashboardLayoutDashboardAccountVanityUrlRoute,
+ 	DashboardLayoutDashboardAccountYourPurchasesRoute: DashboardLayoutDashboardAccountYourPurchasesRoute,
+ 	DashboardLayoutDashboardAppSettingsAppMiscelleneousRoute: DashboardLayoutDashboardAppSettingsAppMiscelleneousRoute,
+diff --git a/src/routes/$vanityName.tsx b/src/routes/$vanityName.tsx
+index 4c0d90b47..cf384fd7f 100644
+--- a/src/routes/$vanityName.tsx
++++ b/src/routes/$vanityName.tsx
+@@ -1,5 +1,7 @@
+ import { ProfilePage } from '@/components/pages/ProfilePage'
++import { StorefrontRenderer } from '@/components/storefront/StorefrontRenderer'
+ import { vanityActions, vanityStore } from '@/lib/stores/vanity'
++import { useStorefrontPage } from '@/queries/storefront'
+ import { createFileRoute, useNavigate } from '@tanstack/react-router'
+ import { useEffect, useMemo } from 'react'
+ import { useStore } from '@tanstack/react-store'
+@@ -19,6 +21,7 @@ function VanityRouteComponent() {
+ 		const entry = vanityActions.resolveVanity(vanityName)
+ 		return entry?.pubkey ?? null
+ 	}, [vanityName, isLoaded, lastUpdated])
++	const { data: storefront } = useStorefrontPage(resolvedPubkey)
+ 
+ 	// Re-check resolution when store updates
+ 	useEffect(() => {
+@@ -39,6 +42,7 @@ function VanityRouteComponent() {
+ 
+ 	// Vanity URL resolved - render profile page directly
+ 	if (resolvedPubkey) {
++		if (storefront?.page) return <StorefrontRenderer page={storefront.page} />
+ 		return <ProfilePage profileId={resolvedPubkey} />
+ 	}
+ 
+diff --git a/src/routes/_dashboard-layout/dashboard/account/storefront.tsx b/src/routes/_dashboard-layout/dashboard/account/storefront.tsx
+new file mode 100644
+index 000000000..a6ecb156d
+--- /dev/null
++++ b/src/routes/_dashboard-layout/dashboard/account/storefront.tsx
+@@ -0,0 +1,170 @@
++import { Button } from '@/components/ui/button'
++import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
++import { Input } from '@/components/ui/input'
++import { Label } from '@/components/ui/label'
++import { Textarea } from '@/components/ui/textarea'
++import { LightningPaymentProcessor } from '@/components/lightning/LightningPaymentProcessor'
++import { STOREFRONT_PRICING } from '@/server/StorefrontIdentityManager'
++import { createFileRoute } from '@tanstack/react-router'
++import { useEffect, useMemo, useState } from 'react'
++import { toast } from 'sonner'
++import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
++import { useDashboardTitle } from '@/routes/_dashboard-layout'
++import { ndkActions } from '@/lib/stores/ndk'
++import { useConfigQuery } from '@/queries/config'
++import { useStorefrontIdentities, useStorefrontPage } from '@/queries/storefront'
++import { purchaseStorefrontIdentity } from '@/lib/zapPurchase'
++import { parseStorefrontPage } from '@/lib/schemas/storefront'
++import { publishStorefrontPage } from '@/publish/storefront-page'
++import { storefrontKeys } from '@/queries/queryKeyFactory'
++import { useQueryClient } from '@tanstack/react-query'
++
++export const Route = createFileRoute('/_dashboard-layout/dashboard/account/storefront')({
++	component: StorefrontComponent,
++})
++
++const DEFAULT_PAGE = JSON.stringify(
++	{
++		version: 1,
++		blocks: [{ type: 'hero', title: 'Welcome', text: 'A storefront page managed by its seller.' }],
++	},
++	null,
++	2,
++)
++
++function StorefrontComponent() {
++	useDashboardTitle('Storefront')
++	const ndk = ndkActions.getNDK()
++	const pubkey = ndk?.activeUser?.pubkey
++	const { data: config } = useConfigQuery()
++	const { data: identities = [] } = useStorefrontIdentities(config?.appPublicKey)
++	const currentIdentity = useMemo(
++		() => identities.find((entry) => entry.pubkey === pubkey && entry.validUntil > Date.now() / 1000),
++		[identities, pubkey],
++	)
++	const { data: publishedPage } = useStorefrontPage(pubkey)
++	const queryClient = useQueryClient()
++	const [name, setName] = useState('')
++	const [content, setContent] = useState(DEFAULT_PAGE)
++	const [isPublishing, setIsPublishing] = useState(false)
++	const [payment, setPayment] = useState<{ invoice: string; amount: number; invoiceId: string } | null>(null)
++
++	useEffect(() => {
++		if (currentIdentity) setName(currentIdentity.name)
++	}, [currentIdentity])
++
++	useEffect(() => {
++		if (publishedPage) setContent(JSON.stringify(publishedPage.page, null, 2))
++	}, [publishedPage])
++
++	const normalizedName = name.trim().toLowerCase()
++	const nameTaken = identities.some(
++		(entry) => entry.name === normalizedName && entry.validUntil > Date.now() / 1000 && entry.pubkey !== pubkey,
++	)
++	const nameValid = /^[a-z0-9][a-z0-9_-]{1,28}[a-z0-9]$/.test(normalizedName)
++
++	const publishPage = async () => {
++		const page = parseStorefrontPage(content)
++		if (!page) {
++			toast.error('Page JSON is invalid or contains unsupported blocks')
++			return
++		}
++		setIsPublishing(true)
++		try {
++			await publishStorefrontPage(page)
++			await queryClient.invalidateQueries({ queryKey: ['storefront', 'page', pubkey] })
++			toast.success('Storefront page published')
++		} catch (error) {
++			toast.error(error instanceof Error ? error.message : 'Failed to publish storefront page')
++		} finally {
++			setIsPublishing(false)
++		}
++	}
++
++	const buyName = async (amountSats: number) => {
++		if (!config?.appPublicKey || !config.appRelay || !ndk || !nameValid || nameTaken) return
++		try {
++			const result = await purchaseStorefrontIdentity(
++				{ ndk, appPubkey: config.appPublicKey, appRelay: config.appRelay },
++				{ name: normalizedName, amountSats },
++			)
++			setPayment({ invoice: result.pr, amount: amountSats, invoiceId: result.invoiceId })
++		} catch (error) {
++			toast.error(error instanceof Error ? error.message : 'Failed to create storefront invoice')
++		}
++	}
++
++	if (!pubkey) {
++		return <p className="p-8 text-muted-foreground">Connect a Nostr account to manage your storefront.</p>
++	}
++
++	return (
++		<div className="space-y-6 p-4 lg:p-8">
++			<div>
++				<h1 className="text-2xl font-bold">Storefront</h1>
++				<p className="text-muted-foreground">One name for your NIP-05 address, storefront URL, and published page.</p>
++			</div>
++			<Card>
++				<CardHeader>
++					<CardTitle>Storefront identity</CardTitle>
++					<CardDescription>{currentIdentity ? 'Your identity is active.' : 'Choose an available name to begin.'}</CardDescription>
++				</CardHeader>
++				<CardContent className="space-y-4">
++					<Label htmlFor="storefront-name">Name</Label>
++					<Input id="storefront-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="alice-store" />
++					<p className="text-sm text-muted-foreground">
++						{normalizedName
++							? `${normalizedName}@${window.location.hostname} · ${window.location.origin}/${normalizedName}`
++							: 'Use 3-30 lowercase letters, numbers, hyphens, or underscores.'}
++					</p>
++					{!currentIdentity && nameValid && !nameTaken ? (
++						<div className="flex flex-wrap gap-2">
++							{Object.values(STOREFRONT_PRICING).map((tier) => (
++								<Button key={tier.label} onClick={() => void buyName(tier.sats)}>
++									Buy {tier.label} · {tier.sats} sats
++								</Button>
++							))}
++						</div>
++					) : null}
++					{nameTaken ? <p className="text-sm text-destructive">That name is already active.</p> : null}
++				</CardContent>
++			</Card>
++			<Card>
++				<CardHeader>
++					<CardTitle>Page content</CardTitle>
++					<CardDescription>Publish validated storefront blocks as a seller-signed Nostr event.</CardDescription>
++				</CardHeader>
++				<CardContent className="space-y-4">
++					<Textarea value={content} onChange={(event) => setContent(event.target.value)} rows={18} className="font-mono text-sm" />
++					<Button onClick={() => void publishPage()} disabled={!currentIdentity || isPublishing}>
++						{isPublishing ? 'Publishing...' : 'Publish page'}
++					</Button>
++				</CardContent>
++			</Card>
++			<Dialog open={Boolean(payment)} onOpenChange={(open) => !open && setPayment(null)}>
++				<DialogContent>
++					<DialogHeader>
++						<DialogTitle>Complete storefront purchase</DialogTitle>
++					</DialogHeader>
++					{payment ? (
++						<LightningPaymentProcessor
++							data={{
++								amount: payment.amount,
++								description: `Storefront name: ${normalizedName}`,
++								invoiceId: payment.invoiceId,
++								bolt11: payment.invoice,
++								isZap: true,
++								requireZapReceipt: true,
++							}}
++							onPaymentComplete={() => {
++								setPayment(null)
++								void queryClient.invalidateQueries({ queryKey: storefrontKeys.all })
++							}}
++							onPaymentFailed={(result) => toast.error(result.error || 'Payment failed')}
++						/>
++					) : null}
++				</DialogContent>
++			</Dialog>
++		</div>
++	)
++}
+diff --git a/src/server/EventHandler.ts b/src/server/EventHandler.ts
+index 3ef27b029..1a5dad2d5 100644
+--- a/src/server/EventHandler.ts
++++ b/src/server/EventHandler.ts
+@@ -6,6 +6,7 @@ import { BootstrapManagerImpl } from './BootstrapManager'
+ import { BlacklistManagerImpl } from './BlacklistManager'
+ import { VanityManagerImpl } from './VanityManager'
+ import { Nip05ManagerImpl } from './Nip05Manager'
++import { StorefrontIdentityManager } from './StorefrontIdentityManager'
+ import { EventValidator } from './EventValidator'
+ import { EventSigner } from './EventSigner'
+ import { NDKService } from './NDKService'
+@@ -24,6 +25,7 @@ export class EventHandler {
+ 	private blacklistManager: BlacklistManagerImpl
+ 	private vanityManager: VanityManagerImpl
+ 	private nip05Manager: Nip05ManagerImpl
++	private storefrontManager: StorefrontIdentityManager
+ 	private eventValidator: EventValidator
+ 	private eventSigner: EventSigner
+ 	private ndkService: NDKService
+@@ -46,6 +48,7 @@ export class EventHandler {
+ 		this.blacklistManager = null as any
+ 		this.vanityManager = null as any
+ 		this.nip05Manager = null as any
++		this.storefrontManager = null as any
+ 	}
+ 
+ 	public static getInstance(): EventHandler {
+@@ -75,9 +78,10 @@ export class EventHandler {
+ 		this.blacklistManager = new BlacklistManagerImpl(this.eventSigner, this.ndkService)
+ 		this.vanityManager = new VanityManagerImpl(this.eventSigner)
+ 		this.nip05Manager = new Nip05ManagerImpl(this.eventSigner)
++		this.storefrontManager = new StorefrontIdentityManager(this.eventSigner)
+ 
+ 		// Register all zap purchase managers
+-		this.purchaseManagers = [this.vanityManager, this.nip05Manager]
++		this.purchaseManagers = [this.vanityManager, this.nip05Manager, this.storefrontManager]
+ 
+ 		// Initialize NDK service and load existing data with timeout
+ 		try {
+@@ -124,6 +128,8 @@ export class EventHandler {
+ 				// Initialize NIP-05
+ 				this.nip05Manager.setNDK(this.ndk)
+ 				await this.nip05Manager.loadExistingNip05Registry(this.eventSigner.getAppPubkey())
++				this.storefrontManager.setNDK(this.ndk)
++				await this.storefrontManager.loadExistingStorefrontRegistry(this.eventSigner.getAppPubkey())
+ 
+ 				// Subscribe to zap receipts for all purchase managers (app relay)
+ 				this.subscribeToZapPurchases(this.ndk, 'App relay')
+@@ -342,6 +348,10 @@ export class EventHandler {
+ 		return this.nip05Manager
+ 	}
+ 
++	public getStorefrontManager(): StorefrontIdentityManager {
++		return this.storefrontManager
++	}
++
+ 	public getStats() {
+ 		return {
+ 			adminCount: this.adminManager.size(),
+diff --git a/src/server/StorefrontIdentityManager.ts b/src/server/StorefrontIdentityManager.ts
+new file mode 100644
+index 000000000..348afa0ab
+--- /dev/null
++++ b/src/server/StorefrontIdentityManager.ts
+@@ -0,0 +1,153 @@
++import type { NostrEvent } from '@nostr-dev-kit/ndk'
++import { ZapPurchaseManager, type PricingTier, type ZapPurchaseEntry } from './ZapPurchaseManager'
++import type { EventSigner } from './EventSigner'
++
++const RESERVED_NAMES = new Set([
++	'admin',
++	'api',
++	'dashboard',
++	'products',
++	'product',
++	'profile',
++	'checkout',
++	'setup',
++	'community',
++	'posts',
++	'post',
++	'nostr',
++	'search',
++	'collection',
++	'collections',
++	'settings',
++	'support',
++	'help',
++	'about',
++	'login',
++	'logout',
++	'register',
++	'signup',
++	'signin',
++	'account',
++	'user',
++	'users',
++	'app',
++	'static',
++	'assets',
++	'images',
++	'public',
++	'favicon',
++	'robots',
++	'sitemap',
++	'root',
++	'postmaster',
++	'webmaster',
++	'hostmaster',
++	'abuse',
++	'noc',
++	'security',
++	'info',
++	'noreply',
++	'no-reply',
++	'system',
++	'bot',
++])
++
++export const STOREFRONT_PRICING: Record<string, PricingTier> = {
++	...(process.env.NODE_ENV === 'development' ? { dev: { sats: 10, days: 0, seconds: 90, label: '90 Seconds (Dev)' } } : {}),
++	'6mo': { sats: 10000, days: 180, label: '6 Months' },
++	'1yr': { sats: 18000, days: 365, label: '1 Year' },
++}
++
++export interface StorefrontIdentityEntry extends ZapPurchaseEntry {
++	name: string
++}
++
++export class StorefrontIdentityManager extends ZapPurchaseManager<StorefrontIdentityEntry> {
++	private pubkeyToName = new Map<string, string>()
++
++	constructor(eventSigner: EventSigner) {
++		super(
++			{
++				zapLabel: 'storefront-register',
++				registryEventKind: 30000,
++				registryDTag: 'storefront-names',
++				pricing: STOREFRONT_PRICING,
++			},
++			eventSigner,
++		)
++	}
++
++	protected extractRegistryKey(zapRequest: NostrEvent): string | null {
++		return zapRequest.tags.find((tag) => tag[0] === 'name')?.[1]?.toLowerCase() ?? null
++	}
++
++	protected validateRegistration(name: string, pubkey: string): string | null {
++		if (!/^[a-z0-9][a-z0-9_-]{1,28}[a-z0-9]$/.test(name)) return `Invalid storefront name: ${name}`
++		if (RESERVED_NAMES.has(name)) return `Reserved storefront name: ${name}`
++
++		const existing = this.registry.get(name)
++		if (existing && existing.pubkey !== pubkey && existing.validUntil > Math.floor(Date.now() / 1000)) {
++			return `Storefront name already taken: ${name}`
++		}
++		return null
++	}
++
++	protected extractEntriesFromEvent(event: NostrEvent): Array<{ key: string; entry: StorefrontIdentityEntry }> {
++		return event.tags
++			.filter((tag) => tag[0] === 'name' && tag[1] && tag[2] && tag[3])
++			.map((tag) => ({
++				key: tag[1].toLowerCase(),
++				entry: { name: tag[1].toLowerCase(), pubkey: tag[2], validUntil: Number.parseInt(tag[3], 10) || 0 },
++			}))
++	}
++
++	protected buildRegistryTags(entries: Map<string, StorefrontIdentityEntry>): string[][] {
++		return Array.from(entries.values()).map((entry) => ['name', entry.name, entry.pubkey, entry.validUntil.toString()])
++	}
++
++	protected createEntry(name: string, pubkey: string, validUntil: number): StorefrontIdentityEntry {
++		return { name, pubkey, validUntil }
++	}
++
++	protected getInvoiceComment(name: string): string {
++		return `Storefront name: ${name}`
++	}
++
++	protected onEntryRegistered(_key: string, entry: StorefrontIdentityEntry): void {
++		this.pubkeyToName.set(entry.pubkey, entry.name)
++	}
++
++	protected onRegistryRebuilt(): void {
++		this.pubkeyToName.clear()
++		for (const entry of this.registry.values()) this.pubkeyToName.set(entry.pubkey, entry.name)
++	}
++
++	public resolveName(name: string): StorefrontIdentityEntry | null {
++		return this.getEntry(name.toLowerCase())
++	}
++
++	public getNameForPubkey(pubkey: string): StorefrontIdentityEntry | null {
++		const name = this.pubkeyToName.get(pubkey)
++		return name ? this.resolveName(name) : null
++	}
++
++	public buildNostrJson(requestedName?: string): { names: Record<string, string> } {
++		const names: Record<string, string> = {}
++		const entries = requestedName ? [this.resolveName(requestedName)] : this.getAllEntries()
++		for (const entry of entries) {
++			if (entry) names[entry.name] = entry.pubkey
++		}
++		return { names }
++	}
++
++	public isNameAvailable(name: string): boolean {
++		const normalized = name.toLowerCase()
++		if (RESERVED_NAMES.has(normalized) || !/^[a-z0-9][a-z0-9_-]{1,28}[a-z0-9]$/.test(normalized)) return false
++		const existing = this.registry.get(normalized)
++		return !existing || existing.validUntil < Math.floor(Date.now() / 1000)
++	}
++
++	public async loadExistingStorefrontRegistry(appPubkey: string): Promise<void> {
++		return this.loadExistingRegistry(appPubkey)
++	}
++}
+diff --git a/src/server/http/nip05.ts b/src/server/http/nip05.ts
+index 252973248..7a93e377e 100644
+--- a/src/server/http/nip05.ts
++++ b/src/server/http/nip05.ts
+@@ -6,8 +6,10 @@ export const nip05Routes: BunRoutes = {
+ 		GET: (req: Request) => {
+ 			const url = new URL(req.url)
+ 			const name = url.searchParams.get('name') ?? undefined
+-			const nip05Manager = getEventHandler().getNip05Manager()
+-			const result = nip05Manager.buildNostrJson(name)
++			const eventHandler = getEventHandler()
++			const unified = eventHandler.getStorefrontManager().buildNostrJson(name)
++			const legacy = eventHandler.getNip05Manager().buildNostrJson(name)
++			const result = { names: { ...legacy.names, ...unified.names } }
+ 			return Response.json(result, {
+ 				headers: {
+ 					'Access-Control-Allow-Origin': '*',

@@ -21,3 +21,15 @@ finding -> status -> files touched
 - review at 5963fc77 already published 2026-09-12 (issuecomment-5645180703, 2x[RISK]+1x[NIT]) -> deliverable already satisfied
 - VERDICT: NO-OP, zero gh writes, zero PR comments -> done -> artifacts/pr1284_publish_t3ead2add/
 - kanban_comment recorded on t_3ead2add -> done -> kanban.db
+
+## 2026-10-29 — PR #1286 metadata + diff re-fetch (read-only evidence task)
+
+finding -> status -> files touched
+
+- `gh pr view 1286` + `gh pr diff 1286` captured raw -> done -> artifacts/pr1286_refetch/raw/{pr1286_meta.json,pr1286.diff}
+- headRefOid `2ae85b6fb05d83ae6b1da68f6c20e51ddbec8c5a` == expected SHA -> head_oid_verified=true, drift=false -> artifacts/pr1286_refetch/raw/head_commit.json
+- head commit `2ae85b6f` = "feat: add storefront CMS routes", 2026-09-09T14:59:47Z, NOT ancestor of origin/auctions (6be7496c) -> PR unmerged, state OPEN, isDraft=true, base `auctions` -> raw/pr1286_head_ref.json
+- file list 14 files (+680/-9): 7 added, 7 modified, 0 removed; API counts cross-checked against `git apply --numstat` — all 14 rows match -> done -> artifacts/pr1286_refetch/REPORT.md
+- path overlap: 11 of 14 paths are named by ADR-019 (status **Proposed**, commit 2874195f) -> downstream should cite it as a proposal, not accepted architecture -> docs/adr/
+- `git apply --check --3way` fails only on `src/routeTree.gen.ts` (local worktree already dirty there) -> downstream checkout must use a clean tree at 2ae85b6f -> none
+- zero gh writes: only `pr view`, `pr diff`, `api GET commits/<sha>` -> done -> none
