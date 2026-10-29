@@ -8,17 +8,17 @@ tier/review-glm). Fleet routing: `reviewer:glm gate2:ds`. Method: linus-review
 
 ## 1. Decisive facts (all verified live this run)
 
-| Fact | Value | Source |
-|---|---|---|
-| PR state | OPEN, reviewDecision=APPROVED, mergeable=MERGEABLE, mergeStateStatus=BLOCKED (maintainer: needs rebase for new CI) | gh pr view 1208 |
-| Head (== card pin) | `055b6575eab0d21cd098d5f13defa03796395309`, unchanged since 2026-08-20 | live API + review timeline |
-| Review-of-record (1) | felixfelix-bot 4936193369, COMMENTED, commit_id == head, 2026-08-14, substantive 7-point review | gh api pulls/1208/reviews |
-| Review-of-record (2) | felixfelix-bot 4981203529, APPROVED, commit_id == head, 2026-08-20: "Re-reviewed — no new issues beyond existing feedback. Ready to merge." | gh api (body fetched this run) |
-| Maintainer approval | Franchovy 4876636520, APPROVED, commit_id == head, 2026-08-06; c03rad0r 4962926002 APPROVED at head 2026-08-18 | gh api |
-| Inline review comments | 0 | gh api pulls/1208/comments |
-| CI at head | 5 success (unit-integration, prettier, e2e-pricing, security-scan, footprint) + 1 skipped (e2e-full), total_count 6 | gh api check-runs (full page) |
-| Gate state key | prs.1208 ABSENT before this run (root cause of card creation) | manager state file, grep 0 |
-| Card history | t_cf3bccae (prior "LARGE" card) done 2026-09-04, empty result, no artifacts | board DB read-only |
+| Fact                   | Value                                                                                                                                       | Source                         |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| PR state               | OPEN, reviewDecision=APPROVED, mergeable=MERGEABLE, mergeStateStatus=BLOCKED (maintainer: needs rebase for new CI)                          | gh pr view 1208                |
+| Head (== card pin)     | `055b6575eab0d21cd098d5f13defa03796395309`, unchanged since 2026-08-20                                                                      | live API + review timeline     |
+| Review-of-record (1)   | felixfelix-bot 4936193369, COMMENTED, commit_id == head, 2026-08-14, substantive 7-point review                                             | gh api pulls/1208/reviews      |
+| Review-of-record (2)   | felixfelix-bot 4981203529, APPROVED, commit_id == head, 2026-08-20: "Re-reviewed — no new issues beyond existing feedback. Ready to merge." | gh api (body fetched this run) |
+| Maintainer approval    | Franchovy 4876636520, APPROVED, commit_id == head, 2026-08-06; c03rad0r 4962926002 APPROVED at head 2026-08-18                              | gh api                         |
+| Inline review comments | 0                                                                                                                                           | gh api pulls/1208/comments     |
+| CI at head             | 5 success (unit-integration, prettier, e2e-pricing, security-scan, footprint) + 1 skipped (e2e-full), total_count 6                         | gh api check-runs (full page)  |
+| Gate state key         | prs.1208 ABSENT before this run (root cause of card creation)                                                                               | manager state file, grep 0     |
+| Card history           | t_cf3bccae (prior "LARGE" card) done 2026-09-04, empty result, no artifacts                                                                 | board DB read-only             |
 
 ## 2. Decision: NO-OP (dedup), not a second review
 
@@ -114,6 +114,7 @@ classify_tier → `docs` → evaluate → **{tier: docs, verdict: pass, passed:
 recorded below after completion.
 
 Actions taken this run (all observed in tool output):
+
 1. Worktree /tmp/wt1208 at head; tests + suite run there.
 2. Gate 2.5 cold audit (delegate, fresh context): CONFIRMED 7/0.
 3. Gate state write: prs["1208"] added with last_reviewed_sha ==

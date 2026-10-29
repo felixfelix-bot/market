@@ -43,8 +43,8 @@ Method: linus-review (correctness-first), Gate 2.5 cold audit before posting.
    cold_cross_family_review token claimed): verdict
    `AUDIT_VERDICT: CONFIRMED — 7 steps confirmed, 0 refuted`
    (audit file: artifacts/pr1208_noop_20261029/audit-1208.md).
-5. Gate state write — DONE: added prs["1208"] with last_reviewed_sha ==
-   055b6575eab0…, backup .bak_t_2d650d80_<ts> written first (42 existing keys
+5. Gate state write — DONE: added prs["1208"] with last*reviewed_sha ==
+   055b6575eab0…, backup .bak_t_2d650d80*<ts> written first (42 existing keys
    preserved, verified post-write).
 6. GitHub writes — NONE (deliberate): no second review, no comment. The
    review-of-record at the head stands; re-posting would be a duplicate.
