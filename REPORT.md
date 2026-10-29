@@ -1,88 +1,107 @@
-# PR #1272 review dispatch — verified NO-OP
+# REPORT — Review PR #1284 `feat(config): add self-hosting instance configuration foundation`
 
-**Task:** review `PlebeianApp/market` PR #1272, `wip/auction-multiparty-demo-2026-08-21`, at `a0aec6a39a0c`.
-**Author:** `maximotodev`.
-**Worker:** `worker-reviewer-kimi` (`tier/review-kimi`).
-**Run date:** 2026-10-29.
-**Workspace:** `/home/c03rad0r/repos/market`.
+Worker: fleet offload (worker-heavy) · Date: 2026-10-29 · Repo: PlebeianApp/market
+Briefed head: `5963fc77bd1c16b6b113f4d6f3c6ad42136725b1` · Author: hkarani (is_own: **false**)
 
-## Outcome
+## VERDICT: DUPLICATE DISPATCH — no publish, no contribution PR
 
-**NO PUBLISH (NO-OP): the requested review and gate-state write already exist.**
+Every stage of the mandated workflow was reached, and stages 3–7 were correctly
+**skipped** because the work was already done and merged. No GitHub write of any
+kind was performed (no comment, no approve, no request-changes, no merge).
 
-This run published no second `gh pr review`, dispatched no new Gate 2.5 audit, and made no unnecessary rewrite of the already-correct gate-state entry. A duplicate at-head review would add noise without adding coverage.
+## Evidence (all independently re-verified this run, not inherited)
 
-Existing review:
-https://github.com/PlebeianApp/market/pull/1272#pullrequestreview-5258972236
+| # | Claim | Verified value | Source |
+|---|-------|----------------|--------|
+| 1 | PR state | **MERGED** 2026-09-25T12:32:41Z | `pr1284_meta.json` |
+| 2 | Merged tip | `22a1cebd647c6b59d929725f5d288a8c4326a4ce` (base `auctions`) | `pr1284_meta.json` |
+| 3 | Merge commit | `a3a76b6c9752f8e3cccf85ff74ce4feea4a922f4` | `pr1284_meta.json` |
+| 4 | Briefed head is real | yes, `5963fc77` = "fix(tests): self-hosted regression coverage", 2026-09-11T05:15:07Z | `ancestry.txt` |
+| 5 | Review at **exact briefed head** | already published 2026-09-12T09:56:38Z by felixfelix-bot, body explicitly names `5963fc77` — 2× [RISK] + 1× [NIT] | `issuecomment_5645180703.json` |
+| 6 | Review at later/merged head | also exists — review id `5317551633` at `22a1cebd`, 2026-09-25T12:23:35Z | `pr1284_meta.json` |
+| 7 | Contribution PR | **#1313** `fix(#1284): union zap relays, derive the handler-id chain, trim booleans` — **MERGED** 2026-09-14T06:14:51Z | `pr1313_meta.json` |
+| 8 | Fix already in merged tree | fix commit `67a76087` **is** ancestor of `22a1cebd`; **not** ancestor of `5963fc77` | `ancestry.txt` |
 
-## Evidence observed in this run
+## Why each workflow stage was skipped
 
-1. Live PR metadata (`gh pr view 1272 --repo PlebeianApp/market --json ...`):
-   - state `OPEN`; draft `true`; mergeable `CONFLICTING`;
-   - head ref `wip/auction-multiparty-demo-2026-08-21`;
-   - head SHA `a0aec6a39a0cc74cdf789c5042569b76fe41ca1e`;
-   - base `auctions` at `c057ec3bd22526dc334eef857a6ba6431b4e1d99`.
-     The abbreviated task pin therefore still identifies the live head exactly.
+**Stage 1 (fetch).** Done. `headRefOid` is `22a1cebd`, which does **not** match the
+brief's `5963fc77`. Per the review-task contract ("Confirm headRefOid == … If it
+does not match, STOP and report the mismatch … instead of reviewing a moving
+target"), this alone is a stop condition.
 
-2. The pinned commit exists locally (`git cat-file -t a0aec6a39a0c` -> `commit`).
-   `git show -s` resolved it to the same full SHA, parent
-   `5f9670944c8981814a57769e797e8d137573048f`, subject
-   `feat(auctions): add owned multiparty manifest projection`.
+**Stage 2 (dedup).** The review-of-record **is** the deliverable. The briefed head
+was reviewed on 2026-09-12 and the comment is live at
+<https://github.com/PlebeianApp/market/pull/1284#issuecomment-5645180703>. Its
+three findings were:
 
-3. Live review object `5258972236` (`gh api repos/PlebeianApp/market/pulls/1272/reviews/5258972236`):
-   - user `felixfelix-bot`;
-   - state `COMMENTED` (fleet approvals are comment bodies);
-   - `commit_id` exactly `a0aec6a39a0cc74cdf789c5042569b76fe41ca1e`;
-   - submitted `2026-09-20T02:04:18Z`;
-   - body explicitly cites the full head SHA and states **APPROVED**;
-   - body records `[BLOCK] None`, `[RISK] None`, informational findings, and one NIT;
-   - body records its completed Gate 2.5 cold audit by `worker-reviewer-glm` (GLM) as `NO-BLOCKERS-FOUND`.
+1. `[RISK]` `src/lib/stores/ndk.ts:417` (also `:448`) — zap monitoring silently loses `ZAP_RELAYS`; `/api/config` now always returns `publicRelays`, so `resolveZapRelays`'s `undefined` fallback never fires → receipts on coins/primal relays undetected.
+2. `[RISK]` `src/routes/_dashboard-layout/dashboard/app-settings/app-miscelleneous.tsx:138` — editable Handler ID in owner UI vs. boot discovery reading only `process.env.INSTANCE_HANDLER_ID` (`src/server/startup.ts:26`) → settings silently revert to legacy event / `needsSetup` flips true.
+3. `[NIT]` `src/lib/instance-config.ts:101` — `optionalBoolean` compares raw string; trailing space/CRLF throws in `setAppSettings` → `process.exit(1)` at boot.
 
-4. Gate state `/home/c03rad0r/.hermes/profiles/manager/state/plebeian-pr-review-state.json`, `prs["1272"]`, was read in this run:
-   - `last_reviewed_sha` = `a0aec6a39a0cc74cdf789c5042569b76fe41ca1e`;
-   - `review_url` = the existing review URL above;
-   - `review_card` = `t_b14d1c62`;
-   - disposition = `reviewed-open-draft` with approval/conflict status.
-     The requested detector-closing record is therefore already present and correct. No write was needed.
+Re-raising any of these, or re-reviewing the merged tip, would be exactly the
+duplicate the dedup rule forbids.
 
-5. The thread already contains subsequent same-head follow-ups by `felixfelix-bot`:
-   - issue comment `5821916695` (2026-09-24): same-head delta review and one NIT;
-   - issue comments `5850543226` and `5850656300` (2026-09-26): Prettier CI diagnosis and offered fixes;
-   - issue comment `5908795674` (2026-09-30): acknowledgment/routing of five inline findings.
-     These do not create a new head or justify republishing the already-existing approval.
+**Stage 3–4 (new-issue review + draft).** Not reached — no draft produced. Note
+`5963fc77` is **not** an ancestor of the merged tip (`ancestry.txt`), so "review
+the tip" would mean reviewing a *different* diff than the brief specifies, and
+that diff is already covered by review `5317551633`.
 
-6. Prior durable no-op records independently document the same closure. Artifacts for cards `t_b3c4c69e` and `t_88229464` were read under `/home/c03rad0r/reports/reviews/`; both conclude that the exact-head review already exists and no duplicate should be published.
+**Stage 5 (GATE 2.5 cross-family).** Correctly not dispatched: there is no draft
+to verify, and dispatching glm on an empty/no-op draft burns a card for nothing.
+(Related history: card `t_cdda8b3f` for this PR's GATE 2.5 was **blocked and never
+ran** — recorded by a prior worker; no glm verdict ever existed for this PR.)
 
-## Requested publication checklist
+**Stage 6 (publish).** Skipped. Posting "no new issues found / Approving." on a
+**merged** PR whose exact head already carries a substantive published review would
+be duplicate noise and would misrepresent an already-landed result.
 
-1. Post review citing head SHA: **already satisfied** by review `5258972236`; not duplicated.
-2. State APPROVED if no change requests: **already satisfied** in that review body. This report does not assert a fresh approval from this no-op run.
-3. Record `last_reviewed_sha`: **already satisfied and verified** in `prs["1272"]`; value matches live head exactly.
-4. Cross-family review and Gate 2.5 before posting: **no new draft was created**, so no fresh Gate 2.5 run or verdict is claimed. The existing published review itself records its prior GLM cold audit, quoted as observed evidence rather than re-executed here.
+**Stage 7 (contribution PR, external author).** All three dedup gates were checked
+and **every one** matches, so creation is forbidden:
 
-## Scope and non-actions
+- (a) **kanban** — no open fix/contribution card for #1284 on `plebeian`;
+  `plebeian-my-prs` holds `t_587ecb9f` (blocked, review of PR #1313);
+  `plebeian-pr-reviews` holds `t_84b7c185` **done** ("Publish approved review for
+  PR #1284 and run contribution-PR dedup").
+- (b) **existing contribution PR** — the fork glob
+  (`hkarani/market`, head `felixfelix-bot/contrib-1284-*`) is empty, but the
+  actual contribution landed **in-repo as PR #1313** (merged 2026-09-14). The
+  briefed glob simply does not match this repo's convention; the underlying
+  condition — "a contribution PR already exists" — is unambiguously true.
+- (c) **already merged** — `67a76087` is an ancestor of the merged tip
+  `22a1cebd`, so the head already contains our fix.
 
-- No application source, tests, or PR branch content was changed.
-- No new GitHub review/comment/label or remote branch write was made.
-- No manager state file was modified because the requested entry was already correct.
-- No new tests were run: this was a documentation-only duplicate-review preflight, not a new code review. Existing test claims remain historical claims in the cited review, not fresh results from this run.
-- `git diff --check` was executed and returned exit code 0. It also covered pre-existing unrelated workspace changes; no new whitespace errors were reported.
+Caveat worth flagging: `5963fc77` is *not* an ancestor of `22a1cebd` (the branch
+was rebased/merged via #1313's tip `b2eb0c46`), so "current head contains our fix"
+is true of the *merge result* but not by ancestry of the briefed SHA. Either way,
+the fix is in `main`'s history via `a3a76b6c`, so there is nothing left for a
+contribution PR to contribute.
 
-## Repository delivery
+## Remaining / follow-up
 
-Only these two tracked task artifacts were changed at the worktree root:
+1. **Stale brief.** Any further dispatch of "review PR #1284 @ 5963fc77" should be
+   dropped at the source — the review is published, the PR is merged, and the
+   contribution PR (#1313) is merged. Suggested canonical dedup summary:
+   `PR #1284 @ 5963fc77 review published 2026-09-12 (issuecomment-5645180703); PR merged 22a1cebd; contribution PR #1313 merged`.
+2. **Stale kanban cards** on `plebeian-pr-reviews` still sitting `ready`/`blocked`
+   for #1284 (`t_15b38bcf`, `t_3ead2add`, `t_75341e70`, `t_cb288450`,
+   `t_cdda8b3f`). They are the source of repeated duplicate dispatches; a manager
+   sweep should close them. Not actioned here — cards belong to other assignees.
+3. **No contribution PR created**, by rule. Nothing to offer @hkarani.
 
-- `/home/c03rad0r/repos/market/PROGRESS.md`
-- `/home/c03rad0r/repos/market/REPORT.md`
+## Artifacts
 
-Their previous task-specific contents remain available in branch history. The existing modified/untracked files named by `git status` were left untouched.
+`/home/c03rad0r/repos/market/artifacts/pr1284_review_dup_20261029/`
 
-Initial commit `33defec0ebed97e77f96a2ac66730066e220b6bb` was created with only `REPORT.md` and `PROGRESS.md` staged and pushed to `fork/review/pr1272-noop-20261029`. `git ls-remote fork refs/heads/review/pr1272-noop-20261029` returned that exact SHA. Task-scoped `git diff --check` and `bunx prettier --check REPORT.md PROGRESS.md` passed before that commit. This progress-evidence amendment is committed and pushed separately; its own SHA is verified by remote read-back rather than predicted here.
+- `pr1284_meta.json` — PR state, merge commit, base, tip
+- `issuecomment_5645180703.json` — full body of the already-published review
+- `pr1313_meta.json` — the already-merged contribution PR
+- `ancestry.txt` — `git merge-base --is-ancestor` matrix
+- `fork_contrib_probe.txt` — fork head-glob probes (both empty)
+- `kanban_probe.txt` — three-board grep for #1284
 
-## Final disposition
+## Honesty statement
 
-No remaining PR-review, Gate 2.5, or gate-state action is required. The only new writes are the two documentation commits on the dedicated review branch. No duplicate review was posted.
-
-PR #1272: https://github.com/PlebeianApp/market/pull/1272
-Existing at-head review: https://github.com/PlebeianApp/market/pull/1272#pullrequestreview-5258972236
-Delivery branch: https://github.com/felixfelix-bot/market/tree/review/pr1272-noop-20261029
+No comment was posted, no review submitted, no approval given, no PR created, no
+kanban card mutated by this run. All state above was read via `gh`/`git` and the
+raw responses are saved under the artifacts directory so the next reader can
+re-verify without trusting this report.
