@@ -1,0 +1,77 @@
+# Nostr CI (ngit-ci) workflow for the Plebeian Market app.
+#
+# ngit-ci executes ONLY files under .ngit/act/workflows/ (the copies in
+# .github/workflows/ are detected but never executed by it), so this file is
+# what gives the repo CI on Nostr while GitHub keeps running the originals.
+#
+# Bounded, browser-free subset of the repo's own checks. Everything invoked here
+# is either a package.json script or a script committed in this repo — nothing
+# is invented — and each step was run by hand in a clean worktree of this branch
+# before being committed. Playwright/browser e2e is deliberately excluded (see
+# .ngit/README.md).
+name: Market Test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Format, secret scan, NDK guard, unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # The act job containers used by ngit-ci are lighter than GitHub runner
+      # VMs: bun is not guaranteed to be present, so install the exact release
+      # this workflow was verified against. (package.json carries no
+      # packageManager pin; bun.lock is the lockfile of record.)
+      - name: Install Bun 1.4.2
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends unzip curl
+          curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.2"
+          # GITHUB_PATH is set by the runner; the fallback keeps this step
+          # runnable verbatim outside CI (local verification).
+          echo "$HOME/.bun/bin" >> "${GITHUB_PATH:-/dev/null}"
+          "$HOME/.bun/bin/bun" --version
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # MUST run before "Generate routes": @tanstack/router-cli rewrites
+      # src/routeTree.gen.ts into a form `prettier --check` rejects (verified:
+      # 876 insertions / 815 deletions vs the committed file, and the job then
+      # fails on that one generated file). On a fresh checkout the committed
+      # file is prettier-clean, which is what this step asserts.
+      - name: Prettier format check
+        run: bun run format:check
+
+      # Repo's own three-tier secret scan in full-repo mode (what the GitHub
+      # ci-unit.yml "security-scan" job runs).
+      - name: Secret scan (nsec / key literals)
+        run: bash scripts/git-hooks/pre-commit --full-repo
+
+      # Repo's own NDK->applesauce ratchet: fails if the number of files
+      # importing @nostr-dev-kit grew past scripts/ndk-baseline.txt.
+      - name: NDK footprint guard
+        run: bash scripts/check-ndk-footprint.sh
+
+      - name: Generate routes
+        run: bun run generate-routes
+
+      # bunfig.toml excludes e2e/** from `bun test`, so this is the unit suite
+      # only (contextvm + src/queries/__tests__ + src/lib/__tests__).
+      - name: Unit tests
+        run: bun run test:unit
+
+  # NOTE: no browser job here by design. test:e2e needs Playwright browsers,
+  # a live nostr relay (`nak serve`) and a dev server; it is far too heavy and
+  # too install-dependent for the act job containers. It stays on GitHub.
+  # See .ngit/README.md.
