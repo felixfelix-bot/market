@@ -1,0 +1,192 @@
+[
+  {
+    "id": "t_0fb86800",
+    "status": "blocked",
+    "assignee": "worker-admin",
+    "title": "Collect PR #1226 diff, discussion, CI checks, and dismissed reviews",
+    "created_by": "auto-decomposer",
+    "created_at": 1790301391,
+    "completed_at": null,
+    "result": null
+  },
+  {
+    "id": "t_173c0c00",
+    "status": "blocked",
+    "assignee": "market-feat-nip53-improvements",
+    "title": "Assemble the shared context brief for market PR #1226 reviewers",
+    "created_by": "auto-decomposer",
+    "created_at": 1789343238,
+    "completed_at": null,
+    "result": null
+  },
+  {
+    "id": "t_219a189a",
+    "status": "blocked",
+    "assignee": "manager",
+    "title": "Reconcile both review tracks and post consolidated verdict on market PR #1226",
+    "created_by": "auto-decomposer",
+    "created_at": 1789336360,
+    "completed_at": null,
+    "result": null
+  },
+  {
+    "id": "t_2aefcf2f",
+    "status": "blocked",
+    "assignee": "market-security-critical-remediation",
+    "title": "Security & data-integrity pass on PR #1226 settlement status",
+    "created_by": "auto-decomposer",
+    "created_at": 1789336360,
+    "completed_at": null,
+    "result": null
+  },
+  {
+    "id": "t_39a83ab3",
+    "status": "blocked",
+    "assignee": "worker-base",
+    "title": "Reconcile PR #1226 review tracks and draft final review body",
+    "created_by": "auto-decomposer",
+    "created_at": 1789374489,
+    "completed_at": null,
+    "result": null
+  },
+  {
+    "id": "t_4d410c55",
+    "status": "blocked",
+    "assignee": "market-feat-nip53-improvements",
+    "title": "Analyze PR #1226 diff: per-file summaries + settlement-status map",
+    "created_by": "auto-decomposer",
+    "created_at": 1789343238,
+    "completed_at": null,
+    "result": null
+  },
+  {
+    "id": "t_54b4f69d",
+    "status": "blocked",
+    "assignee": "manager",
+    "title": "Review PR #1226: feat: auction order details \u2014 settlement status display (Franchovy) \u2014 review requested from us",
+    "created_by": "gh-kanban-sync",
+    "created_at": 1789099383,
+    "completed_at": null,
+    "result": null
+  },
+  {
+    "id": "t_719e6be2",
+    "status": "blocked",
+    "assignee": "manager",
+    "title": "Gather PR #1226 context: diff, CI, review history",
+    "created_by": "auto-decomposer",
+    "created_at": 1789336360,
+    "completed_at": null,
+    "result": null
+  },
+  {
+    "id": "t_8452b87b",
+    "status": "blocked",
+    "assignee": "worker-base",
+    "title": "Verify PR #1226 consolidated review and conditionally file the linked fix follow-up",
+    "created_by": "auto-decomposer",
+    "created_at": 1789374489,
+    "completed_at": null,
+    "result": null
+  },
+  {
+    "id": "t_a32200ac",
+    "status": "blocked",
+    "assignee": "worker-admin",
+    "title": "Locate both prior review tracks for PR #1226 (correctness + security)",
+    "created_by": "auto-decomposer",
+    "created_at": 1790301391,
+    "completed_at": null,
+    "result": null
+  },
+  {
+    "id": "t_bb035076",
+    "status": "blocked",
+    "assignee": "worker-base",
+    "title": "Post the single consolidated review on PlebeianApp/market PR #1226 and verify the review URL",
+    "created_by": "auto-decomposer",
+    "created_at": 1789374489,
+    "completed_at": null,
+    "result": null
+  },
+  {
+    "id": "t_bc593435",
+    "status": "blocked",
+    "assignee": "default",
+    "title": "Collect PR #1226 diff, CI status, and both prior review tracks",
+    "created_by": "auto-decomposer",
+    "created_at": 1789374489,
+    "completed_at": null,
+    "result": null
+  },
+  {
+    "id": "t_fe2daa8b",
+    "status": "blocked",
+    "assignee": "market-master",
+    "title": "Collect PR #1226 metadata, review-request timeline, and CI check statuses",
+    "created_by": "auto-decomposer",
+    "created_at": 1789343238,
+    "completed_at": null,
+    "result": null
+  },
+  {
+    "id": "t_62f36501",
+    "status": "done",
+    "assignee": "worker-reviewer-kimi",
+    "title": "Review PR #1226: feat: auction order details \u2014 settlement status display",
+    "created_by": "user",
+    "created_at": 1789302042,
+    "completed_at": 1790856548,
+    "result": "NO-OP close: PR #1226 closed unmerged 2026-09-19 (superseded by #1361, close comment 5745160243); head 247f9a25 unmoved and already carries our lane's APPROVED review (c03rad0r id 5190708581, commit_id==head) \u2014 loop already closed by sibling t_d18bf9c5; successor #1361 re-verified to carry the patch (orderSettlementStatusView.ts blob 239a141a). Nothing published (dead PR \u2014 AACR noise); Gate 2.5 not dispatched (no draft, no verdict claimed). PR #1226 https://github.com/PlebeianApp/market/pull/1226\ntags: docs, no-code"
+  },
+  {
+    "id": "t_d18bf9c5",
+    "status": "done",
+    "assignee": "worker-reviewer-kimi",
+    "title": "Review PR #1226: auction order details \u2014 settlement status display (Franchovy, base auctions)",
+    "created_by": "user",
+    "created_at": 1789300347,
+    "completed_at": 1790854787,
+    "result": "NO-OP: PR #1226 head 247f9a25156832b66559d30648789d80efb9da00 unmoved; our lane's APPROVED review 5190708581 (c03rad0r, commit_id==head) already covers it; PR closed-unmerged 2026-09-19, superseded by #1361 (patch carried \u2014 verified). Nothing published; prs.1226 state key written (was absent). PR #1226 https://github.com/PlebeianApp/market/pull/1226 at head 247f9a25156832b66559d30648789d80efb9da00\ntags: docs, no-code"
+  },
+  {
+    "id": "t_54658dfb",
+    "status": "ready",
+    "assignee": "worker-merchant-qa",
+    "title": "Review settlement-status display correctness in PR #1226",
+    "created_by": "auto-decomposer",
+    "created_at": 1789336360,
+    "completed_at": null,
+    "result": null
+  },
+  {
+    "id": "t_68bf065d",
+    "status": "ready",
+    "assignee": "manager",
+    "title": "OPERATOR ACTION: retire the closed PR #1226 review tree? (t_54b4f69d chain moot \u2014 PR closed, never merged)",
+    "created_by": "manager",
+    "created_at": 1790946042,
+    "completed_at": null,
+    "result": null
+  },
+  {
+    "id": "t_70ba64ac",
+    "status": "ready",
+    "assignee": "worker-pr-reviewer",
+    "title": "SUBMIT-REVIEW #1226: Franchovy's review request open 53h \u2014 findings only exist as an issue comment, no formal review submitted",
+    "created_by": "user",
+    "created_at": 1789252328,
+    "completed_at": null,
+    "result": "FALSE-DONE (audited 2026-09-13T03:2xZ by gh-kanban-sync): completed_at=NULL, result=NULL. GitHub shows our last review on PlebeianApp/market#1226 is still DISMISSED (2026-08-20T10:14:37Z) and the review request remains OPEN (reviewRequests=[c03rad0r, felixfelix-bot, maximotodev], head c4410f8f, mergeStateStatus=BLOCKED). Findings exist only as an ASSET issue comment. Second card on this PR falsely closed by offload writeback (predecessor t_54b4f69d). Reopen manually or re-dispatch."
+  },
+  {
+    "id": "t_508d64b1",
+    "status": "todo",
+    "assignee": "worker-admin",
+    "title": "Assemble PR #1226 review-input report and enforce the hard-stop condition",
+    "created_by": "auto-decomposer",
+    "created_at": 1790301391,
+    "completed_at": null,
+    "result": null
+  }
+]

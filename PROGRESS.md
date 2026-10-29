@@ -56,3 +56,20 @@ finding -> status -> files touched
 - Root REPORT.md left intact (owned by card t_6a82b4dc / PR #1286 worker, commit 226ecc13) — authoritative copy at artifacts/pr1284_dedupb/REPORT.md -> done
 - Corrected over-broad "no branch was pushed" line: posted `DEDUP B — addendum` (2155 submitted / 2154 stored) disclosing the 2 pushes to the PRE-EXISTING `fork/review/pr1272-noop-20261029` evidence branch; no PR/issue/contribution branch created -> done -> artifacts/pr1284_dedupb/dedup_b_addendum.md
 - Push observed: `138c7ae5..88468157` then `88468157..9fe17105` -> `fork/review/pr1272-noop-20261029`; `git ls-remote` == `git rev-parse HEAD` == 9fe17105 -> done
+
+## 2026-10-29 — PR #1226 review tree retirement (card t_68bf065d)
+
+Finding -> status -> files touched. Newest last.
+
+- Audited live GitHub state of #1226 -> CLOSED/draft/never-merged (mergedAt=null, closed 2026-09-19T20:43:54Z, head 247f9a25); reviewDecision=APPROVED is *misleading* (it ignores a CONTRIBUTOR's CHANGES_REQUESTED) -> confirmed -> artifacts/pr1226_retire/raw/raw_pr1226_meta.json
+- Counted the tree on board plebeian-pr-reviews -> **19** #1226 cards, not the 5 named in the card (2 already done, 17 open) -> scope corrected -> raw/pre_state_1226_cards.json
+- Checked the claimed brief attachment -> **does not exist**: 0 rows in task_attachments for t_719e6be2 (board total=2 rows, neither #1226), 0 matching files in attachments dir / workspaces / repo / any worktree -> claim falsified -> raw/t_719e6be2_attachments.txt, raw/brief_search.txt
+- Checked whether the public post already happened -> **it did, 3x before this card**: reviews 5591466473 + 5591468909 (2026-10-20, COMMENTED) and 5635730808 (2026-10-24, CHANGES_REQUESTED) at head 247f9a25; provenance comment 6484324481 (2026-10-29T00:22:48Z) -> option (B)'s premise is moot -> raw/raw_pr1226_reviews.json, raw/raw_pr1226_comments.json
+- Verified findings survive independently of the tree -> on #1226 (5635730808), on live successor #1361 (review 5691384997 CHANGES_REQUESTED at d1a4a647), in-repo artifacts/pr1226_review/verdict_1361.md, and 2 on-disk aborted-leg reports under ~/reports/reviews -> retention satisfied -> raw/raw_pr1361_reviews.json, raw/raw_pr1361_meta.json
+- Confirmed archive is non-destructive before mutating -> kanban_db.archive_task is a status flip that preserves comments/results/runs; only `archive --rm` purges -> safe -> hermes_cli/kanban_db.py:7352 (read-only inspection)
+- **DECISION: (A) RETIRE** -> archived 16 cards on plebeian-pr-reviews: t_0fb86800 t_173c0c00 t_219a189a t_2aefcf2f t_39a83ab3 t_4d410c55 t_508d64b1 t_54658dfb t_54b4f69d t_70ba64ac t_719e6be2 t_8452b87b t_a32200ac t_bb035076 t_bc593435 t_fe2daa8b -> board DB
+- Post-archive verification -> all 16 report `archived`; non-archived #1226 = 3 (2 legacy done + this decision card); **zero** cards newly promoted to ready (archived parents unblock children, so this was checked explicitly) -> clean -> none
+- Left in place on purpose -> t_62f36501/t_d18bf9c5 (already done), t_68bf065d (this decision card), market t_c9b109fb (fix leg, different board, out of stated scope) -> flagged in DECISION.md §6 -> none
+- Wrote decision record with reversal procedure -> done -> artifacts/pr1226_retire/DECISION.md
+- Preserved pre-existing root REPORT.md (owned by #1286 worker, commit 226ecc13, sha256 37f8891e) before overwriting -> copied byte-identical to artifacts/pr1286_citations/REPORT.md -> done -> artifacts/pr1286_citations/REPORT.md
+- GitHub writes by this task -> **ZERO**. No review, comment, PR, branch, or issue created/edited/closed/merged; no push to any repo. All GitHub access was `gh api` GET. -> verified -> none

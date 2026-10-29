@@ -1,0 +1,46 @@
+# Search for the claimed brief attachment (bounded, depth-limited, no network)
+# Claim under audit: 'attachments/t_719e6be2/pr1226-reviewer-brief.md (29,395 B)'
+
+## /home/c03rad0r/.hermes/kanban/boards/plebeian-pr-reviews/attachments
+scanned_dirs=10 hits=0
+(no matches)
+
+## /home/c03rad0r/.hermes/kanban/boards/plebeian-pr-reviews/workspaces
+scanned_dirs=35 hits=0
+(no matches)
+
+## /home/c03rad0r/repos/market/attachments
+(absent)
+
+## /home/c03rad0r/worktrees
+scanned_dirs=22206 hits=55
+/home/c03rad0r/worktrees/pr179-advisories-solo/state/reports/tollgate-pre18-consult-brief.md
+/home/c03rad0r/worktrees/t_3251294b/state/reports/tollgate-pre18-consult-brief.md
+/home/c03rad0r/worktrees/.base-check/state/reports/tollgate-pre18-consult-brief.md
+/home/c03rad0r/worktrees/ho-deploy/state/reports/handover-consult-brief.md
+/home/c03rad0r/worktrees/ho-deploy/state/reports/plebeian-pr-reviews-t_969efa85-gate-waiver-brief.md
+/home/c03rad0r/worktrees/ho-deploy/state/reports/tollgate-pre18-consult-brief.md
+/home/c03rad0r/worktrees/ho-deploy/state/reports/fips-noassociation-consult-brief.md
+/home/c03rad0r/worktrees/t_774ac9ec/tests/skills/test_google_workspace_daily_brief_reference.py
+/home/c03rad0r/worktrees/t_dadc4b70-kanban-idfix/tests/skills/test_google_workspace_daily_brief_reference.py
+/home/c03rad0r/worktrees/ho-run-tags/state/reports/handover-consult-brief.md
+/home/c03rad0r/worktrees/ho-run-tags/state/reports/plebeian-pr-reviews-t_969efa85-gate-waiver-brief.md
+/home/c03rad0r/worktrees/ho-run-tags/state/reports/tollgate-pre18-consult-brief.md
+/home/c03rad0r/worktrees/t_2641ddaa/state/reports/tollgate-pre18-consult-brief.md
+/home/c03rad0r/worktrees/t_fa61e022-red/tests/skills/test_google_workspace_daily_brief_reference.py
+/home/c03rad0r/worktrees/f1-base/state/reports/tollgate-pre18-consult-brief.md
+/home/c03rad0r/worktrees/t_69da44d9/state/reports/plebeian-pr-reviews-t_969efa85-gate-waiver-brief.md
+/home/c03rad0r/worktrees/t_69da44d9/state/reports/tollgate-pre18-consult-brief.md
+/home/c03rad0r/worktrees/f1-cron-governance-template/state/reports/tollgate-pre18-consult-brief.md
+/home/c03rad0r/worktrees/ho-t933cd47c-drift/state/reports/tollgate-pre18-consult-brief.md
+/home/c03rad0r/worktrees/t_24206a66/state/reports/plebeian-pr-reviews-t_969efa85-gate-waiver-brief.md
+
+## worktrees sub-filter: filenames containing '1226'
+count=0
+(no filename anywhere under /home/c03rad0r/worktrees contains '1226')
+
+## CONCLUSION
+No file named pr1226-reviewer-brief.md (or any *1226*brief* file) exists in the board's
+attachments dir, the board workspaces, the repo, or any worktree.
+task_attachments has 0 rows for t_719e6be2. The 29,395 B deliverable claimed by t_68bf065d
+never existed on this host.
