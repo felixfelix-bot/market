@@ -7,6 +7,16 @@ finding -> status -> files touched
 > `artifacts/<card>/REPORT.md` (e.g. the pre-2026-10-29T05:29 root REPORT.md is
 > byte-identical to `artifacts/pr1284_dedupa/REPORT.md`) and remain in git history.
 
+2026-10-29T10:47:30Z · worker-reviewer-glm · PR #1409 review (fleet offload, gate1 glm + gate2 kimi)
+
+- PR #1409 MERGED at head 8cf24b9e (2026-10-05T23:02:47Z, merge 614ff3a0, parent = #1407 merge commit 78c10f48) -> APPROVED verdict (docs-only ADR-0017 status flip, all claims verified) -> done -> artifacts/pr1409_review/REPORT.md
+- No prior felixfelix-bot review at this head -> real review-of-record dispatch, not NO-OP -> done -> raw/reviews.json
+- Gate 2.5: TRUE cross-family cold audit — kimi (Moonshot) via worker-reviewer-kimi profile, model kimi-k2.7-code (tier/review-kimi 503'd, ollama lane succeeded) -> CONFIRMED_W_AMENDMENTS (STEP 9: NIT reworded for :161 "proposal" protocol term) -> done -> artifacts/pr1409_review/audit/audit-verdict.md
+- Review published: felixfelix-bot COMMENTED review id 5696444929 at commit 8cf24b9ec134, body states APPROVED, cites head SHA, byte-identical to REVIEW.md -> done -> raw/posted_review_body.md
+- Gate state recorded: prs["1409"].last_reviewed_sha=8cf24b9ec134… in manager/state/plebeian-pr-review-state.json (backup .bak_pr1409_20261029_104624, atomic, re-verified keys) -> done -> artifacts/pr1409_review/update_gate_state.py
+- Lane isolation: shared checkout was switched mid-session by concurrent pr399 lane; my evidence branch review/pr1409-glm-20261029 created (a41aaf5d purely additive atop their 0d336ad3) -> done -> fork remote
+- GitHub writes: exactly one (review 5696444929); everything else read-only gh api GETs -> verified -> none
+
 ## 2026-10-29 — PR #1284 review (earlier run, preserved)
 
 - Brief head `5963fc77` verified real (committed 2026-09-11T05:15:07Z) but is NOT the PR tip -> PR #1284 is MERGED at `22a1cebd` (merge commit `a3a76b6c`, base `auctions`, 2026-09-25T12:32:41Z) -> artifacts/pr1284_review_dup_20261029/pr1284_meta.json
