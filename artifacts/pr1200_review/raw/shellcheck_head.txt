@@ -1,0 +1,72 @@
+
+In deploy-simple/relay/install-staging-relay.sh line 54:
+	uint "$READINESS_SECONDS" && ((10#$READINESS_SECONDS > 0)) || {
+                                  ^-- SC2015 (info): Note that A && B || C is not if-then-else. C may run when A is true.
+
+
+In deploy-simple/relay/install-staging-relay.sh line 71:
+		grep -Fxq "EnvironmentFile=${REMOTE_ENV}" "$SOURCE_UNIT" &&
+                                                                         ^-- SC2015 (info): Note that A && B || C is not if-then-else. C may run when A is true.
+
+
+In deploy-simple/relay/install-staging-relay.sh line 161:
+	uint "$PRE_PID" && ((PRE_PID > 0)) || {
+                        ^-- SC2015 (info): Note that A && B || C is not if-then-else. C may run when A is true.
+
+
+In deploy-simple/relay/install-staging-relay.sh line 165:
+	uint "$restarts" && ((restarts == 0)) || {
+                         ^-- SC2015 (info): Note that A && B || C is not if-then-else. C may run when A is true.
+
+
+In deploy-simple/relay/install-staging-relay.sh line 221:
+		sudo grep -Fxq "EnvironmentFile=${REMOTE_ENV}" "$REMOTE_SERVICE" &&
+                                                                                 ^-- SC2015 (info): Note that A && B || C is not if-then-else. C may run when A is true.
+
+
+In deploy-simple/relay/install-staging-relay.sh line 245:
+	uint "$raw" && uint "$search" && uint "$free" || {
+                                      ^-- SC2015 (info): Note that A && B || C is not if-then-else. C may run when A is true.
+
+
+In deploy-simple/relay/install-staging-relay.sh line 336:
+	uint "$raw_before" && uint "$search_before" && uint "$free_before" || {
+                                                    ^-- SC2015 (info): Note that A && B || C is not if-then-else. C may run when A is true.
+
+
+In deploy-simple/relay/install-staging-relay.sh line 359:
+	uint "$pid" && ((pid > 0)) || {
+                    ^-- SC2015 (info): Note that A && B || C is not if-then-else. C may run when A is true.
+
+
+In deploy-simple/relay/install-staging-relay.sh line 363:
+	uint "$restarts" && ((restarts == 0)) || {
+                         ^-- SC2015 (info): Note that A && B || C is not if-then-else. C may run when A is true.
+
+
+In deploy-simple/relay/install-staging-relay.sh line 461:
+	uint "$raw_now" && uint "$search_now" && uint "$free_now" || {
+                                              ^-- SC2015 (info): Note that A && B || C is not if-then-else. C may run when A is true.
+
+
+In deploy-simple/relay/install-staging-relay.sh line 708:
+	uint "$raw_before" && uint "$search_before" && uint "$free_before" || {
+                                                    ^-- SC2015 (info): Note that A && B || C is not if-then-else. C may run when A is true.
+
+
+In deploy-simple/relay/install-staging-relay.sh line 731:
+	uint "$pid" && ((pid > 0)) || {
+                    ^-- SC2015 (info): Note that A && B || C is not if-then-else. C may run when A is true.
+
+
+In deploy-simple/relay/install-staging-relay.sh line 735:
+	uint "$restarts" && ((restarts == 0)) || {
+                         ^-- SC2015 (info): Note that A && B || C is not if-then-else. C may run when A is true.
+
+
+In deploy-simple/relay/install-staging-relay.sh line 755:
+	uint "$observe_raw_before" && uint "$observe_search_before" && uint "$observe_free_before" || {
+                                                                    ^-- SC2015 (info): Note that A && B || C is not if-then-else. C may run when A is true.
+
+For more information:
+  https://www.shellcheck.net/wiki/SC2015 -- Note that A && B || C is not if-t...

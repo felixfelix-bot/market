@@ -1,0 +1,34 @@
+ok 1 - delayed readiness then success
+ok 2 - permanent readiness timeout
+ok 3 - PID drift
+ok 4 - InvocationID drift
+ok 5 - executable hash mismatch
+ok 6 - NRestarts becoming nonzero
+ok 7 - boot ID drift
+ok 8 - raw storage-growth failure
+ok 9 - search storage-growth failure
+ok 10 - free-space-loss failure above minimum
+ok 11 - minimum free-space failure
+ok 12 - health success after deadline
+ok 13 - post-health identity recheck
+ok 14 - post-health storage recheck
+ok 15 - clean journal window
+ok 16 - startup restart evidence
+ok 17 - startup kernel OOM evidence
+ok 18 - service journal failure is closed
+ok 19 - kernel journal failure is closed
+ok 20 - successful rollback readiness
+ok 21 - restored process with rollback-readiness timeout
+ok 22 - structural rollback failure
+ok 23 - rollback restart evidence is structural
+ok 24 - rollback OOM evidence is structural
+ok 25 - rollback journal failure is structural
+ok 26 - rollback timeout with restart evidence is structural
+ok 27 - readiness configuration validation
+ok 28 - readiness and journal wiring
+ok 29 - rollback status is preserved
+ok 30 - successful rollback cleanup classification
+ok 31 - successful rollback preserves arbitrary original status
+ok 32 - rollback timeout retention classification
+ok 33 - structural rollback retention classification
+1..33
