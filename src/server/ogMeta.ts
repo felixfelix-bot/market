@@ -15,9 +15,25 @@
  * shell (graceful degradation, because this feature is SEO-only and must
  * never break the production app).
  *
+ * Aggregate work bound: rotating random product ids could otherwise drive
+ * unbounded concurrent server-side relay lookups. A small process-wide
+ * concurrency cap (OG_MAX_CONCURRENT_LOOKUPS) bounds how many lookups may be
+ * in flight at once; when the cap is saturated a new lookup falls back to
+ * the plain shell (null) immediately rather than queueing. Concurrent
+ * lookups for the SAME id are coalesced onto a single in-flight relay query
+ * and share its result, so a burst of crawler hits on one product never
+ * fans out into N identical relay queries.
+ *
  * Every entry point here is best-effort: on any failure (relay down, timeout,
  * unknown id, bad signature) it returns null and the caller serves the
  * untouched SPA shell. A crawler-friendly page must never hang or 5xx.
+ *
+ * SEAM NOTE (ADR-0002): this module performs server-runtime relay I/O via raw
+ * nostr-tools. ADR-0002 scopes the io.ts seam to app-first migration and
+ * defers server runtime to Wave E; the seam's default adapter (NDK browser
+ * singleton) cannot execute under Bun. This mirrors the existing
+ * `src/index.tsx` server pattern, adds no NDK/adapter imports, and is flagged
+ * for the Wave E io-server adapter.
  */
 import { Relay } from 'nostr-tools'
 import { verifyEvent } from 'nostr-tools/pure'
@@ -29,6 +45,12 @@ const OG_FETCH_TIMEOUT_MS = 2_500
 const OG_CACHE_TTL_MS = 5 * 60 * 1000
 /** Bounds memory; product ids are 64 hex chars so entries are tiny. */
 const OG_CACHE_MAX_ENTRIES = 128
+/**
+ * Process-wide cap on concurrent relay lookups. Rotating random ids must not
+ * be able to drive unbounded concurrent server-side work; when this many
+ * lookups are already in flight, a new one falls back to the plain shell.
+ */
+const OG_MAX_CONCURRENT_LOOKUPS = 4
 
 const PRODUCT_KIND = 30_402
 const EVENT_ID_PATTERN = /^[0-9a-f]{64}$/
@@ -40,11 +62,23 @@ interface OgCacheEntry {
 
 const ogMetaCache = new Map<string, OgCacheEntry>()
 
+/** Number of relay lookups currently in flight (the concurrency gate). */
+let inFlightLookups = 0
+/**
+ * In-flight lookups keyed by product id, so concurrent requests for the same
+ * id coalesce onto a single relay query and share its result.
+ */
+const inFlightById = new Map<string, Promise<OgProductMeta | null>>()
+
 /**
  * Fetch (or recall from cache) preview meta for a product id. Returns null
  * for non-event-id inputs, NSFW products, and any lookup failure (relay
  * unreachable or slow). The caller serves the untouched SPA shell when null
  * is returned.
+ *
+ * Concurrency: when the process-wide cap is saturated, or when the same id
+ * is already being looked up, this returns without opening a new relay
+ * query — either the shared in-flight result (same id) or null (saturated).
  *
  * @param relayUrl - app relay URL (APP_RELAY_URL; when unset or blank the lookup is skipped)
  * @param productId - 64-hex-char Nostr event id
@@ -59,7 +93,33 @@ export async function getProductOgMeta(relayUrl: string | undefined, productId: 
 	const cached = ogMetaCache.get(id)
 	if (cached && cached.expiresAt > Date.now()) return cached.meta
 
-	const event = await fetchVerifiedProductEvent(relay, id)
+	// Same-id coalescing: if this id is already being looked up, share the
+	// in-flight query instead of opening a second relay connection.
+	const inFlight = inFlightById.get(id)
+	if (inFlight) return inFlight
+
+	// Aggregate work bound: when the cap is saturated, fall back to the plain
+	// shell immediately rather than queueing unbounded server-side work.
+	if (inFlightLookups >= OG_MAX_CONCURRENT_LOOKUPS) {
+		console.warn('og: lookup concurrency cap reached, serving plain shell')
+		return null
+	}
+
+	const lookup = performLookup(relay, id)
+	inFlightById.set(id, lookup)
+	inFlightLookups++
+
+	try {
+		return await lookup
+	} finally {
+		inFlightById.delete(id)
+		inFlightLookups--
+	}
+}
+
+/** Run the actual relay lookup, cache the result, and return preview meta. */
+async function performLookup(relayUrl: string, id: string): Promise<OgProductMeta | null> {
+	const event = await fetchVerifiedProductEvent(relayUrl, id)
 	const meta = event ? buildOgProductMeta(event as unknown as OgTagSourceEvent) : null
 
 	ogMetaCache.set(id, { meta, expiresAt: Date.now() + OG_CACHE_TTL_MS })
@@ -83,14 +143,42 @@ async function fetchVerifiedProductEvent(relayUrl: string, productId: string): P
 	try {
 		const deadline = Date.now() + OG_FETCH_TIMEOUT_MS
 
+		// The connect deadline is the terminal failure path for a slow
+		// relay: race the connect against it and observe the losing
+		// connect even after the race is over, so a connect that
+		// resolves late can never leak an open socket.
 		const connectTimeout = rejectAfter(OG_FETCH_TIMEOUT_MS, 'og: relay connect timeout')
+		const connectPromise = Relay.connect(relayUrl)
+		try {
+			relay = await Promise.race([connectPromise, connectTimeout.promise])
+		} catch (error) {
+			// The deadline won while `relay` was still null, so the
+			// cleanup below is a no-op — yet the connect can still
+			// resolve later with an open WebSocket nobody would close.
+			// Close it on late success; a late failure has no socket.
+			connectPromise
+				.then((lateRelay) => {
+					try {
+						lateRelay.close()
+					} catch {
+						// Connection may already be closed.
+					}
+				})
+				.catch(() => {
+					// Connect ultimately failed; nothing to close.
+				})
+			throw error
+		} finally {
+			// Clear the deadline timer as soon as the race settles, so
+			// the winning path does not carry a pending timer into the
+			// request phase.
+			connectTimeout.cancel()
+		}
+
 		const requestTimeout = rejectAfter(Math.max(deadline - Date.now(), 1), 'og: relay request timeout')
 		try {
-			relay = await Promise.race([Relay.connect(relayUrl), connectTimeout.promise])
-
 			return await Promise.race([requestProductEvent(relay, productId), requestTimeout.promise])
 		} finally {
-			connectTimeout.cancel()
 			requestTimeout.cancel()
 		}
 	} catch (error) {
