@@ -8,6 +8,16 @@ import { CheckCircle, Copy, CreditCard, RefreshCw, Zap } from 'lucide-react'
 import { getStatusColor } from '../orderDetailHelpers'
 import type { InvoiceWithSource } from '../useOrderInvoices'
 
+/**
+ * Display title for an invoice card. The (Merchant)/(v4v) suffix makes it
+ * explicit who each payment goes to. Display-level only: `invoice.type` stays
+ * the full payment state and is not collapsed into this label.
+ */
+export function getInvoiceTitle(invoice: Pick<PaymentInvoiceData, 'recipientName' | 'type'>): string {
+	const recipientLabel = invoice.type === 'merchant' ? 'Merchant' : 'v4v'
+	return `${invoice.recipientName} (${recipientLabel})`
+}
+
 interface InvoiceCardProps {
 	invoice: InvoiceWithSource
 	index: number
@@ -57,7 +67,7 @@ export function InvoiceCard({ invoice, index, totalInvoices, isBuyer, isGenerati
 						<CreditCard className="w-5 h-5 text-gray-400 flex-shrink-0" />
 					)}
 					<div className="min-w-0">
-						<h4 className="font-medium truncate">{invoice.type === 'merchant' ? 'Merchant Payment' : invoice.recipientName}</h4>
+						<h4 className="font-medium truncate">{getInvoiceTitle(invoice)}</h4>
 						<p className="text-sm text-muted-foreground">
 							{invoice.amount.toLocaleString()} sats
 							{invoiceToUse.expiresAt && (
