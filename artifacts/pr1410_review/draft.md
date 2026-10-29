@@ -14,7 +14,7 @@ The guard is the part that usually gets botched; here it doesn't. It discovers p
 
 - Guard suite: 32 pass / 0 fail / 97 assertions — matches the PR body claim exactly.
 - Regression control: reverting the three `cp` lines reproduces the claimed 31 pass / 1 fail, the single failure naming exactly `deploy-auctionsdev.yml / deploy.yml / release.yml: no patches in deploy-package/`. The guard is not vacuous.
-- Required checks at head: footprint, security-scan, prettier, unit-integration, e2e-grep — all green. `Deploy preview` green; e2e-full and Tear down are expected skips. (The one failed `Tear down preview` run at this head is from the preview event, exit 127 during runner provisioning — preview-lane infra noise, not this diff.)
+- Required checks at head: footprint, security-scan, prettier, unit-integration, e2e-grep — all green. `Deploy preview` green; e2e-full and Tear down are expected skips. (The one failed `Tear down preview` run at this head is from the preview event: the teardown job's "Prepare SSH key" step runs `bash infra/preview-vps/ssh-prepare.sh` with no checkout, so the script is absent from the workspace — exit 127. The script exists in the repo at base and head, so this is a pre-existing preview-lane defect, not this diff.)
 - Scope discipline: exactly four files, +42/−1, as claimed. No NIP-46, dependency, or Bun-version changes smuggled in — the diff is three copy lines plus the guard.
 
 ## Staging acceptance is no longer pending
