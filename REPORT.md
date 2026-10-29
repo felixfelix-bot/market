@@ -1,62 +1,68 @@
-# REPORT.md — PR #1285 duplicate dispatch at `a0696cf8`
+# REPORT — PR #1384 duplicate review dispatch (NO-OP)
 
-Date: 2026-10-29T00:57:19Z
-Worker: worker-reviewer-kimi (Kimi / Moonshot family)
-Requested subject: PlebeianApp/market PR #1285 by hkarani, `security/1112-add-relay-bid-spam-dos-protection` at `a0696cf80388ed99fea391fab42ad1056c8f4a41`
+Task card: plebeian-pr-reviews `t_8abf83e1` (worker-reviewer-glm, gate 1; fleet
+routing `reviewer:glm gate2:ds`). Dispatch pin: `843abaa5cbd4`. Full detail and
+evidence live in `artifacts/pr1384_review/REPORT.md` (same content also at
+`/home/c03rad0r/reports/reviews/plebeian-pr-reviews-t_8abf83e1-glm.md` and the
+board attachment dir). This file records the final verified state for the
+pushed milestone `c3b0738b867c…` on `fork/review/pr1384-noop-20261029`.
 
 ## Outcome
 
-NO-OP — the requested publication is already covered at the live, merged head. No new `gh pr review`, issue comment, approval, or other GitHub write was performed by this run. Posting another at-head review would duplicate the existing lane artifact on a merged PR.
+**NO-OP on publication — verified, not assumed.** No `gh pr review`, no issue
+comment, no APPROVED, no request-changes was posted for PR #1384 this run.
+The dispatch asked for a review at a pin that is (a) a stale pre-rebuild
+commit and (b) an ancestor of this lane's own published review head; and the
+live head already carries the fleet's review-of-record. Re-publishing would be
+duplicate/AACR noise.
 
-Existing review:
-https://github.com/PlebeianApp/market/pull/1285#pullrequestreview-5328576103
+## Verified facts (all re-derived live this run)
 
-That review states retrospective APPROVED, no change requests against the merged delta, and one non-blocking [RISK]. This no-op does not create a new verdict or claim that the old audit was rerun.
+1. **Pin is stale.** `843abaa5cbd4` (2026-09-23) is absent from the live
+   62-commit list; `compare 843abaa5...378a96b9` → diverged (163 ahead / 25
+   behind): the branch was rebuilt after the pin.
+2. **Pin's content was already reviewed by this lane.** It is an ancestor of
+   `042d272b` — the head of felixfelix-bot comment 5801210593 (2026-09-23,
+   verdict: no [BLOCK], 2 [RISK], 4 [INFO]) — and of delta review 5311618021 at
+   `cd990b7b` (2026-09-24, no [BLOCK], 2 [RISK], 2 [NIT], 2 [INFO], which
+   names its own cross-family cold audit by worker-reviewer-ds).
+3. **Live head `378a96b95081…` is covered.** felixfelix-bot review 5331709479
+   (2026-09-27, COMMENT, deepseek-flash = **ds family**) sits at exactly this
+   head: 2 BLOCKs (multiparty root emitted on the live publish path in
+   contradiction of the packet's own §17 prohibition; duplicated
+   validator-policy parser for untrusted relay data) + P1–P7 + a
+   threads-resolved table re-classifying all 11 threads from the earlier glm
+   reviews. Nothing newer exists on the PR. Four of its citations were
+   spot-verified at the live head this run — all confirmed.
+4. **Detector loop root cause fixed.** `plebeian-pr-review-state.json` had no
+   `prs.1384` entry at all. Now recorded:
+   `last_reviewed_sha=378a96b95081d3a1a4369cbd8e555b97a337e1d2`,
+   `review_card=t_8abf83e1`, `review_url` → review 5331709479, disposition +
+   evidence note. Backup `.bak-pr1384-noop-20261029`; read-back verified;
+   sibling entries preserved. The manager's own functions executed against
+   live GitHub: `reviews_by_us_at(1384, head)=True`, `needs_review=False`.
+5. **Gate 2.5 not dispatched — honestly.** No new draft exists to audit, no
+   new verdict is claimed, and `worker-reviewer-ds` has no profile on this
+   node. The card's cross-family intent is already discharged by the at-head
+   ds-family review-of-record. No audit tokens are claimed.
+6. **Card repair.** `t_8abf83e1` was done-with-empty-result (fleet-writeback
+   rc=0, 2026-09-26), live engine `tier=code/block` (9 gates missing) — the
+   documented re-promotion loop. Repaired via targeted sqlite UPDATE
+   (board-DB backup `.bak-t_8abf83e1-20261029T0252`) with a line-1
+   `tags: recon, read-only` declaration — this run's work is genuinely
+   read-only verification (no repo commit on PlebeianApp/market, no publish,
+   no tests claimed). Post-flight live engine:
+   **tier=recon, verdict=pass, passed=[review_artifact, secrets_clean],
+   missing=[]**. A closure comment was posted on the card (3rd comment).
+7. **Secrets.** gitleaks 8.21.2 (`--no-git`) over the artifacts dir: no leaks.
+   Engine `scan_secrets` over result + attachments: `[]`.
 
-## Fresh evidence from this run
+## GitHub writes to PlebeianApp/market: none
 
-1. Live PR metadata was fetched with `gh pr view 1285 --repo PlebeianApp/market`. State is MERGED; head is `f100daad527cc1ef5d6021de4a3533f87697281e`; base is `auctions`; merged at 2026-09-21T21:53:49Z as `0a48b028ee1c7830813617d2b708094d2de2b010`.
-2. The dispatch pin is not the live head. `git merge-base --is-ancestor a0696cf80388 f100daad…` succeeded; `git rev-list --count a0696cf80388..f100daad…` returned 3. The later commits are `a12f3fe6`, `8df76d27`, and `f100daad`.
-3. Review 5328576103 was read back directly through `gh api repos/PlebeianApp/market/pulls/1285/reviews/5328576103`: user `felixfelix-bot`, state `COMMENTED`, `commit_id=f100daad…`, submitted 2026-09-27T02:35:44Z. Thus a real review object exists at the live head, satisfying the detector's coverage mechanism.
-4. Manager state `/home/c03rad0r/.hermes/profiles/manager/state/plebeian-pr-review-state.json` already records `prs.1285.last_reviewed_sha=f100daad…`, `review_card=t_6488d793`, `disposition=reviewed-merged-approved-risk`, and the URL above. No state write was necessary.
-5. This run loaded the manager's own `plebeian-pr-review-gate.py` functions without running its scheduler. `reviews_by_us_at(1285, f100daad…)` returned `true`; `needs_review(...)` returned `false`. The detector condition is therefore closed by observed function results, not just by the state key's presence.
+## Pushed milestone
 
-## Original review and Gate 2.5 evidence
-
-Durable artifact:
-`/home/c03rad0r/reports/reviews/plebeian-pr-reviews-t_6488d793-kimi.md`
-
-It records the published merged-head review, first-party test/probe evidence, read-back, state write, and the actual three-round cross-family Gate 2.5 chain: round 1 REJECTED, round 2 REJECTED, round 3 APPROVED, followed by a disclosed cosmetic calibration. The surviving round-3 verdict file `/home/c03rad0r/worktrees/t_6488d793/gate25/gate25-1285-r3.md` was read in this run and ends `APPROVED`; it names worker-reviewer-glm / tier-review-glm and verifies the review's findings and test claims. This run did not rerun those tests or audits and does not present their historical execution as fresh output.
-
-Gate 2.5 was not dispatched for this run. There is no new draft to publish and no new verdict to audit; dispatching a cold reviewer for an empty publication would add no evidence.
-
-## Earlier duplicate close and this supplement
-
-An earlier worker had already closed the same PR's stale review dispatch as a no-op on 2026-10-29. Its final commit `059a2f1398f939cc0b9d5f376b04541943751458` was confirmed by `git ls-remote` at `fork/review/pr1285-noop-20261029`. Its root `REPORT.md` covers dispatch pin `5ea90a06…`; it does not name this run's different pin `a0696cf8…`. This run therefore adds only `docs/pr1285-noop/determination-a0696cf8.md` and a fresh full report, preserving the earlier no-op rather than treating it as though it never happened.
-
-The pushed prior no-op branch remains available at:
-https://github.com/felixfelix-bot/market/tree/review/pr1285-noop-20261029
-
-## Repository handling
-
-The checkout started with unrelated modifications to `MANIFEST.md`, `artifacts/pr1306_dedup/*`, `src/lib/auction/reserveGuard.ts`, and untracked `e2e/baseline-results/`; none were edited or staged by this task. The tracked root `PROGRESS.md` initially belonged to PR #1138 and is preserved in branch history; this task replaces it only in the worktree with the required PR #1285 progress checklist. The root `REPORT.md` is this report.
-
-No source or test files changed, so behavior tests were not run. `git diff --check -- REPORT.md PROGRESS.md docs/pr1285-noop/determination-a0696cf8.md` passed, and `bunx prettier --check` on those same three files passed. Commit `c386aeac2da4237d11b8e5492ce8bc2a22b49b1c` was created with only the three task files staged. `git push fork HEAD:review/pr1285-noop-20261029` succeeded, and `git ls-remote fork refs/heads/review/pr1285-noop-20261029` returned that exact SHA. This final report-evidence amendment is committed and pushed separately; its own final SHA is recorded by the last commit message and verified by remote read-back.
-
-## Publication and state checklist
-
-- [x] Exact dispatched SHA cited and resolved.
-- [x] Live head fetched and compared with the pin.
-- [x] Existing review at live head fetched directly.
-- [x] Original full artifact and final Gate 2.5 verdict read.
-- [x] `last_reviewed_sha` confirmed already recorded at the live head.
-- [x] Manager detector functions confirm at-head coverage and no review needed.
-- [x] Duplicate GitHub review/comment avoided.
-- [x] No new Gate 2.5 verdict claimed.
-- [x] Task-scoped `git diff --check` passed.
-- [x] Task-scoped Prettier check passed.
-- [x] Supplement commit `c386aeac2da4237d11b8e5492ce8bc2a22b49b1c` pushed, with the exact remote SHA read back.
-
-## Remaining steps
-
-None for the PR review, detector state, or Gate 2.5. The only remaining repository operation was to record and push this final evidence amendment; that operation is performed immediately after this report is written. No PR publication is remaining or appropriate.
+- Commit `c3b0738b867cd28fabeb36f62cc41afa87ae379a` on
+  `fork/review/pr1384-noop-20261029` (observed via `git ls-remote`), carrying
+  `artifacts/pr1384_review/` (REPORT, PROGRESS, raw evidence, the result
+  declaration text). The contended shared-worktree root PROGRESS.md/REPORT.md
+  belong to a concurrent pr1272 lane and were left untouched.
