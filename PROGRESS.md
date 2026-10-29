@@ -2,7 +2,7 @@
 
 - Preflight: live head is a5b9f50e0651b124f44679579a50102b4d4e34e1, not card pin e75ab27e84a6; our lane last reviewed 3a44fa6a. Status: live-head delta review required. Files touched: none yet.
 - Workspace: created /home/c03rad0r/worktrees/pr1380-delta-review on review/pr1380-delta-20261029 at 9f3e68a0, avoiding unrelated changes in the primary checkout. Status: done. Files touched: PROGRESS.md.
-- Source review: pending. Findings: none recorded yet.
+- Source review: current-head delta is four commits: ADR citation/latency edits, one transient-classifier alternation plus test, and a test-header edit. All four publish-path reads pass declared auditors (src/publish/auctions.tsx:1303,:1366,:1653,:1737); retry remains bounded/fail-closed (src/queries/auctions.tsx:685-699). Current-head CI green; unit job 108717627522 contains the new Failed to fetch pass and 1861 tests/134 files. Merge simulation against origin/auctions returned one tree with no conflict section; diff-check clean. Status: code verification complete; exact-head focused local test pending. Findings: the ADR causal sentence is false in the wholly-empty case, but is already Required item 1 in current-head reviews 5332383772/5332383971, so it will be carried rather than duplicated. Files touched: artifacts/pr1380_review/{show_head.py,summarize_thread.py,pr-meta.json,issue-comments.json,reviews.json,check-runs.json,unit-ci.log,full-pr.diff}.
 - Gate 2.5: pending cold worker-reviewer-glm audit; no verdict claimed.
 - Publish: pending. No review posted and no last_reviewed_sha update yet.
 - Artifact: pending final REPORT.md, commit and push.

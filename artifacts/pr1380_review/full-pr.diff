@@ -1,0 +1,767 @@
+From e5e6d9714bcf196dad06596d9a19abca3a244379 Mon Sep 17 00:00:00 2001
+From: c03rad0r <c03rad0r@users.noreply.github.com>
+Date: Sun, 20 Sep 2026 11:41:23 +0200
+Subject: [PATCH 1/7] fix(auctions): scope the settlement quorum gates to
+ auction auditors + bounded retry
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The two settlement-path quorum gates in `publishAuctionSettlement` read verdicts
+with the auction's auditor set omitted and with a dead 6th argument left behind
+by 80507d32 ("publisher passing true as fetchFn") — a botched param order that
+was papered over rather than fixed:
+
+    fetchAuctionVerdicts(id, null, coord, undefined, undefined, true)
+                                               ^^^^^^^^^  ^^^^^^^^^^^
+                                               auditors   fetchFn=true
+
+Both calls were `error TS2554: Expected 1-5 arguments, but got 6`, and both did
+an unscoped relay read (every author, not the auction's declared auditors). The
+read is only *semantically* safe today because `computeVerdictQuorum` re-filters
+by auditor after the fact; the relay-side scoping and the type error are not.
+
+Changes:
+- Route all four publish-path verdict gate reads (bidder path-release x2,
+  reserve_not_met, winning-bid settlement) through a new
+  `fetchAuctionVerdictsWithRetry`, which passes the auction's declared
+  `auditors` as the relay `authors` filter and hands the read a retry budget.
+- The retry is a bounded window (2500ms) with a 300ms step, mirroring the poll
+  pattern in `src/lib/utils/mempool.ts`. It retries an empty read (relay
+  propagation lag is the expected cause) and transient transport errors only —
+  anything else propagates immediately. An auction that declares no auditors is
+  a permanent condition rather than lag, and is not retried.
+- Fail-closed is unchanged: when the window closes the last observation is
+  returned (or the last transient error rethrown), so the caller's
+  quorum-shortfall throw still runs and a short quorum is never published.
+- Unit coverage for the retry budget, and the empty / permanent / transient /
+  non-transient paths.
+
+Gates (local, base `upstream/auctions` @ 94d06bd9):
+- e2e "publish events to relay" group (:711 / :767 / :823 / :908): 5 consecutive
+  runs green, 0 retries, 0 flaky.
+- `bun run test:unit`: 1354 pass / 3 fail — exactly the same 3 pre-existing
+  failures as the untouched base (1347 pass / 3 fail), plus 7 new passing tests.
+- `bunx tsc --noEmit`: 331 errors vs 333 on the base. Zero new error types; the
+  two TS2554s above are gone.
+- `bun run format:check` and `git diff --check`: clean.
+---
+ src/publish/auctions.tsx                      |  15 +-
+ .../__tests__/auctionVerdictsRetry.test.ts    | 198 ++++++++++++++++++
+ src/queries/auctions.tsx                      |  73 +++++++
+ 3 files changed, 278 insertions(+), 8 deletions(-)
+ create mode 100644 src/queries/__tests__/auctionVerdictsRetry.test.ts
+
+diff --git a/src/publish/auctions.tsx b/src/publish/auctions.tsx
+index 8e2052583..07bb5eeea 100644
+--- a/src/publish/auctions.tsx
++++ b/src/publish/auctions.tsx
+@@ -1275,7 +1275,7 @@ export const publishBidderPathRelease = async (input: PublishBidderPathReleaseIn
+ 	// terminal settlement, or the locktime may have changed since the UI read.
+ 	try {
+ 		const [
+-			{ fetchAuction, fetchAuctionBids, fetchAuctionSettlements, fetchAuctionVerdicts },
++			{ fetchAuction, fetchAuctionBids, fetchAuctionSettlements, fetchAuctionVerdictsWithRetry },
+ 			{ parseAuctionEvent },
+ 			{ parseBidEvent },
+ 			{ parseSettlementEvent },
+@@ -1300,7 +1300,7 @@ export const publishBidderPathRelease = async (input: PublishBidderPathReleaseIn
+ 
+ 		const [bidEvents, verdictEvents, settlementEvents] = await Promise.all([
+ 			fetchAuctionBids(latestLeg.auctionRootEventId, null, parsedAuction.coordinate, true),
+-			fetchAuctionVerdicts(latestLeg.auctionRootEventId, null, parsedAuction.coordinate, parsedAuction.auditors, undefined),
++			fetchAuctionVerdictsWithRetry(latestLeg.auctionRootEventId, null, parsedAuction.coordinate, parsedAuction.auditors),
+ 			fetchAuctionSettlements(latestLeg.auctionRootEventId, null, parsedAuction.coordinate, undefined, true),
+ 		])
+ 		const parsedBids = bidEvents
+@@ -1353,7 +1353,7 @@ export const publishBidderPathRelease = async (input: PublishBidderPathReleaseIn
+ 	// and the auction is ready for settlement. This prevents premature
+ 	// release based on stale or incomplete information.
+ 	try {
+-		const [{ fetchAuctionVerdicts, fetchAuction }, { parseValidatorVerdictEvent }, { parseAuctionEvent }] = await Promise.all([
++		const [{ fetchAuctionVerdictsWithRetry, fetchAuction }, { parseValidatorVerdictEvent }, { parseAuctionEvent }] = await Promise.all([
+ 			import('@/queries/auctions'),
+ 			import('@/lib/schemas/auction/validatorEvents'),
+ 			import('@/lib/schemas/auction/auctionEvent'),
+@@ -1363,12 +1363,11 @@ export const publishBidderPathRelease = async (input: PublishBidderPathReleaseIn
+ 		const parsedAuctionResult = parseAuctionEvent(toRawEvent(auctionEvent))
+ 		if (!parsedAuctionResult.ok) throw new Error('Auction is malformed')
+ 		const quorumAuction = parsedAuctionResult.value
+-		const verdictEvents = await fetchAuctionVerdicts(
++		const verdictEvents = await fetchAuctionVerdictsWithRetry(
+ 			latestLeg.auctionRootEventId,
+ 			null,
+ 			latestLeg.auctionCoordinate,
+ 			quorumAuction.auditors,
+-			undefined,
+ 		)
+ 		const parsedVerdicts = verdictEvents
+ 			.map((v) => parseValidatorVerdictEvent(toRawEvent(v)))
+@@ -1545,7 +1544,7 @@ export const publishAuctionSettlement = async (formData: AuctionSettlementFormDa
+ 	// Lazy imports to avoid pulling settlement-only deps into the bid
+ 	// path's bundle.
+ 	const [
+-		{ fetchAuction, fetchAuctionBids, fetchAuctionPathReleases, fetchAuctionSettlements, fetchAuctionVerdicts, getBidAmount },
++		{ fetchAuction, fetchAuctionBids, fetchAuctionPathReleases, fetchAuctionSettlements, fetchAuctionVerdictsWithRetry, getBidAmount },
+ 		auctionSettlementMod,
+ 		settlementEventsMod,
+ 		constantsMod,
+@@ -1651,7 +1650,7 @@ export const publishAuctionSettlement = async (formData: AuctionSettlementFormDa
+ 		// winning bid must not be able to displace it with reserve_not_met.
+ 		const [rnmBids, rnmVerdicts] = await Promise.all([
+ 			fetchAuctionBids(formData.auctionEventId, null, auctionCoordinate, true),
+-			fetchAuctionVerdicts(formData.auctionEventId, null, auctionCoordinate, undefined, undefined, true),
++			fetchAuctionVerdictsWithRetry(formData.auctionEventId, null, auctionCoordinate, parsedAuction.auditors),
+ 		])
+ 		const rnmParsedBids = rnmBids
+ 			.map((b) => parseBidEvent(toRawEvent(b)))
+@@ -1735,7 +1734,7 @@ export const publishAuctionSettlement = async (formData: AuctionSettlementFormDa
+ 	// winner independently from validator quorum evidence.
+ 	const [bids, verdictEvents] = await Promise.all([
+ 		fetchAuctionBids(formData.auctionEventId, null, auctionCoordinate, true),
+-		fetchAuctionVerdicts(formData.auctionEventId, null, auctionCoordinate, undefined, undefined, true),
++		fetchAuctionVerdictsWithRetry(formData.auctionEventId, null, auctionCoordinate, parsedAuction.auditors),
+ 	])
+ 	if (!bids.length) {
+ 		throw new Error('No bids on this auction — nothing to settle. Use reserve_not_met to close it.')
+diff --git a/src/queries/__tests__/auctionVerdictsRetry.test.ts b/src/queries/__tests__/auctionVerdictsRetry.test.ts
+new file mode 100644
+index 000000000..4f4bb640a
+--- /dev/null
++++ b/src/queries/__tests__/auctionVerdictsRetry.test.ts
+@@ -0,0 +1,198 @@
++import { beforeAll, describe, expect, mock, test } from 'bun:test'
++import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools'
++import { VALIDATOR_VERDICT_KIND } from '@/lib/auction/constants'
++import type { NostrEvent, NostrFilter } from '@/lib/nostr/io'
++
++type RelayEvent = NostrEvent
++
++if (!('localStorage' in globalThis)) {
++	const items = new Map<string, string>()
++	Object.defineProperty(globalThis, 'localStorage', {
++		value: {
++			getItem: (key: string) => items.get(key) ?? null,
++			setItem: (key: string, value: string) => items.set(key, value),
++			removeItem: (key: string) => items.delete(key),
++			clear: () => items.clear(),
++		},
++		configurable: true,
++	})
++}
++
++// Same seam the sibling verdict-query test mocks, with the same shape: bun
++// applies `mock.module` process-wide for the whole test run, so the mocks here
++// must stay identical to `auctionVerdicts.test.ts`. The signature seam is
++// deliberately NOT mocked — the fixtures below are really signed, so the parse
++// boundary under it behaves as it does in production.
++mock.module('@/lib/stores/blacklist', () => ({
++	blacklistActions: {
++		isBlacklistLoaded: () => false,
++		isPubkeyBlacklisted: () => false,
++		isProductBlacklisted: () => false,
++		isCollectionBlacklisted: () => false,
++	},
++}))
++
++mock.module('@/lib/stores/ndk', () => ({
++	getWriteRelays: () => [],
++	ndkStore: {
++		state: {
++			ndk: null,
++			zapNdk: null,
++			explicitRelayUrls: [],
++			writeRelayUrls: [],
++			signer: undefined,
++		},
++	},
++	ndkActions: {
++		getNDK: () => ({}),
++		fetchEventsWithTimeout: mock(async () => new Set<never>()),
++	},
++}))
++
++// The mocks above must be registered before the module under test is imported,
++// so the import is deferred past the hoisted `mock.module` calls.
++type AuctionsQueries = typeof import('@/queries/auctions')
++let queries!: AuctionsQueries
++const AUCTION_VERDICT_RETRY_WINDOW_MS = 2500
++const AUCTION_VERDICT_RETRY_STEP_MS = 300
++
++beforeAll(async () => {
++	queries = await import('@/queries/auctions')
++	// Budget under test comes from the module, not from the local copies above.
++	expect(queries.AUCTION_VERDICT_RETRY_WINDOW_MS).toBe(AUCTION_VERDICT_RETRY_WINDOW_MS)
++	expect(queries.AUCTION_VERDICT_RETRY_STEP_MS).toBe(AUCTION_VERDICT_RETRY_STEP_MS)
++})
++
++const AUCTION_ROOT_EVENT_ID = '1'.repeat(64)
++const AUCTION_COORDINATE = `30408:${'a'.repeat(64)}:auction-1`
++
++const validatorSecretKey = generateSecretKey()
++const validatorPubkey = getPublicKey(validatorSecretKey)
++
++function verdictEvent(createdAt: number): NostrEvent {
++	return finalizeEvent(
++		{
++			kind: VALIDATOR_VERDICT_KIND as unknown as number,
++			created_at: createdAt,
++			content: '',
++			tags: [
++				['d', `${'b'.repeat(64)}:${AUCTION_ROOT_EVENT_ID}:${'c'.repeat(64)}`],
++				['p', 'b'.repeat(64)],
++				['e', AUCTION_ROOT_EVENT_ID],
++				['bid', 'c'.repeat(64)],
++				['a', AUCTION_COORDINATE],
++				['claim', 'valid_bid_placed'],
++				['observed_at', String(createdAt)],
++			],
++		},
++		validatorSecretKey,
++	)
++}
++
++const verdict = verdictEvent(1700000000)
++
++/**
++ * Build an injected fetcher from a scripted sequence of responses. An Error
++ * entry is thrown; an array entry is returned. The last entry repeats once the
++ * script is exhausted, so "always empty" / "always throws" are expressible.
++ */
++function scriptedFetch(script: (RelayEvent[] | Error)[]) {
++	const calls: NostrFilter[] = []
++	const fn = async (filter: NostrFilter | NostrFilter[]) => {
++		calls.push(filter as NostrFilter)
++		const step = script[Math.min(calls.length - 1, script.length - 1)]
++		if (step instanceof Error) throw step
++		return [...step]
++	}
++	return { fn, calls }
++}
++
++describe('publish-path verdict reads — bounded transient retry', () => {
++	test('budget is a 2500ms window with a 300ms step', () => {
++		expect(queries.AUCTION_VERDICT_RETRY_WINDOW_MS).toBe(2500)
++		expect(queries.AUCTION_VERDICT_RETRY_STEP_MS).toBe(300)
++	})
++
++	test('re-reads after an empty observation until the verdict appears', async () => {
++		const { fn, calls } = scriptedFetch([[], [], [verdict]])
++
++		const result = await queries.fetchAuctionVerdictsWithRetry(
++			AUCTION_ROOT_EVENT_ID,
++			null,
++			AUCTION_COORDINATE,
++			[validatorPubkey],
++			fn,
++			500,
++			10,
++		)
++
++		expect(result.map((e) => e.id)).toEqual([verdict.id])
++		expect(calls.length).toBe(3)
++		// Every attempt stays scoped to the auction's declared auditors.
++		for (const filter of calls) expect(filter.authors).toEqual([validatorPubkey])
++	})
++
++	test('returns the last empty observation when the window closes — the caller still fails closed', async () => {
++		const { fn, calls } = scriptedFetch([[]])
++
++		const result = await queries.fetchAuctionVerdictsWithRetry(
++			AUCTION_ROOT_EVENT_ID,
++			null,
++			AUCTION_COORDINATE,
++			[validatorPubkey],
++			fn,
++			60,
++			10,
++		)
++
++		// No throw from the retry helper: the empty read is handed back so the
++		// caller's quorum-shortfall throw (fail-closed) is what stops the publish.
++		expect(result).toEqual([])
++		expect(calls.length).toBeGreaterThan(1)
++	})
++
++	test('does not retry an auction that declares no auditors (permanent, not lag)', async () => {
++		const { fn, calls } = scriptedFetch([[]])
++
++		const result = await queries.fetchAuctionVerdictsWithRetry(AUCTION_ROOT_EVENT_ID, null, AUCTION_COORDINATE, [], fn, 500, 10)
++
++		expect(result).toEqual([])
++		expect(calls.length).toBe(0)
++	})
++
++	test('propagates a non-transient error immediately', async () => {
++		const failure = new Error('unexpected response shape from relay')
++		const { fn, calls } = scriptedFetch([failure])
++
++		await expect(
++			queries.fetchAuctionVerdictsWithRetry(AUCTION_ROOT_EVENT_ID, null, AUCTION_COORDINATE, [validatorPubkey], fn, 500, 10),
++		).rejects.toThrow('unexpected response shape from relay')
++		expect(calls.length).toBe(1)
++	})
++
++	test('retries a transient transport error, then returns the verdict', async () => {
++		const { fn, calls } = scriptedFetch([new Error('socket closed'), [verdict]])
++
++		const result = await queries.fetchAuctionVerdictsWithRetry(
++			AUCTION_ROOT_EVENT_ID,
++			null,
++			AUCTION_COORDINATE,
++			[validatorPubkey],
++			fn,
++			500,
++			10,
++		)
++
++		expect(result.map((e) => e.id)).toEqual([verdict.id])
++		expect(calls.length).toBe(2)
++	})
++
++	test('rethrows the transient error once the window closes', async () => {
++		const { fn, calls } = scriptedFetch([new Error('relay connection timeout')])
++
++		await expect(
++			queries.fetchAuctionVerdictsWithRetry(AUCTION_ROOT_EVENT_ID, null, AUCTION_COORDINATE, [validatorPubkey], fn, 60, 10),
++		).rejects.toThrow('relay connection timeout')
++		expect(calls.length).toBeGreaterThan(1)
++	})
++})
+diff --git a/src/queries/auctions.tsx b/src/queries/auctions.tsx
+index 0eed62546..970e178ca 100644
+--- a/src/queries/auctions.tsx
++++ b/src/queries/auctions.tsx
+@@ -620,6 +620,79 @@ export const fetchAuctionVerdicts = async (
+ 	)
+ }
+ 
++/**
++ * Retry budget for a publish-path verdict read: a bounded window with a
++ * fixed step. Sized to cover relay propagation lag (a verdict published
++ * moments ago is not necessarily visible to the next read) without holding
++ * a seller's/bidder's publish action open indefinitely.
++ */
++export const AUCTION_VERDICT_RETRY_WINDOW_MS = 2500
++export const AUCTION_VERDICT_RETRY_STEP_MS = 300
++
++/**
++ * Transport-level failures a retry can plausibly clear — socket closed,
++ * connection refused, timeouts/aborts. Deliberately narrow: a semantic
++ * failure (bad filter, malformed response, verification error) must
++ * propagate immediately rather than be hidden behind a retry window.
++ */
++const TRANSIENT_FETCH_ERROR_PATTERN =
++	/timeout|timed out|abort|network|fetch failed|econnreset|econnrefused|econnaborted|socket|closed|unavailable|not connected|relay.*(error|unreachable)/i
++
++const isTransientAuctionFetchError = (err: unknown): boolean => {
++	if (!err) return false
++	const name = typeof err === 'object' && 'name' in err ? String((err as { name?: unknown }).name ?? '') : ''
++	const message = err instanceof Error ? err.message : String(err)
++	return TRANSIENT_FETCH_ERROR_PATTERN.test(`${name} ${message}`)
++}
++
++/**
++ * Bounded, transient-only retry around `fetchAuctionVerdicts`, for the
++ * publish-path quorum gates.
++ *
++ * On the publish paths an empty verdict read is not a neutral observation:
++ * it makes the quorum resolve 0/N, and the gate is fail-closed, so a single
++ * racy read (a verdict that is published but not yet indexed by the relay)
++ * blocks a legitimate release or settlement. Retrying a *bounded* number of
++ * times separates "not visible yet" from "not there":
++ *
++ * - an empty result is retried (propagation lag is the expected cause);
++ * - an explicitly empty `validatorPubkeys` (auction declares no auditors) is
++ *   NOT retried — nothing is authorized, so re-reading cannot change the
++ *   answer;
++ * - an error is retried only when `isTransientAuctionFetchError` recognises
++ *   it; anything else propagates immediately.
++ *
++ * The final fail-closed behaviour is preserved: when the window closes the
++ * last observation is returned (or the last transient error rethrown), so
++ * the caller's quorum-shortfall throw still runs and a genuinely missing
++ * quorum is never published.
++ */
++export const fetchAuctionVerdictsWithRetry = async (
++	auctionEventId: string,
++	limit: number | null = 500,
++	auctionCoordinates?: string,
++	validatorPubkeys?: string[],
++	fetchFn: EventFetcher = applesauceIo.fetchEvents,
++	windowMs = AUCTION_VERDICT_RETRY_WINDOW_MS,
++	stepMs = AUCTION_VERDICT_RETRY_STEP_MS,
++): Promise<NostrEventLike[]> => {
++	const deadline = Date.now() + windowMs
++	for (;;) {
++		try {
++			const verdicts = await fetchAuctionVerdicts(auctionEventId, limit, auctionCoordinates, validatorPubkeys, fetchFn)
++			if (verdicts.length > 0) return verdicts
++			// Permanent condition, not propagation lag: no declared auditor
++			// can ever produce an authorized verdict here.
++			if (validatorPubkeys?.length === 0) return verdicts
++			if (Date.now() + stepMs >= deadline) return verdicts
++		} catch (err) {
++			if (!isTransientAuctionFetchError(err)) throw err
++			if (Date.now() + stepMs >= deadline) throw err
++		}
++		await new Promise((resolve) => setTimeout(resolve, stepMs))
++	}
++}
++
+ /**
+  * Explicit signature check for kind-30440 verdicts. Tolerates both real
+  * `NDKEvent`s (via `rawEvent()`) and duck-typed event objects so the parse
+
+From ab80b0bcc4a2f4a15e92323dbd808c773c6f741a Mon Sep 17 00:00:00 2001
+From: felixfelix-bot <felixfelix-bot@users.noreply.github.com>
+Date: Fri, 25 Sep 2026 14:35:12 +0200
+Subject: [PATCH 2/7] docs(queries): label the retry's propagation-lag premise
+ as inferred (review 5260334866)
+
+The retry-budget comment stated relay propagation lag as the reason for the
+window. That mechanism is inferred from the code path, not observed: the only
+evidence on the PR is green runs, and the relay's response at a failing read was
+never captured (PR #1380, maxime-tt review 5260334866, item 1). The comment now
+says so, and says what the window is measured to do either way.
+
+Comment-only change: no behaviour, no assertion, and no gate semantics change.
+---
+ src/queries/auctions.tsx | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/src/queries/auctions.tsx b/src/queries/auctions.tsx
+index 970e178ca..a12d4aada 100644
+--- a/src/queries/auctions.tsx
++++ b/src/queries/auctions.tsx
+@@ -622,9 +622,13 @@ export const fetchAuctionVerdicts = async (
+ 
+ /**
+  * Retry budget for a publish-path verdict read: a bounded window with a
+- * fixed step. Sized to cover relay propagation lag (a verdict published
+- * moments ago is not necessarily visible to the next read) without holding
+- * a seller's/bidder's publish action open indefinitely.
++ * fixed step, sized to cover relay propagation lag — a verdict published
++ * moments ago is not necessarily visible to the next read.
++ *
++ * That premise is INFERRED from the code path above, not observed: no
++ * captured failing read with the relay's response backs it (PR #1380,
++ * review 5260334866). What the window is measured to do either way is keep
++ * a seller's/bidder's publish action from being held open indefinitely.
+  */
+ export const AUCTION_VERDICT_RETRY_WINDOW_MS = 2500
+ export const AUCTION_VERDICT_RETRY_STEP_MS = 300
+
+From 72402cdd7e2dd563eb84d4257416a2b2a503a678 Mon Sep 17 00:00:00 2001
+From: felixfelix-bot <felixfelix-bot@users.noreply.github.com>
+Date: Fri, 25 Sep 2026 14:36:29 +0200
+Subject: [PATCH 3/7] docs(adr): record the bounded verdict re-read as a
+ publish-gate relay assumption (review 5260334866)
+
+Root AGENTS.md requires a new relay assumption to be explicit in documentation
+("No new event kinds, payment semantics, relay assumptions, or network egress
+paths without code, tests, and documentation that make the decision explicit").
+ADR-0004 owns publish-layer quorum-gate semantics, so the assumption lands
+there as an amendment on the settlement publisher section: the bounded window
+and step, that only an empty read or a transient transport error is re-read,
+that an auditor-less auction is not retried, and that the re-read cannot weaken
+the fail-closed gate.
+
+Proposed, not accepted: the amendment says so in place and the ADR Status field
+is unchanged, because the decision awaits maintainer sign-off (PR #1380,
+maxime-tt review 5260334866, "Required before merge" item 2).
+
+Prettier-clean: `bunx prettier --check` on the touched files passes.
+---
+ .../ADR-0004-auction-settlement-descriptor.md | 33 +++++++++++++++++++
+ 1 file changed, 33 insertions(+)
+
+diff --git a/docs/adr/ADR-0004-auction-settlement-descriptor.md b/docs/adr/ADR-0004-auction-settlement-descriptor.md
+index a5b971f71..eb268b98c 100644
+--- a/docs/adr/ADR-0004-auction-settlement-descriptor.md
++++ b/docs/adr/ADR-0004-auction-settlement-descriptor.md
+@@ -286,6 +286,39 @@ The publisher independently derives the canonical winner:
+    succeeds, leg 2 fails, and the seller has partial funds with no valid
+    settlement event.
+ 
++> **Amendment (2026-09-25, proposed — awaits maintainer sign-off): a
++> publish-path verdict read is a bounded re-read, not a single
++> observation.** The quorum gates above read kind-30440 verdicts scoped to
++> the auction's declared `auditors`, and a verdict that is published but not
++> yet indexed by the relay is absent from such a read: on a fail-closed gate
++> one racy read resolves the quorum to `0/N` and refuses a legitimate path
++> release or settlement. This amendment records the resulting relay
++> assumption — _a kind-30440 verdict MAY be absent from a read taken
++> immediately after publication, and a bounded re-read is expected to
++> resolve it_ — as part of the gate's contract
++> (`fetchAuctionVerdictsWithRetry`, `src/queries/auctions.tsx:599-664`).
++>
++> 1. **The window is bounded, and it is the only thing the re-read may act
++>    on.** The gate re-reads an empty result, or a transient transport
++>    failure, inside a 2500 ms window with a 300 ms step (≤ 9 reads), then
++>    stops. An auction that declares no auditors is a permanent condition,
++>    not propagation lag, and is deliberately not retried; a non-transient
++>    error propagates immediately. The re-read is publish-path only —
++>    read-path consumers keep their single read.
++> 2. **The re-read cannot weaken the gate.** When the window closes, the last
++>    observation is returned or the last transient error is rethrown, so
++>    every caller's quorum-shortfall throw still runs and a genuinely short
++>    quorum is never published. The measured consequence is latency, not
++>    permissiveness: worst case one extra 2500 ms per publish action, and a
++>    genuinely short quorum reports ~2500 ms later than before — consistent
++>    with this ADR's "Security takes priority over settlement speed".
++>
++> The propagation-lag premise behind the window is INFERRED from the code
++> path, not observed: no captured failing read with the relay's response
++> backs it. This extension of an ADR-owned gate is therefore proposed rather
++> than clarifying an accepted decision; the `Status` field above is
++> unchanged.
++
+ ### 6. Self-verifiable events vs. network-consensus states (amendment)
+ 
+ Auction end states are classified by verification category:
+
+From e7c3a118aab1b06ae4af08f483cb19d1b2f6c3ae Mon Sep 17 00:00:00 2001
+From: r <r@x>
+Date: Sun, 27 Sep 2026 22:48:52 +0200
+Subject: [PATCH 4/7] docs(adr): cite the retry symbol instead of a stale line
+ range
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Review 5320097003 (maxime-tt), item 1, verbatim: "The ADR's line anchor
+does not bracket the thing it names. The amendment cites
+'fetchAuctionVerdictsWithRetry, src/queries/auctions.tsx:599-664' ... It
+also cannot survive the merge ... Cheapest fix is to drop the range and
+keep the symbol."
+
+The amendment's §4 citation was `src/queries/auctions.tsx:599-664`. That
+range does not bracket the declaration: :599 is `fetchAuctionVerdicts`, a
+different function, and the range drifts on every merge. Verified on this
+head (72402cdd): `fetchAuctionVerdictsWithRetry` is declared at
+src/queries/auctions.tsx:674. Drop the range and keep the symbol, so the
+citation cannot go stale.
+---
+ docs/adr/ADR-0004-auction-settlement-descriptor.md | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/docs/adr/ADR-0004-auction-settlement-descriptor.md b/docs/adr/ADR-0004-auction-settlement-descriptor.md
+index eb268b98c..6613e39bf 100644
+--- a/docs/adr/ADR-0004-auction-settlement-descriptor.md
++++ b/docs/adr/ADR-0004-auction-settlement-descriptor.md
+@@ -296,7 +296,7 @@ The publisher independently derives the canonical winner:
+ > assumption — _a kind-30440 verdict MAY be absent from a read taken
+ > immediately after publication, and a bounded re-read is expected to
+ > resolve it_ — as part of the gate's contract
+-> (`fetchAuctionVerdictsWithRetry`, `src/queries/auctions.tsx:599-664`).
++> (`fetchAuctionVerdictsWithRetry` in `src/queries/auctions.tsx`).
+ >
+ > 1. **The window is bounded, and it is the only thing the re-read may act
+ >    on.** The gate re-reads an empty result, or a transient transport
+
+From ec94f52add3b619fa9f432fa3075a21b46e62db2 Mon Sep 17 00:00:00 2001
+From: r <r@x>
+Date: Sun, 27 Sep 2026 22:50:26 +0200
+Subject: [PATCH 5/7] fix(queries): retry the browser-level "Failed to fetch"
+ as transient
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Review 5320097003 (maxime-tt), item 4, verbatim: "the transient classifier
+misses the browser-level TypeError: Failed to fetch
+(src/queries/auctions.tsx:612-613 has fetch failed, not 'failed to
+fetch'), so that error propagates instead of being retried."
+
+TDD, RED first. Before the change, the new test drove the classifier with
+`new TypeError('Failed to fetch')` and the error propagated on the first
+read instead of being retried. RED, quoted from the full `bun run
+test:unit` run at 72402cdd with the new test present:
+
+  TypeError: Failed to fetch
+      at <anonymous> (src/queries/__tests__/auctionVerdictsRetry.test.ts:195:44)
+  (fail) publish-path verdict reads — bounded transient retry > retries the
+  browser-level TypeError: Failed to fetch [9.59ms]
+
+GREEN after adding the `failed to fetch` alternative to
+TRANSIENT_FETCH_ERROR_PATTERN:
+
+  (pass) publish-path verdict reads — bounded transient retry > retries the
+  browser-level TypeError: Failed to fetch [11.75ms]
+  8 pass / 0 fail / 19 expect() calls
+
+Narrow: one alternation in the pattern, plus the doc comment above it. The
+test uses the file's existing scripted, in-process fetcher and really-signed
+fixtures — no network service is called (AGENTS.md "Test Isolation").
+---
+ .../__tests__/auctionVerdictsRetry.test.ts    | 21 +++++++++++++++++++
+ src/queries/auctions.tsx                      | 10 +++++----
+ 2 files changed, 27 insertions(+), 4 deletions(-)
+
+diff --git a/src/queries/__tests__/auctionVerdictsRetry.test.ts b/src/queries/__tests__/auctionVerdictsRetry.test.ts
+index 4f4bb640a..f005f61f3 100644
+--- a/src/queries/__tests__/auctionVerdictsRetry.test.ts
++++ b/src/queries/__tests__/auctionVerdictsRetry.test.ts
+@@ -187,6 +187,27 @@ describe('publish-path verdict reads — bounded transient retry', () => {
+ 		expect(calls.length).toBe(2)
+ 	})
+ 
++	test('retries the browser-level TypeError: Failed to fetch', async () => {
++		// A browser transport failure surfaces as `TypeError: Failed to fetch`
++		// — the Web Fetch API's wording — not Bun's `fetch failed`. Both are
++		// transport-level, so both must be retried inside the window rather
++		// than propagating out of the gate on the first read.
++		const { fn, calls } = scriptedFetch([new TypeError('Failed to fetch'), [verdict]])
++
++		const result = await queries.fetchAuctionVerdictsWithRetry(
++			AUCTION_ROOT_EVENT_ID,
++			null,
++			AUCTION_COORDINATE,
++			[validatorPubkey],
++			fn,
++			500,
++			10,
++		)
++
++		expect(calls.length).toBe(2)
++		expect(result.map((e) => e.id)).toEqual([verdict.id])
++	})
++
+ 	test('rethrows the transient error once the window closes', async () => {
+ 		const { fn, calls } = scriptedFetch([new Error('relay connection timeout')])
+ 
+diff --git a/src/queries/auctions.tsx b/src/queries/auctions.tsx
+index a12d4aada..2276f5502 100644
+--- a/src/queries/auctions.tsx
++++ b/src/queries/auctions.tsx
+@@ -635,12 +635,14 @@ export const AUCTION_VERDICT_RETRY_STEP_MS = 300
+ 
+ /**
+  * Transport-level failures a retry can plausibly clear — socket closed,
+- * connection refused, timeouts/aborts. Deliberately narrow: a semantic
+- * failure (bad filter, malformed response, verification error) must
+- * propagate immediately rather than be hidden behind a retry window.
++ * connection refused, timeouts/aborts, and the Web Fetch API's
++ * `TypeError: Failed to fetch` (the browser wording for a network-layer
++ * failure, distinct from Bun's `fetch failed`). Deliberately narrow: a
++ * semantic failure (bad filter, malformed response, verification error)
++ * must propagate immediately rather than be hidden behind a retry window.
+  */
+ const TRANSIENT_FETCH_ERROR_PATTERN =
+-	/timeout|timed out|abort|network|fetch failed|econnreset|econnrefused|econnaborted|socket|closed|unavailable|not connected|relay.*(error|unreachable)/i
++	/timeout|timed out|abort|network|fetch failed|failed to fetch|econnreset|econnrefused|econnaborted|socket|closed|unavailable|not connected|relay.*(error|unreachable)/i
+ 
+ const isTransientAuctionFetchError = (err: unknown): boolean => {
+ 	if (!err) return false
+
+From 0a1fd5e068028498a8e07911188df257d2ca5937 Mon Sep 17 00:00:00 2001
+From: r <r@x>
+Date: Sun, 27 Sep 2026 22:56:46 +0200
+Subject: [PATCH 6/7] docs(adr): correct the publish-path retry latency to the
+ two-read worst case
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Review 5320097003 (maxime-tt), item 2, verbatim: "The latency sentence
+understates the path-release flow by roughly 2x. ADR-0004:312 says 'worst
+case one extra 2500 ms per publish action' ... A single
+publishBidderPathRelease call performs two sequential publish-path verdict
+reads ... and both are reached on the same click whenever the verdict is
+genuinely absent ... Worst case there is ≈ 2 × 2.4 s. In
+publishAuctionSettlement the two reads ... sit in mutually exclusive
+branches, so there it really is one window."
+
+Verified at 72402cdd: `publishBidderPathRelease` reads publish-path
+verdicts twice on one click — src/publish/auctions.tsx:1303 (the
+`Promise.all` above the settlement check) and :1366 (the
+`won_pending_settlement` quorum gate). Both are reached when the verdict is
+genuinely absent, so the worst case is two windows, ≈ 2 × 2500 ms (each
+read stops at the last step inside its own window, ≈ 2.4 s).
+`publishAuctionSettlement` reads at :1653 (the `reserve_not_met` shortcut,
+which returns) and :1737 (the winning-bid path) — mutually exclusive
+branches, so one window there. The arithmetic stays consistent with the
+amendment's own budget (2500 ms window / 300 ms step, ≤ 9 reads).
+---
+ .../ADR-0004-auction-settlement-descriptor.md  | 18 +++++++++++++++---
+ 1 file changed, 15 insertions(+), 3 deletions(-)
+
+diff --git a/docs/adr/ADR-0004-auction-settlement-descriptor.md b/docs/adr/ADR-0004-auction-settlement-descriptor.md
+index 6613e39bf..5c07c5471 100644
+--- a/docs/adr/ADR-0004-auction-settlement-descriptor.md
++++ b/docs/adr/ADR-0004-auction-settlement-descriptor.md
+@@ -309,9 +309,21 @@ The publisher independently derives the canonical winner:
+ >    observation is returned or the last transient error is rethrown, so
+ >    every caller's quorum-shortfall throw still runs and a genuinely short
+ >    quorum is never published. The measured consequence is latency, not
+->    permissiveness: worst case one extra 2500 ms per publish action, and a
+->    genuinely short quorum reports ~2500 ms later than before — consistent
+->    with this ADR's "Security takes priority over settlement speed".
++>    permissiveness, and the worst case is per publish-path entry point, not
++>    per read: `publishBidderPathRelease` performs **two** sequential
++>    publish-path verdict reads on a single click — one in the pre-release
++>    re-resolve (`src/publish/auctions.tsx`, the `Promise.all` above the
++>    settlement check) and one in the `won_pending_settlement` quorum gate —
++>    and both are reached whenever the verdict is genuinely absent, so the
++>    worst case there is two windows, ≈ 2 × 2500 ms (each read stops at the
++>    last step inside its own window, ≈ 2.4 s). In
++>    `publishAuctionSettlement` the two reads sit in mutually exclusive
++>    branches (the `reserve_not_met` shortcut and the winning-bid path), so
++>    there it really is one window (≈ 2500 ms). A genuinely short quorum
++>    therefore reports up to ~2 × 2500 ms later than before on the
++>    path-release path, and ~2500 ms later on the settlement path —
++>    consistent with this ADR's "Security takes priority over settlement
++>    speed".
+ >
+ > The propagation-lag premise behind the window is INFERRED from the code
+ > path, not observed: no captured failing read with the relay's response
+
+From a5b9f50e0651b124f44679579a50102b4d4e34e1 Mon Sep 17 00:00:00 2001
+From: r <r@x>
+Date: Sun, 27 Sep 2026 22:57:41 +0200
+Subject: [PATCH 7/7] docs(queries): correct the retry test's mock-isolation
+ comment
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Review 5320097003 (maxime-tt), item 5, verbatim: "the new test's header
+comment (src/queries/__tests__/auctionVerdictsRetry.test.ts:21-25)
+overstates its independence from the process-wide mock.module registry."
+
+Comment-only. The old text implied this file's mocks were the seam and that
+"staying identical to auctionVerdicts.test.ts" was enough. It is not: bun
+applies `mock.module` process-wide for the whole `bun run test:unit` run, so
+this file registers its mocks but does not control the registry another
+co-running file populates. The corrected comment says what the file does
+control — its own really-signed fixtures, so the deliberately unmocked
+signature seam behaves as in production — and what it does not.
+---
+ src/queries/__tests__/auctionVerdictsRetry.test.ts | 13 ++++++++-----
+ 1 file changed, 8 insertions(+), 5 deletions(-)
+
+diff --git a/src/queries/__tests__/auctionVerdictsRetry.test.ts b/src/queries/__tests__/auctionVerdictsRetry.test.ts
+index f005f61f3..03118b2f0 100644
+--- a/src/queries/__tests__/auctionVerdictsRetry.test.ts
++++ b/src/queries/__tests__/auctionVerdictsRetry.test.ts
+@@ -18,11 +18,14 @@ if (!('localStorage' in globalThis)) {
+ 	})
+ }
+ 
+-// Same seam the sibling verdict-query test mocks, with the same shape: bun
+-// applies `mock.module` process-wide for the whole test run, so the mocks here
+-// must stay identical to `auctionVerdicts.test.ts`. The signature seam is
+-// deliberately NOT mocked — the fixtures below are really signed, so the parse
+-// boundary under it behaves as it does in production.
++// Mock registration, not isolation. `mock.module` applies process-wide for the
++// whole `bun run test:unit` run, so this file does NOT control the registry:
++// the mocks below are registered with the same shape as the sibling
++// verdict-query test (`auctionVerdicts.test.ts`) so the two agree whichever
++// loads first, but another co-running file's registration can still win. What
++// this file does control is its own fixtures: they are really signed, so the
++// parse boundary under the deliberately unmocked signature seam behaves as it
++// does in production.
+ mock.module('@/lib/stores/blacklist', () => ({
+ 	blacklistActions: {
+ 		isBlacklistLoaded: () => false,
