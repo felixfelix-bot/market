@@ -38,3 +38,8 @@ with paired felixfelix-bot APPROVED review 5224768310 that carries the qualified
 ## Verdict
 APPROVED (matches prior run comment 372; independently re-derived). Caveat: "no new issues" is true only under
 the "beyond already-raised" reading, which the published review body carries; the bare one-liner is ambiguous.
+
+## M5 (final)
+- REPORT.md written (verdict APPROVED, sections a-d + honesty notes).
+- Committed and pushed to fork branch review/pr1317-cold-20261029.
+- No GitHub posts (dedup: comment 5700061320 + review 5224768310 already live).
