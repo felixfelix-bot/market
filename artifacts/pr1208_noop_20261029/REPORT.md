@@ -143,7 +143,11 @@ precedent t_1e030aa9); not needed.
   `gate_engine.py evaluate --board plebeian-pr-reviews --task t_2d650d80`
   → tier=docs, verdict=pass, missing=[] (filled in after execution below).
 
-POST_FLIGHT_ENGINE: (to be filled with observed output after completion)
+POST_FLIGHT_ENGINE (observed 2026-10-29, after kanban_complete):
+`gate_engine.py evaluate --board plebeian-pr-reviews --task t_2d650d80 --json`
+→ tier=docs, verdict=**pass**, passed=[pushed_or_consolidated], missing=[],
+review_artifact=true, review_published=true, secrets_hits=[]. Card status=done,
+completed_at=1793264552, result_len=882. Loop closed.
 
 reviewer_model: glm-5.3
 review_tier: tier/review-glm

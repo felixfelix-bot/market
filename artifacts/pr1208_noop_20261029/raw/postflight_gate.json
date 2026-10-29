@@ -1,0 +1,27 @@
+{
+ "tier": "docs",
+ "verdict": "pass",
+ "passed": [
+  "pushed_or_consolidated"
+ ],
+ "missing": [],
+ "cross_family": null,
+ "author_family": "zhipu",
+ "ci": null,
+ "secrets_clean": null,
+ "secrets_hits": [],
+ "board": "plebeian-pr-reviews",
+ "id": "t_2d650d80",
+ "title": "Review PR #1208: feat(orders): add NIP-17 order chat read pipeline",
+ "assignee": "worker-reviewer-glm",
+ "ci_evidence": null,
+ "ci_required": true,
+ "review_artifact": true,
+ "review_published": true,
+ "consolidated": false,
+ "review_benchmark_floor": false,
+ "pr_branch_naming": false,
+ "completed_at": 1793264552,
+ "created_at": 1791228485,
+ "enforce_since_ts": 0
+}
