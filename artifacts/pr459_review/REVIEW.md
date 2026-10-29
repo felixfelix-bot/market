@@ -22,7 +22,7 @@ So an unpriced product still emits `product:price:amount` = "0" (via `:108-109`,
 
 ## [RISK] `src/routes/products.$productId.tsx:393` — og:image passes relay data through unvalidated
 
-`image: backgroundImageUrl || undefined` sends `product.image[1]` — untrusted relay tag data — straight into `og:image`/`twitter:image`. A relative or non-HTTP URL produces a broken preview (social crawlers require absolute URLs); the merged superseder added `absolutizeImageUrl()` (`src/lib/ogTags.ts:239-246` on master) precisely because this needs validation. The PR text also says "Treat relay data as untrusted until validated" is a repo constraint — this is the one place the PR doesn't.
+`image: backgroundImageUrl || undefined` sends `product.image[1]` — untrusted relay tag data — straight into `og:image`/`twitter:image`. A relative or non-HTTP URL produces a broken preview (social crawlers require absolute URLs); the merged superseder added `absolutizeImageUrl()` (`src/lib/ogTags.ts:241-246` on master) precisely because this needs validation. "Treat relay data as untrusted until validated" is a standing repo constraint (AGENTS.md) — this is the one place the PR doesn't.
 
 ## [RISK] Client-side injection is invisible to the crawlers this PR is named after
 

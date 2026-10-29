@@ -13,9 +13,9 @@ Author: BenGWeeks — Head SHA under review: db60d4d7ec896944e79ed2734f42b7ec670
 - F6 [INFO] Correction to prior review 4745940450: "duplicate meta description" risk is NOT real at this head — src/index.html:4-10 has no description meta and no other src/ code injects one (git grep at head). VERIFIED. -> REVIEW.md
 - F7 [NIT] og:type "product" is not a valid OG type; product:price:* is a defunct FB commerce namespace (harmless, ignored). VERIFIED. -> REVIEW.md
 
-Dedup duty: 4 felixfelix-bot COMMENTED reviews already exist at this head (4745911927, 4745913371 byte-identical dup, 4745927618, 4745940450) — NONE is a formal APPROVED/CHANGES_REQUESTED verdict and NONE cites F1/F2. A fresh formal REQUEST_CHANGES review is warranted, not a duplicate.
+Dedup duty: 4 felixfelix-bot COMMENTED reviews already existed at this head (4745911927, 4745913371 byte-identical dup, 4745927618, 4745940450) — NONE was a formal APPROVED/CHANGES_REQUESTED verdict and NONE cited F1/F2. A fresh formal REQUEST_CHANGES review was warranted, not a duplicate. POSTED ONCE: review 5695870945 (CHANGES_REQUESTED, felixfelix-bot) at https://github.com/PlebeianApp/market/pull/459#pullrequestreview-5695870945
 
-Gate 2.5: named profile `worker-reviewer-ds` is ABSENT on this node (~/.hermes/profiles holds only reviewer-glm/kimi/qwen + manager/worker-*). Cold audit discharged as independent fresh-context subagent pass (same-family limitation stated honestly in REPORT.md).
+Gate 2.5: named profile `worker-reviewer-ds` is ABSENT on this node (~/.hermes/profiles holds only reviewer-glm/kimi/qwen + manager/worker-*). Cold audit discharged as independent fresh-context subagent (same-family limitation stated honestly in REPORT.md and audit/audit-verdict.md). Verdict: CONFIRMED_W_AMENDMENTS — hook count corrected 18/19, stale 590→826, surrogate-pair NIT added, citations fixed.
 
 ## Status log
 
@@ -24,10 +24,10 @@ Gate 2.5: named profile `worker-reviewer-ds` is ABSENT on this node (~/.hermes/p
 - [x] Code facts verified first-hand at head via `git show db60d4d7:...`
 - [x] Superseder #1232 verified MERGED 2026-09-14T06:19:46Z; master carries ogTags SSR implementation
 - [x] REVIEW.md draft written (cites head SHA)
-- [ ] Cold audit (gate 2.5) — in progress
-- [ ] Publish review via `gh pr review --request-changes`
-- [ ] Record prs["459"].last_reviewed_sha in manager gate state
-- [ ] REPORT.md final
+- [x] Cold audit (gate 2.5) — CONFIRMED_W_AMENDMENTS (subagent verified 6 claims before 503 death; steps 7-10 completed first-hand; amendments applied)
+- [x] Publish review via `gh pr review --request-changes` — review 5695870945 confirmed via API
+- [x] Record prs["459"].last_reviewed_sha in manager gate state — written + verified (backup .bak_pr459_20261029_095808)
+- [x] REPORT.md final
 
 ## Files touched
 
