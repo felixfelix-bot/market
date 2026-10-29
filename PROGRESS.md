@@ -1,48 +1,66 @@
-# PROGRESS — PR #1226 review leg (fleet offload worker)
+# PROGRESS — PR #1138 never-posted draft salvage assessment (fleet offload worker)
 
-Task: Review PR #1226 (Franchovy, auction order details settlement status).
-Brief state was STALE — live state re-established below.
+Task: Determine whether the drafted-but-never-posted delta review (range
+`4828c54..50199dc`, 4 files, +204/−11) is still valid against the CURRENT head
+of PlebeianApp/market PR #1138, and which parts are salvageable. READ-ONLY; nothing posted.
 
-## Findings so far
+Prior PROGRESS content (PR #1226 leg) is preserved in git history at `0a4289a6`.
 
-- [verified] PR #1226 is CLOSED (2026-09-19T20:43:54Z by Franchovy, "Superceded by #1361").
-  Never merged. Not a draft-with-pending-review; review cannot be posted as requested.
-  -> status: DEAD TARGET, no verdict postable
-  -> files: none (gh api reads only)
-- [verified] Successor is PR #1361 `feat(auctions): ... (supersedes #1226)`, OPEN, base
-  `auctions`, head d1a4a647, mergeStateStatus=BLOCKED, reviewDecision=CHANGES_REQUESTED.
-  -> status: REAL review target
-- [verified] Prior felixfelix-bot review 5635730808 (2026-10-24) posted 3 BLOCKs and claimed
-  B1/B3 fixed + B2 still holds at d1a4a647. Head unchanged since -> re-verifying independently.
-- [verified] B1 fixed: settlementDescriptor.ts:613-616 requires latestSettlementValidity==='valid'
-  && classifyPhase==='settled' && hasMatchedClaimOrder.
-- [verified] B2 STILL HOLDS, mechanism confirmed: settlementStatus read straight from the
-  seller-authored kind-1024 (`settlements.reduce` -> `latestSettlement?.status`), no
-  kind-30440 grief quorum anywhere. ADR-0004:298-305 mandates quorum-derived grief.
-- [verified] NEW nuance beyond prior review: `griefed` and `griefed_pending_fallback` ARE in
-  VALIDATOR_CLAIMS (constants.ts:163-164) but neither is in VALIDATOR_CONFIRM_CLAIMS
-  (:177) nor VALIDATOR_CONDEMN_CLAIMS (:180), so the verdict->quorum bridge cannot emit
-  grief at all. Both ends (claim taxonomy + settlement read) are missing.
-- [verified] Prior "grief in kind-1024 status" note is MORE than provenance: `isSettlementStructurallyValid`
-  returns 'valid' for griefed_no_fallback on structural checks alone (settlementDescriptor.ts:186-189),
-  i.e. a seller-authored claim needs no path-release/bid-chain evidence at all.
-- [verified] COST OF B2 IS NOW CONCRETE: griefed_no_fallback classifies 'valid' AND is exempt from the
-  B3 reserve-meting-bid guard, so classifyPhase returns 'griefed-no-fallback' UNCONDITIONALLY on a
-  seller-signed kind-1024. Sellers can close a completed auction as "Griefed (No Fallback)" and it is
-  displayed as validated to buyer + eligible fallback bidder.
-- [verified] B2 test encodes the violation: settlementDescriptor.test.ts:683 seeds grief purely via
-  makeSettlement({status:'griefed_no_fallback'}) with NO verdicts (makeInput default verdicts: []).
-- [verified] NEW B4: verdicts queried by current replaceable-version id, not auction root.
-  OrderDetailComponent.tsx:465 passes auctionData?.id; sibling consumers pass
-  root||id (auctions.$auctionId.tsx:459, dashboard/...:282, AuctionBidder.tsx:150). Verdicts carry BOTH
-  tags (validatorEvents.ts:112 '#a' = coordinate) and fetchAuctionVerdicts:610-611 ANDs '#e' with '#a'.
-  For a republished auction (auction_root_event_id tag, auctionEvent.ts:154), #e:currentVersion matches
-  nothing even though #a matches -> verdicts empty -> topBid null -> settled returns 'invalid' (:192)
-  -> 'Awaiting Settlement'. Also *reintroduces* the grief class via the reserved #e.
-- [verified] B3 fix confirmed: claimOrderAuthorizesFulfillment binds authority.claimOrderId === orderEventId (:634-641).
-- [verified] CI at head d1a4a647 (2026-09-25T14:03): e2e-grep FAIL (6/7 other checks pass).
-  Two e2e failures: (a) auction-settlement.spec.ts:869 kind-1024 never arrives (pre-existing),
-  (b) THIS PR's own new test order-detail.spec.ts:147 'process order' button not visible.
-  -> B4 gives a plausible shared root cause for (b): no verdicts -> fulfillmentReady false.
-- [verified] push BLOCKED: felixfelix-bot 403 pull-only on PlebeianApp/market. Commits are LOCAL ONLY.
-- NEXT: write REPORT.md, post verdict to #1361 (review is the only writable channel).
+## Findings
+
+- [verified] Live PR #1138 head = `6be7496cc2089db2e2da04bb083312ae6d43a79d`
+  (gh api pulls/1138: head_ref `auctions`, base `master` @ `c8c06fd7`, 784 commits,
+  state open, mergeStateStatus `dirty`, updated 2026-10-28T23:03:36Z).
+  The draft's `50199dc` is NOT the head — it is 312 commits behind.
+  -> status: head MOVED
+  -> files: none (gh api + git reads)
+
+- [verified] `4828c54` is still the fork point / merge-base of `50199dc` and of the head:
+  `git merge-base 4828c54 6be7496cc` = `4828c54`; `git rev-list --count 50199dc...6be7496cc` = `0 312`.
+  Draft range `4828c54..50199dc` = 4 commits = the whole of merged PR #1289.
+  -> status: anchor VALID, scope superseded
+
+- [verified] Draft ARTIFACT: no draft body file ever existed on disk. Recovered surrogate =
+  `reviews/1138-gate-verdict.md` in /home/c03rad0r/repos/plebeian-pr-reviews (commit `697e1c4`,
+  + second cold pass `08e2312`), plus kanban card `gate-pr1138-keyset-delta`
+  (~/.hermes/kanban.db, title states "VERDICT APPROVED; draft accurate... nothing posted").
+  Draft shape: thanks-line + 1 [INFO] cashu-ts drift finding + "no new issues in this delta"
+  + "16 findings from prior reviews stand" + close.
+  -> status: body UNRECOVERABLE, shape+content reconstructable
+  -> files: reviews/1138-gate-verdict.md, reviews/1138-draft-salvage-assessment.md (banner-corrected STALE)
+
+- [verified] Per-file staleness at 6be7496cc (blob compare + `rev-list --count 50199dc..6be7496cc -- <f>`):
+  `fetchMintKeysets.test.ts` f6a20243 == f6a20243, 0 commits -> UNCHANGED.
+  `settlementDescriptor.ts` 34d2761b -> 6bff19fe, 4 commits -> MODIFIED.
+  `settlementDescriptor.test.ts` 0f57e31e -> 0bfa7af5, 6 commits -> MODIFIED.
+  `validation.ts` 62520152 -> a429fac2, 9 commits -> MODIFIED.
+  Diff after draft restricted to the 4 files: 3 files, +574/−201.
+  -> status: 1 of 4 files byte-identical
+
+- [verified] The draft's own subject matter SURVIVES at head, line-shifted:
+  `requestWithTimeout` now validation.ts:97-106 (was 85-97), `fetchMintKeysets` :111,
+  `KEYSET_FETCH_TIMEOUT_MS` :67, seam `settlementDescriptor.ts:587`. package.json still
+  floats `^2.1` (line 39) while bun.lock resolves 2.9.0. Prod caller
+  `src/components/AuctionSettlement.tsx:213-235` still passes no `mintKeysets`.
+  -> status: [INFO] finding STILL VALID, NEEDS REWORD (line refs + dedup)
+
+- [verified] The [INFO] was ALREADY POSTED in softer form by maxime-tt on merged PR #1289
+  (issue comment 5618306565, 2026-09-10, suggestion #4 "prefer a library signal option").
+  -> status: cross-thread dedup applies; do not present as new
+
+- [verified] The already-posted at-head review 5690837398 (COMMENTED, commit_id 6be7496cc,
+  2026-10-28T23:03:36Z) contains NO keyset/timeout/cashu-ts/requestWithTimeout content.
+  -> status: no overlap with the draft's [INFO]; gap still open (dedup-safe)
+
+- [verified] "16 findings from prior reviews stand" is OVERSTATED: the bfd66fc7-era assessment
+  found only ~11 stand + 1 half (R2-1/R2-2/R2-5/R2-10 and R2-8's dead-code half were fixed
+  pre-draft). Spot-checked 3/11 at 6be7496cc and all 3 still stand: R2-3 `void onBidEvent`
+  (subscriber.ts:208), R2-4 no `.max()` on parallel arrays (schemas/auction/bidEvent.ts:80),
+  R2-9 `String(n) !== raw...` (p2pkSecret.ts:122). Remaining 8 NOT re-verified this task.
+  -> status: STALE as written (count), salvageable as corrected table
+
+- [info] `~/.hermes/bot/.dispatch_frozen` does NOT exist on this host (ls ENOENT). Freeze not
+  lifted, not needed: every step was read-only. Zero GitHub writes (gh api GET only).
+  -> status: constraint honored
+
+- NEXT: write REPORT.md, commit. No push attempted yet.
