@@ -232,7 +232,8 @@ must not be mistaken for discharging current coverage.
 
 ### Commits after the PROGRESS push
 
-This REPORT.md is committed in a follow-up commit on the same branch
-(`worker-base/1138-draft-salvage`) after the verified push above. If that follow-up push did not
-land, PROGRESS.md is on the remote and this file is local-only — stated plainly rather than
-claimed.
+The REPORT.md commit (`d3863555`) was committed and pushed to the same branch **after** the
+verified PROGRESS push, and that push was then re-verified end-to-end:
+`git ls-remote fork refs/heads/worker-base/1138-draft-salvage` →
+`d38635553c2ce9ef96b180ac9ea91ee4a268e0bc` == local `git rev-parse HEAD`. Both commits are on
+the remote; nothing is local-only.
