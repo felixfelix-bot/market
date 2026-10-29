@@ -1,0 +1,20 @@
+{
+  "backup": "/home/c03rad0r/.hermes/profiles/manager/state/plebeian-pr-review-state.json.bak-pr1380-delta-20261029",
+  "entry": {
+    "disposition": "reviewed-open-changes-requested-docs",
+    "last_checked": "2026-10-29T03:58:51.950205+00:00",
+    "last_reviewed_at": "2026-10-29",
+    "last_reviewed_sha": "a5b9f50e0651b124f44679579a50102b4d4e34e1",
+    "note": "Live-head delta-closure review (card pin e75ab27e stale; prior lane coverage 3a44fa6a). Published felixfelix-bot review 5692663369 at a5b9f50e (COMMENT state; body CHANGES_REQUESTED). Auditor-scoping and bounded fail-closed retry verified; new browser Failed to fetch classifier passes in CI. No new code defect. Two existing documentation Required items carried, not re-filed: ADR:317 causal sentence and stale PR-body evidence. Exact-head focused tests with --isolate: 15 pass / 0 fail; seven non-skipped checks green including e2e-grep. Gate 2.5 cold worker-reviewer-glm/glm-5.3 audit APPROVED (REAL/DEDUP/SPAM-AACR/MISSED/PUBLISHABILITY PASS); publication calibrations folded. Evidence: /home/c03rad0r/worktrees/pr1380-delta-review/REPORT.md and artifacts/pr1380_review/.",
+    "review_card": "t_f91d0f61",
+    "review_url": "https://github.com/PlebeianApp/market/pull/1380#pullrequestreview-5692663369",
+    "review_id": 5692663369,
+    "issues_raised": [
+      "[RISK] Existing required item (reviews 5332383772/5332383971), deduplicated: docs/adr/ADR-0004-auction-settlement-descriptor.md:317 says both path-release reads run when verdicts are absent; empty verdicts leave bids pending and the winner guard throws before the second read.",
+      "[RISK] Existing required item (same reviews), deduplicated: PR body old base and unit/e2e evidence must be re-anchored to a5b9f50e; no new code defect found.",
+      "[INFO] Proposed bounded-read ADR amendment still needs maintainer sign-off."
+    ],
+    "reviewer_model": "glm-5.3"
+  },
+  "sibling_1381_preserved": true
+}
