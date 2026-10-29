@@ -11,3 +11,13 @@ finding -> status -> files touched
 - Contribution-PR dedup (b) fork probe `hkarani/market` head globs `felixfelix-bot/contrib-1284-*` and `fix/1284-*` EMPTY — convention does not apply; real contrib landed in-repo as #1313 -> no duplicate -> artifacts/.../fork_contrib_probe.txt
 - VERDICT: DUPLICATE DISPATCH — review published + contribution merged -> SKIP GATE 2.5 (no draft to verify), SKIP publish (would duplicate a merged PR's comment), SKIP contribution-PR creation -> done -> REPORT.md
 - No gh writes performed: no comment, no approve, no request-changes, no merge -> done -> none
+
+## 2026-10-29 — card t_3ead2add (publish PR #1284 if GATE 2.5 approved)
+
+finding -> status -> files touched
+
+- GATE 2.5 verdict ABSENT (t_cdda8b3f blocked, run 103 scheduled 0s, no verdict anywhere) -> not APPROVED -> no publish
+- PR #1284 MERGED 2026-09-25, head 22a1cebd; 5963fc77 not an ancestor -> brief stale
+- review at 5963fc77 already published 2026-09-12 (issuecomment-5645180703, 2x[RISK]+1x[NIT]) -> deliverable already satisfied
+- VERDICT: NO-OP, zero gh writes, zero PR comments -> done -> artifacts/pr1284_publish_t3ead2add/
+- kanban_comment recorded on t_3ead2add -> done -> kanban.db
