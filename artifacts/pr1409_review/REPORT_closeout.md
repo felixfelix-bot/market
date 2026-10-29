@@ -21,6 +21,7 @@ Docs-only status flip (+8/−7, exactly 2 files): ADR-0017 `Proposed` → `Accep
 - CI at head: unit-integration, prettier, footprint, security-scan, e2e-grep, Deploy preview green; e2e-full skipped; the one failed "Tear down preview" is the known preview-lane teardown defect (Prepare SSH key + pinned host key, exit 127), unreachable from a docs diff.
 
 Non-blocking notes posted in the review body:
+
 - [NIT] ADR-0017:67,71,95 — stale "proposed" architecture framing survives in three spots (post-audit amended to note :100/:161-162 are BFT protocol terms, not status framing).
 - [INFO] README:25 — registry Notes cell lacks PR provenance (#1407/#1409), unlike ADR-0015/0016 rows.
 

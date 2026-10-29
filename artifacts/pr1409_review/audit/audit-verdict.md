@@ -16,5 +16,6 @@ STEP 11: PASS tone is correctness-first, findings tagged [NIT]/[INFO], verdict A
 
 AUDIT_VERDICT: CONFIRMED_W_AMENDMENTS
 AMENDMENTS:
+
 - STEP 9: [NIT] docs/adr/ADR-0017-four-validator-bft-consensus-for-plebeian-auctions.md:161 also contains "proposal" ("A Byzantine proposer may **omit a bid** from its proposal."). This is a protocol term, not stale status framing, so it does not invalidate the NIT, but the draft's count "three earlier spots" is technically off by one if counting literal occurrences. Suggested amendment: reword the NIT to say "three earlier spots where the architecture is framed as 'proposed' (:67, :71, :95)" or note that :161 is a separate technical term.
-MISS_CANDIDATES: none
+  MISS_CANDIDATES: none

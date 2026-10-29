@@ -10,7 +10,7 @@ The PR does exactly what its title says and nothing else: it flips ADR-0017's st
 
 The factual core checks out against the GitHub record. "On 2026-10-05, this ADR was ratified and PR #1407 was merged" (ADR-0017:230): Franchovy APPROVED #1407 at `96cbdd1f` on 2026-10-05T15:38:06Z, #1407 merged at 15:48:12Z, and this PR's direct parent is #1407's merge commit `78c10f48`. The seven enumerated architecture choices (ADR-0017:234-240) are **byte-identical** to the pre-merge text — the PR claims ratification of exactly those seven and smuggles in no eighth. The dropped sentence "That parameter decision does not ratify this proposed ADR or its seven broader architecture choices" was true before the merge and false after; removing it is the entire point of the PR.
 
-Scope discipline holds: exactly two files, +8/−7, docs only. The body's claim that this PR "does not include the separately ratified leader-change-only soft-close amendment" is verifiable — that amendment is commit `6ca781fb`, which lands on `master` *after* this head; it is not in this diff. No auction semantics, no code, no ADR renumbering.
+Scope discipline holds: exactly two files, +8/−7, docs only. The body's claim that this PR "does not include the separately ratified leader-change-only soft-close amendment" is verifiable — that amendment is commit `6ca781fb`, which lands on `master` _after_ this head; it is not in this diff. No auction semantics, no code, no ADR renumbering.
 
 ## First-party verification (at head `8cf24b9e`)
 
@@ -26,4 +26,4 @@ Scope discipline holds: exactly two files, +8/−7, docs only. The body's claim 
 
 ---
 
-*Fleet review (worker-reviewer-glm, linus method, correctness-first). Gate 2.5 cold audit before posting: cross-family kimi (Moonshot) audit via the `worker-reviewer-kimi` profile (model `kimi-k2.7-code`) — different family from the drafter; verdict **CONFIRMED_W_AMENDMENTS**, its one wording amendment applied to the [NIT] above. Audit trail: `artifacts/pr1409_review/audit/` on the evidence branch.*
+_Fleet review (worker-reviewer-glm, linus method, correctness-first). Gate 2.5 cold audit before posting: cross-family kimi (Moonshot) audit via the `worker-reviewer-kimi` profile (model `kimi-k2.7-code`) — different family from the drafter; verdict **CONFIRMED_W_AMENDMENTS**, its one wording amendment applied to the [NIT] above. Audit trail: `artifacts/pr1409_review/audit/` on the evidence branch._
