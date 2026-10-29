@@ -1,0 +1,57 @@
+Task t_cdda8b3f: Cold review of PR #1284 draft review (GATE 2.5, glm-5.3)
+  status:    blocked
+  assignee:  worker-reviewer-glm
+  workspace: scratch
+  max-retries: 2 (default)
+  created:   2026-09-13 23:56 by auto-decomposer
+
+  Diagnostics (1):
+    ⚠ [warning] Task has been blocked for 500h
+       data: blocked_at=1791434225 | age_hours=500.8
+       → Add a comment / unblock the task
+
+Body:
+ROLE: You are a cold, opposite-family reviewer (glm-5.3). You did NOT write the draft review under audit and you must not trust its framing. Do not post anything to GitHub.
+
+TARGET: PlebeianApp/market PR #1284, draft review produced by the previous task, expected head SHA 5963fc77bd1c16b6b113f4d6f3c6ad42136725b1.
+
+INPUTS: The draft review text (from the parent task output) and prev_issues (already-filed issues list) supplied with this task.
+
+STEP 1 - GROUND TRUTH
+Run:
+  gh pr view 1284 --repo PlebeianApp/market --json title,body,headRefOid
+  gh pr diff 1284 --repo PlebeianApp/market
+Confirm the head OID is exactly 5963fc77bd1c16b6b113f4d6f3c6ad42136725b1. If it is not, stop and report REJECTED with the mismatch as the reason. Read the actual diff and the surrounding code at head; do not rely on the draft's summaries, quotes, or line numbers.
+
+STEP 2 - PER-FINDING AUDIT
+For every finding in the draft, verify three things:
+(a) REAL - it names a concrete trigger that leads to a concrete misbehavior, with a file:line citation that is accurate at the head SHA. Re-read the surrounding code to confirm the fault path. Reject anything that is not a demonstrated fault.
+(b) NOT ALREADY RAISED - dedup against prev_issues using the canonical summary form `path/file.ts:L42 short root cause`. Same root cause = same canonical summary = must not be re-raised.
+(c) NOT SPAM - meets the AACR quality bar: no speculative 'may cause' without a demonstrated fault path, no false positives on code that is actually correct, no style-policing dressed up as a bug.
+Also reject findings whose cited line numbers are stale or whose quoted code does not appear at that location.
+
+STEP 3 - FORMAT CHECK
+Confirm the draft body is <= 40 lines and uses the required terse style with [BLOCK] / [RISK] / [NIT] / [INFO] tags, with severity tags used consistently and no untagged prose paragraphs.
+
+OUTPUT (verdict only, no GitHub side effects):
+- APPROVED if every finding passes (a), (b), (c) and the format check passes. State the verified head SHA and the count of findings checked.
+- REJECTED otherwise. For each finding to drop or reword, give: the canonical `path/file.ts:L42 short root cause`, the concrete reason for rejection (which of a/b/c failed), and the file:line evidence you used to decide. If the format check fails, quote the offending lines and give the corrected form.
+
+ACCEPTANCE CRITERIA: a verdict of APPROVED or REJECTED, every draft finding individually adjudicated against the real diff at the verified head SHA, dedup against prev_issues stated per finding, format check stated explicitly, and no writes to GitHub.
+
+Latest summary:
+urgency-unclassified: classify with hermes-urgency set plebeian-pr-reviews <id> <now|soon|defer|batch>
+
+Comments (3):
+  [2026-09-25 02:30] gate-tick: gate-tick: BLOCKED — missing gate(s): tests_green, pushed_or_consolidated, ci_evidence, cold_cross_family_review, review_artifact, consolidated, review_benchmark_floor, secrets_clean. tier=code author_family=zhipu. Resolve and re-run to pass.
+  [2026-09-26 02:15] fleet-writeback: fleet-done rc=0 verified=True (offloaded); status -> done
+  [2026-10-08 06:37] gate-tick: gate-tick: BLOCKED (completion-pending) — missing gate(s): tests_green, pushed_or_consolidated, ci_evidence, cold_cross_family_review, consolidated, review_benchmark_floor, secrets_clean, no_live_drift. tier=code author_family=zhipu. Resolve the evidence and re-run to pass.
+
+Events (3):
+  [2026-09-25 02:32] promoted
+  [2026-09-25 02:32] [run 103] scheduled {'reason': 'urgency-unclassified: classify with hermes-urgency set plebeian-pr-reviews <id> <now|soon|defer|batch>'}
+  [2026-10-08 06:37] blocked {'source': 'gate-tick', 'block_kind': 'completion', 'missing': ['tests_green', 'pushed_or_consolidated', 'ci_evidence', 'cold_cross_family_review', 'consolidated', 'review_benchmark_floor', 'secrets_clean', 'no_live_drift'], 'tier': 'code', 'note': 'completion-pending; sticky so recompute_ready cannot re-dispatch a finished card'}
+
+Runs (1):
+  #103 scheduled    @worker-reviewer-glm  0s  2026-09-25 02:32
+        → urgency-unclassified: classify with hermes-urgency set plebeian-pr-reviews <id> <now|soon|defer|batch>

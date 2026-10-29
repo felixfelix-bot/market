@@ -1,0 +1,11 @@
+▶ t_15b38bcf  ready     worker-pr-reviewer    Draft unposted review comment for PlebeianApp/market PR #1284 @ 5963fc77
+▶ t_3ead2add  ready     market-master         Publish approved review comment on market PR #1284 if GATE 2.5 approved
+▶ t_75341e70  ready     market-master         Dedup recon A: grep three kanban boards for existing PR #1284 coverage
+✓ t_104af1e2  done      worker-reviewer-glm   Review PR #1284: feat(config): add self-hosting instance configuration foundation
+✓ t_ae8ae890  done      worker-reviewer-kimi  Review PR #1284: feat(config): add self-hosting instance configuration foundation
+✓ t_ee16cd98  done      worker-reviewer-glm   Cross-family cold review of PR #1284 review draft (parent t_104af1e2)
+✓ t_3b152f53  done      worker-reviewer-glm   Cross-family cold review: PR #1284 draft verdict (no-new-issues)
+⊘ t_cb288450  blocked   manager               Review PR #1284: feat(config): add self-hosting instance configuration foundation
+✓ t_0994ac50  done      worker-reviewer-kimi  Review PR #1284: feat(config): self-hosting instance configuration foundation (hkarani, base auctions)
+⊘ t_84b7c185  blocked   manager               Publish approved review for PR #1284 and run contribution-PR dedup
+⊘ t_cdda8b3f  blocked   worker-reviewer-glm   Cold review of PR #1284 draft review (GATE 2.5, glm-5.3)
