@@ -20,3 +20,21 @@ with paired felixfelix-bot APPROVED review 5224768310 that carries the qualified
 
 ## Files touched (worktree /tmp/wt1317cold, branch review/pr1317-cold-20261029)
 - PROGRESS.md, REPORT.md, artifacts/pr1317_coldreview/raw/* (evidence copies)
+
+## Verified findings (M2-M4)
+- M2 dedup: draft bytes == published comment 5700061320 (diff empty, trailing \n only in both). Paired review
+  5224768310 (APPROVED, 15:29:00Z) carries the QUALIFIED wording: "no new issues beyond those already raised
+  in the existing review at this head (felixfelix-bot comment 5219729164)". CI at cfef7525: 6 check-runs
+  (e2e-grep, unit-integration, prettier, security-scan, footprint = success; e2e-full = skipped).
+- M3 (b): all 5 maxime-tt required findings addressed at tip — mechanisms verified in code (see REPORT).
+  Tests reproduced: auctionWon.test.ts 16/0, pathReleases+verdicts 12/0 (bun, worktree at cfef7525).
+- M4 (a)+(c): independent added-lines sweep. NEW vs base found: TS2554 x2 (publish/auctions.tsx:1604,1669
+  phantom 6th arg `true` — runtime-inert; call-site defect already raised by Copilot at c76ab196; commit
+  80507d32 fixed only the runtime half) and TS2345 x2 (readonly-array nits in new test file, :388-389).
+  tsc: base=308 errors / tip=312 (repo-wide pre-existing debt, no CI typecheck gate). Everything else maps
+  to the raised baseline (maxime 5, Copilot 17 inline, felixfelix-bot 6 at tip incl. #1323 P2s + RISK).
+- M4 (d): MERGED 2026-09-16T08:42:44Z, mergeCommit 8c634c15, Franchovy APPROVED 08:42:30Z on cfef7525e9.
+
+## Verdict
+APPROVED (matches prior run comment 372; independently re-derived). Caveat: "no new issues" is true only under
+the "beyond already-raised" reading, which the published review body carries; the bare one-liner is ambiguous.

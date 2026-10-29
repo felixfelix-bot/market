@@ -1,0 +1,467 @@
+../../home/c03rad0r/repos/market/node_modules/@cashu/cashu-ts/lib/types/WSConnection.d.ts(1,34): error TS2307: Cannot find module './model/types.js' or its corresponding type declarations.
+../../home/c03rad0r/repos/market/node_modules/@cashu/cashu-ts/lib/types/index.d.ts(8,90): error TS2307: Cannot find module './auth.js' or its corresponding type declarations.
+../../home/c03rad0r/repos/market/node_modules/@cashu/cashu-ts/lib/types/model/MintInfo.d.ts(1,74): error TS2307: Cannot find module './types.js' or its corresponding type declarations.
+../../home/c03rad0r/repos/market/node_modules/@cashu/cashu-ts/lib/types/model/OutputData.d.ts(1,87): error TS2307: Cannot find module './types.js' or its corresponding type declarations.
+../../home/c03rad0r/repos/market/node_modules/@cashu/cashu-ts/lib/types/model/PaymentRequest.d.ts(1,102): error TS2307: Cannot find module './types.js' or its corresponding type declarations.
+../../home/c03rad0r/repos/market/node_modules/@cashu/cashu-ts/lib/types/utils.d.ts(2,73): error TS2307: Cannot find module './model/types.js' or its corresponding type declarations.
+../../home/c03rad0r/repos/market/node_modules/@getalby/lightning-tools/dist/types/index.d.ts(1,38): error TS2307: Cannot find module '@webbtc/webln-types' or its corresponding type declarations.
+../../home/c03rad0r/repos/market/node_modules/@getalby/lightning-tools/dist/types/index.d.ts(2,52): error TS2307: Cannot find module '@webbtc/webln-types' or its corresponding type declarations.
+../../home/c03rad0r/repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(8,1): error TS1046: Top-level declarations in .d.ts files must start with either a 'declare' or 'export' modifier.
+../../home/c03rad0r/repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(8,27): error TS7006: Parameter 'n' implicitly has an 'any' type.
+../../home/c03rad0r/repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(8,30): error TS7006: Parameter 'm' implicitly has an 'any' type.
+../../home/c03rad0r/repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(8,33): error TS1183: An implementation cannot be declared in ambient contexts.
+../../home/c03rad0r/repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(9,25): error TS7006: Parameter 'e' implicitly has an 'any' type.
+../../home/c03rad0r/repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(9,28): error TS1183: An implementation cannot be declared in ambient contexts.
+../../home/c03rad0r/repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(10,96): error TS1183: An implementation cannot be declared in ambient contexts.
+../../home/c03rad0r/repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(12,25): error TS1039: Initializers are not allowed in ambient contexts.
+../../home/c03rad0r/repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(13,17): error TS1036: Statements are not allowed in ambient contexts.
+../../home/c03rad0r/repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(13,45): error TS18048: 'd' is possibly 'undefined'.
+../../home/c03rad0r/repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(13,45): error TS2345: Argument of type 'PropertyDescriptor | undefined' is not assignable to parameter of type 'PropertyDescriptor & ThisType<any>'.
+  Type 'undefined' is not assignable to type 'PropertyDescriptor & ThisType<any>'.
+    Type 'undefined' is not assignable to type 'PropertyDescriptor'.
+../../home/c03rad0r/repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(15,38): error TS1183: An implementation cannot be declared in ambient contexts.
+../../home/c03rad0r/repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(6615,28): error TS1039: Initializers are not allowed in ambient contexts.
+../../home/c03rad0r/repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(6624,26): error TS1039: Initializers are not allowed in ambient contexts.
+../../home/c03rad0r/repos/market/node_modules/@nostr-dev-kit/wallet/dist/index.d.ts(6,31): error TS2307: Cannot find module '@webbtc/webln-types' or its corresponding type declarations.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/devtools-event-client/dist/esm/plugin.d.ts(13,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(335,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(692,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(709,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(794,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(1118,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(1182,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(1213,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(1259,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(1290,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(1428,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(1934,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(2132,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(19,115): error TS2344: Type 'FileRoutesByPath[TFilePath]["parentRoute"]' does not satisfy the constraint 'Route<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(19,115): error TS2536: Type '"parentRoute"' cannot be used to index type 'FileRoutesByPath[TFilePath]'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(19,197): error TS2344: Type 'FileRoutesByPath[TFilePath]["id"]' does not satisfy the constraint 'string'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(19,197): error TS2536: Type '"id"' cannot be used to index type 'FileRoutesByPath[TFilePath]'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(19,274): error TS2344: Type 'FileRoutesByPath[TFilePath]["path"]' does not satisfy the constraint 'string'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(19,274): error TS2536: Type '"path"' cannot be used to index type 'FileRoutesByPath[TFilePath]'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(19,361): error TS2344: Type 'FileRoutesByPath[TFilePath]["fullPath"]' does not satisfy the constraint 'string'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(19,361): error TS2536: Type '"fullPath"' cannot be used to index type 'FileRoutesByPath[TFilePath]'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(24,106): error TS2344: Type 'FileRoutesByPath[TFilePath]["parentRoute"]' does not satisfy the constraint 'Route<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(24,106): error TS2536: Type '"parentRoute"' cannot be used to index type 'FileRoutesByPath[TFilePath]'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(24,188): error TS2344: Type 'FileRoutesByPath[TFilePath]["id"]' does not satisfy the constraint 'string'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(24,188): error TS2536: Type '"id"' cannot be used to index type 'FileRoutesByPath[TFilePath]'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(24,265): error TS2344: Type 'FileRoutesByPath[TFilePath]["path"]' does not satisfy the constraint 'string'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(24,265): error TS2536: Type '"path"' cannot be used to index type 'FileRoutesByPath[TFilePath]'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(24,352): error TS2344: Type 'FileRoutesByPath[TFilePath]["fullPath"]' does not satisfy the constraint 'string'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(24,352): error TS2536: Type '"fullPath"' cannot be used to index type 'FileRoutesByPath[TFilePath]'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,98): error TS2536: Type '"preLoaderRoute"' cannot be used to index type 'FileRoutesByPath[TFilePath]'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,234): error TS2344: Type 'TRoute["parentRoute"]' does not satisfy the constraint 'AnyRoute'.
+  Type 'FileRoutesByPath[TFilePath]["preLoaderRoute"]["parentRoute"]' is not assignable to type 'Route<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,234): error TS2536: Type '"parentRoute"' cannot be used to index type 'TRoute'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,257): error TS2536: Type '"types"' cannot be used to index type 'TRoute'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,257): error TS2536: Type '"id"' cannot be used to index type 'TRoute["types"]'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,280): error TS2536: Type '"types"' cannot be used to index type 'TRoute'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,280): error TS2536: Type '"params"' cannot be used to index type 'TRoute["types"]'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,307): error TS2536: Type '"types"' cannot be used to index type 'TRoute'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,307): error TS2536: Type '"loaderDeps"' cannot be used to index type 'TRoute["types"]'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,338): error TS2536: Type '"types"' cannot be used to index type 'TRoute'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,338): error TS2536: Type '"routerContext"' cannot be used to index type 'TRoute["types"]'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,372): error TS2536: Type '"types"' cannot be used to index type 'TRoute'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,372): error TS2536: Type '"routeContextFn"' cannot be used to index type 'TRoute["types"]'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,407): error TS2536: Type '"types"' cannot be used to index type 'TRoute'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,407): error TS2536: Type '"beforeLoadFn"' cannot be used to index type 'TRoute["types"]'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(87,102): error TS2536: Type '"preLoaderRoute"' cannot be used to index type 'FileRoutesByPath[TFilePath]'.
+../../home/c03rad0r/repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(87,203): error TS2344: Type 'TRoute' does not satisfy the constraint 'AnyRoute'.
+  Type 'FileRoutesByPath[TFilePath]["preLoaderRoute"]' is not assignable to type 'Route<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>'.
+../../home/c03rad0r/repos/market/node_modules/applesauce-relay/dist/management.d.ts(79,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../home/c03rad0r/repos/market/node_modules/barcode-detector/dist/es/core.d.ts(17,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../home/c03rad0r/repos/market/node_modules/bun-types/globals.d.ts(232,74): error TS2694: Namespace '"node:util"' has no exported member 'TextEncoderEncodeIntoResult'.
+../../home/c03rad0r/repos/market/node_modules/bun-types/overrides.d.ts(322,47): error TS2552: Cannot find name 'ConnectionOptions'. Did you mean 'BunConnectionOptions'?
+../../home/c03rad0r/repos/market/node_modules/bun-types/overrides.d.ts(362,67): error TS2552: Cannot find name 'KeyObject'. Did you mean 'Object'?
+../../home/c03rad0r/repos/market/node_modules/bun-types/overrides.d.ts(366,88): error TS2304: Cannot find name 'TLSSocket'.
+../../home/c03rad0r/repos/market/node_modules/coco-cashu-indexeddb/dist/index.d.ts(8,15): error TS2589: Type instantiation is excessively deep and possibly infinite.
+../../home/c03rad0r/repos/market/node_modules/react-use/lib/factory/createReducerContext.d.ts(2,243): error TS2694: Namespace 'React' has no exported member 'ReducerAction'.
+../../home/c03rad0r/repos/market/node_modules/react-use/lib/factory/createReducerContext.d.ts(5,153): error TS2694: Namespace 'React' has no exported member 'ReducerAction'.
+../../home/c03rad0r/repos/market/node_modules/react-use/lib/factory/createReducerContext.d.ts(5,286): error TS2694: Namespace 'React' has no exported member 'ReducerAction'.
+../../home/c03rad0r/repos/market/node_modules/react-use/lib/useEnsuredForwardedRef.d.ts(1,87): error TS2305: Module '"react"' has no exported member 'RefForwardingComponent'.
+../../home/c03rad0r/repos/market/node_modules/react-use/lib/usePermission.d.ts(10,11): error TS2430: Interface 'IDevicePermissionDescriptor' incorrectly extends interface 'PermissionDescriptor'.
+  Types of property 'name' are incompatible.
+    Type '"camera" | "microphone" | "speaker"' is not assignable to type 'PermissionName'.
+      Type '"speaker"' is not assignable to type 'PermissionName'.
+build.ts(132,2): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+build.ts(138,25): error TS2802: Type 'IterableIterator<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+build.ts(144,16): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+build.ts(198,2): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+contextvm/__tests__/currency-server.test.ts(28,60): error TS2345: Argument of type '() => Response' is not assignable to parameter of type 'typeof fetch'.
+  Property 'preconnect' is missing in type '() => Response' but required in type 'typeof fetch'.
+contextvm/__tests__/currency-server.test.ts(66,5): error TS2322: Type '{ refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'refresh' is incompatible with index signature.
+      Type 'ZodDefault<ZodOptional<ZodBoolean>>' is not assignable to type 'AnySchema'.
+        Type 'ZodDefault<ZodOptional<ZodBoolean>>' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/__tests__/currency-server.test.ts(67,5): error TS2322: Type '{ rates: z.ZodRecord<z.ZodString, z.ZodNumber>; sourcesSucceeded: z.ZodArray<z.ZodString>; sourcesFailed: z.ZodArray<z.ZodString>; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ rates: z.ZodRecord<z.ZodString, z.ZodNumber>; sourcesSucceeded: z.ZodArray<z.ZodString>; sourcesFailed: z.ZodArray<z.ZodString>; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'rates' is incompatible with index signature.
+      Type 'ZodRecord<ZodString, ZodNumber>' is not assignable to type 'AnySchema'.
+        Type 'ZodRecord<ZodString, ZodNumber>' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/__tests__/currency-server.test.ts(69,13): error TS7031: Binding element 'refresh' implicitly has an 'any' type.
+contextvm/__tests__/currency-server.test.ts(97,5): error TS2322: Type '{ currency: z.ZodString; refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ currency: z.ZodString; refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'currency' is incompatible with index signature.
+      Type 'ZodString' is not assignable to type 'AnySchema'.
+        Type 'ZodString' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/__tests__/currency-server.test.ts(98,5): error TS2322: Type '{ currency: z.ZodString; rate: z.ZodNumber; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ currency: z.ZodString; rate: z.ZodNumber; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'currency' is incompatible with index signature.
+      Type 'ZodString' is not assignable to type 'AnySchema'.
+        Type 'ZodString' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/__tests__/currency-server.test.ts(100,13): error TS7031: Binding element 'currency' implicitly has an 'any' type.
+contextvm/__tests__/currency-server.test.ts(100,23): error TS7031: Binding element 'refresh' implicitly has an 'any' type.
+contextvm/__tests__/currency-server.test.ts(275,4): error TS2322: Type '{ refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'refresh' is incompatible with index signature.
+      Type 'ZodDefault<ZodOptional<ZodBoolean>>' is not assignable to type 'AnySchema'.
+        Type 'ZodDefault<ZodOptional<ZodBoolean>>' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/__tests__/currency-server.test.ts(276,4): error TS2322: Type '{ rates: z.ZodRecord<z.ZodString, z.ZodNumber>; sourcesSucceeded: z.ZodArray<z.ZodString>; sourcesFailed: z.ZodArray<z.ZodString>; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ rates: z.ZodRecord<z.ZodString, z.ZodNumber>; sourcesSucceeded: z.ZodArray<z.ZodString>; sourcesFailed: z.ZodArray<z.ZodString>; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'rates' is incompatible with index signature.
+      Type 'ZodRecord<ZodString, ZodNumber>' is not assignable to type 'AnySchema'.
+        Type 'ZodRecord<ZodString, ZodNumber>' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/__tests__/currency-server.test.ts(319,4): error TS2322: Type '{ currency: z.ZodString; refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ currency: z.ZodString; refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'currency' is incompatible with index signature.
+      Type 'ZodString' is not assignable to type 'AnySchema'.
+        Type 'ZodString' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/__tests__/currency-server.test.ts(320,4): error TS2322: Type '{ currency: z.ZodString; rate: z.ZodNumber; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ currency: z.ZodString; rate: z.ZodNumber; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'currency' is incompatible with index signature.
+      Type 'ZodString' is not assignable to type 'AnySchema'.
+        Type 'ZodString' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/__tests__/currency-server.test.ts(322,12): error TS7031: Binding element 'currency' implicitly has an 'any' type.
+contextvm/server.ts(177,4): error TS2322: Type '{ refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'refresh' is incompatible with index signature.
+      Type 'ZodDefault<ZodOptional<ZodBoolean>>' is not assignable to type 'AnySchema'.
+        Type 'ZodDefault<ZodOptional<ZodBoolean>>' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/server.ts(178,4): error TS2322: Type '{ rates: z.ZodRecord<z.ZodString, z.ZodNumber>; sourcesSucceeded: z.ZodArray<z.ZodString>; sourcesFailed: z.ZodArray<z.ZodString>; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ rates: z.ZodRecord<z.ZodString, z.ZodNumber>; sourcesSucceeded: z.ZodArray<z.ZodString>; sourcesFailed: z.ZodArray<z.ZodString>; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'rates' is incompatible with index signature.
+      Type 'ZodRecord<ZodString, ZodNumber>' is not assignable to type 'AnySchema'.
+        Type 'ZodRecord<ZodString, ZodNumber>' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/server.ts(180,12): error TS7031: Binding element 'refresh' implicitly has an 'any' type.
+contextvm/server.ts(208,4): error TS2322: Type '{ currency: z.ZodString; refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ currency: z.ZodString; refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'currency' is incompatible with index signature.
+      Type 'ZodString' is not assignable to type 'AnySchema'.
+        Type 'ZodString' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/server.ts(209,4): error TS2322: Type '{ currency: z.ZodString; rate: z.ZodNumber; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ currency: z.ZodString; rate: z.ZodNumber; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'currency' is incompatible with index signature.
+      Type 'ZodString' is not assignable to type 'AnySchema'.
+        Type 'ZodString' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/server.ts(211,12): error TS7031: Binding element 'currency' implicitly has an 'any' type.
+contextvm/server.ts(211,22): error TS7031: Binding element 'refresh' implicitly has an 'any' type.
+deploy-simple/scripts/app-settings/inspect.ts(37,46): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/app-settings/inspect.ts(44,52): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/app-settings/publish.ts(97,43): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/app-settings/publish.ts(107,33): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/app-settings/publish.ts(119,5): error TS2353: Object literal may only specify known properties, and 'pubkey' does not exist in type 'EventTemplate'.
+deploy-simple/scripts/app-settings/publish.ts(128,34): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/app-settings/publish.ts(137,5): error TS2353: Object literal may only specify known properties, and 'pubkey' does not exist in type 'EventTemplate'.
+deploy-simple/scripts/app-settings/publish.ts(176,3): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/backup.ts(56,17): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/backup.ts(64,19): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/backup.ts(74,19): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/backup.ts(81,2): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/backup.ts(94,1): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/backup.ts(108,1): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/restore.ts(45,17): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/restore.ts(53,18): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/restore.ts(54,20): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/restore.ts(56,22): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/restore.ts(81,16): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+e2e/fixtures/relay-monitor.ts(170,32): error TS2802: Type 'Map<number, number>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+e2e/tests/auction-settlement.spec.ts(693,32): error TS2322: Type '{ [x: string]: string[] | number[]; kinds: number[]; }' is not assignable to type 'Filter'.
+  'string' and '`#${string}`' index signatures are incompatible.
+    Type 'string[] | number[]' is not assignable to type 'string[] | undefined'.
+      Type 'number[]' is not assignable to type 'string[]'.
+        Type 'number' is not assignable to type 'string'.
+e2e/tests/auction-settlement.spec.ts(852,6): error TS2322: Type 'string' is not assignable to type 'MockToken'.
+scripts/fetch-btc-price.ts(35,1): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+scripts/fetch-btc-price.ts(39,16): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+scripts/fetch-btc-price.ts(59,1): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+scripts/gen_payment_details.ts(92,41): error TS2339: Property 'ON_CHAIN' does not exist on type '{ readonly LIGHTNING_NETWORK: "ln"; }'.
+scripts/gen_payment_details.ts(100,38): error TS2339: Property 'ON_CHAIN' does not exist on type '{ readonly LIGHTNING_NETWORK: "ln"; }'.
+scripts/migrate-relay.ts(24,1): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+scripts/migrate-relay.ts(49,3): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+src/components/AuctionBidsContainer.tsx(88,46): error TS2345: Argument of type '(best: NDKEvent | null, bid: NostrEventLike) => NostrEventLike' is not assignable to parameter of type '(previousValue: NDKEvent | null, currentValue: NostrEventLike, currentIndex: number, array: NostrEventLike[]) => NDKEvent | null'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/components/AuctionBidsContainer.tsx(132,80): error TS2345: Argument of type 'NostrEventLike' is not assignable to parameter of type 'NDKEvent'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/components/AuctionBidsContainer.tsx(146,23): error TS2740: Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/components/AuctionBidsContainer.tsx(184,84): error TS2345: Argument of type 'NostrEventLike' is not assignable to parameter of type 'NDKEvent'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/components/AuctionBidsContainer.tsx(193,27): error TS2740: Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/components/AuctionCard.tsx(90,5): error TS2740: Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/components/AuctionCard.tsx(91,5): error TS2322: Type 'NostrEventLike[]' is not assignable to type 'NDKEvent[]'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/components/AuctionCard.tsx(168,24): error TS2740: Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/components/AuctionCard.tsx(168,42): error TS2322: Type 'NostrEventLike[]' is not assignable to type 'NDKEvent[]'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/components/AuctionCard.tsx(171,20): error TS2740: Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/components/AuctionCard.tsx(171,78): error TS2322: Type 'NostrEventLike[]' is not assignable to type 'NDKEvent[]'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/components/AuctionDisplayComponent.tsx(69,26): error TS2740: Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/components/AuctionTimelineChart.tsx(397,15): error TS2740: Type '{}' is missing the following properties from type 'ScatterPointItem': cx, cy, x, y, and 5 more.
+src/components/AuctionVerdictPanel.tsx(95,48): error TS2322: Type '{ pubkey: string; colored: true; deterministicFallbackText: true; }' is not assignable to type 'IntrinsicAttributes & AvatarUserProps'.
+  Property 'colored' does not exist on type 'IntrinsicAttributes & AvatarUserProps'. Did you mean 'color'?
+src/components/AuctionVerdictPanel.tsx(99,45): error TS2322: Type '{ pubkey: string; colored: true; deterministicFallbackText: true; }' is not assignable to type 'IntrinsicAttributes & AvatarUserProps'.
+  Property 'colored' does not exist on type 'IntrinsicAttributes & AvatarUserProps'. Did you mean 'color'?
+src/components/checkout/WalletSelector.tsx(22,31): error TS2339: Property 'ON_CHAIN' does not exist on type '{ readonly LIGHTNING_NETWORK: "ln"; }'.
+src/components/lightning/LightningPaymentProcessor.tsx(183,6): error TS2322: Type '(payment: NDKZapDetails<LnPaymentInfo>) => Promise<{ pr: string; }>' is not assignable to type 'LnPayCb'.
+  Type 'Promise<{ pr: string; }>' is not assignable to type 'Promise<NDKPaymentConfirmationLN | undefined>'.
+    Property 'preimage' is missing in type '{ pr: string; }' but required in type 'NDKPaymentConfirmationLN'.
+src/components/lightning/LightningPaymentProcessor.tsx(200,23): error TS2345: Argument of type '{ success: false; error: string; }' is not assignable to parameter of type 'PaymentResult'.
+  Property 'invoiceId' is missing in type '{ success: false; error: string; }' but required in type 'PaymentResult'.
+src/components/migration/MigrationForm.tsx(319,54): error TS2345: Argument of type '{ name: string; summary: string; description: string; price: string; quantity: string; currency: string; status: "hidden" | "on-sale" | "pre-order"; productType: "variable" | "single"; mainCategory: string; ... 6 more ...; dimensions: { ...; } | null; }' is not assignable to parameter of type 'ProductFormData'.
+  Property 'isNSFW' is missing in type '{ name: string; summary: string; description: string; price: string; quantity: string; currency: string; status: "hidden" | "on-sale" | "pre-order"; productType: "variable" | "single"; mainCategory: string; ... 6 more ...; dimensions: { ...; } | null; }' but required in type 'ProductFormData'.
+src/components/sheet-contents/auctions/AuctionFormContent.tsx(1799,14): error TS2802: Type 'Set<AuctionPublishValidationField>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/components/sheet-contents/auctions/AuctionFormContent.tsx(1799,54): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<AuctionPublishValidationField, string>'.
+src/components/sheet-contents/auctions/AuctionFormContent.tsx(1804,33): error TS2802: Type 'Set<AuctionPublishValidationField>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/components/sheet-contents/auctions/AuctionFormContent.tsx(1805,50): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<AuctionPublishValidationField, string>'.
+src/components/sheet-contents/products/ProductFormContent.tsx(450,13): error TS2322: Type '{ children: string; type: "button"; variant: "secondary"; className: string; tooltip: string; onClick: () => void; "data-testid": string; }' is not assignable to type 'IntrinsicAttributes & ClassAttributes<HTMLButtonElement> & ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<...> & { ...; }'.
+  Property 'tooltip' does not exist on type 'IntrinsicAttributes & ClassAttributes<HTMLButtonElement> & ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<...> & { ...; }'.
+src/components/ui/relay-manager/RelayManager.tsx(43,21): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/feature/wallet/components/Nip60Wallet.tsx(182,5): error TS2322: Type 'void' is not assignable to type 'boolean'.
+src/feature/wallet/components/Nip60Wallet.tsx(340,8): error TS2322: Type '"dark-active"' is not assignable to type '"link" | "default" | "outline" | "destructive" | "secondary" | "ghost" | null | undefined'.
+src/feature/wallet/components/Nip60Wallet.tsx(361,8): error TS2322: Type '"dark-active"' is not assignable to type '"link" | "default" | "outline" | "destructive" | "secondary" | "ghost" | null | undefined'.
+src/hooks/useAuctionWinMonitor.ts(53,31): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/hooks/useNotificationMonitor.ts(494,51): error TS2345: Argument of type 'NostrEventLike' is not assignable to parameter of type 'NDKEvent'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/hooks/useNotificationMonitor.ts(498,46): error TS2345: Argument of type 'NostrEventLike' is not assignable to parameter of type 'NDKEvent'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/hooks/useNotificationMonitor.ts(513,71): error TS2345: Argument of type '(auction: NDKEvent) => string' is not assignable to parameter of type '(value: NostrEventLike, index: number, array: NostrEventLike[]) => string'.
+  Types of parameters 'auction' and 'value' are incompatible.
+    Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/hooks/useNotificationMonitor.ts(612,51): error TS2345: Argument of type 'NostrEventLike' is not assignable to parameter of type 'NDKEvent'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/hooks/useNotificationMonitor.ts(623,51): error TS2345: Argument of type 'NostrEventLike' is not assignable to parameter of type 'NDKEvent'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/hooks/useNotificationMonitor.ts(691,51): error TS2345: Argument of type 'NostrEventLike' is not assignable to parameter of type 'NDKEvent'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/hooks/useNotificationMonitor.ts(758,28): error TS2345: Argument of type '(auction: NDKEvent) => void' is not assignable to parameter of type '(value: NostrEventLike, index: number, array: NostrEventLike[]) => void'.
+  Types of parameters 'auction' and 'value' are incompatible.
+    Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/lib/__tests__/appSettings.test.ts(117,66): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(expected: { name: string; displayName: string; picture: string; banner: string; ownerPk: string; allowRegister: boolean; defaultCurrency: string; contactEmail: string | undefined; showNostrLink: boolean; blossom_server?: string | undefined; nip96_server?: string | undefined; } | null): void', gave the following error.
+    Argument of type '{ name: string; displayName: string; picture: string; banner: string; ownerPk: string; allowRegister: boolean; defaultCurrency: string; showNostrLink: boolean; }' is not assignable to parameter of type '{ name: string; displayName: string; picture: string; banner: string; ownerPk: string; allowRegister: boolean; defaultCurrency: string; contactEmail: string | undefined; showNostrLink: boolean; blossom_server?: string | undefined; nip96_server?: string | undefined; }'.
+      Property 'contactEmail' is missing in type '{ name: string; displayName: string; picture: string; banner: string; ownerPk: string; allowRegister: boolean; defaultCurrency: string; showNostrLink: boolean; }' but required in type '{ name: string; displayName: string; picture: string; banner: string; ownerPk: string; allowRegister: boolean; defaultCurrency: string; contactEmail: string | undefined; showNostrLink: boolean; blossom_server?: string | undefined; nip96_server?: string | undefined; }'.
+  Overload 2 of 2, '(expected: NoInfer<{ name: string; displayName: string; picture: string; banner: string; ownerPk: string; allowRegister: boolean; defaultCurrency: string; contactEmail: string | undefined; showNostrLink: boolean; blossom_server?: string | undefined; nip96_server?: string | undefined; } | null>): void', gave the following error.
+    Argument of type '{ name: string; displayName: string; picture: string; banner: string; ownerPk: string; allowRegister: boolean; defaultCurrency: string; showNostrLink: boolean; }' is not assignable to parameter of type '{ name: string; displayName: string; picture: string; banner: string; ownerPk: string; allowRegister: boolean; defaultCurrency: string; contactEmail: string | undefined; showNostrLink: boolean; blossom_server?: string | undefined; nip96_server?: string | undefined; }'.
+      Property 'contactEmail' is missing in type '{ name: string; displayName: string; picture: string; banner: string; ownerPk: string; allowRegister: boolean; defaultCurrency: string; showNostrLink: boolean; }' but required in type '{ name: string; displayName: string; picture: string; banner: string; ownerPk: string; allowRegister: boolean; defaultCurrency: string; contactEmail: string | undefined; showNostrLink: boolean; blossom_server?: string | undefined; nip96_server?: string | undefined; }'.
+src/lib/__tests__/auctionBidPublishRetry.test.ts(170,19): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+src/lib/__tests__/auctionBidValidation.test.ts(145,2): error TS2741: Property 'legLockedAmount' is missing in type '{ rawEvent: NDKEvent; id: string; bidderPubkey: string; createdAt: number; auctionRootEventId: string; auctionCoordinate: string; sellerPubkey: string; amount: number; currency: "SAT"; ... 10 more ...; prevBidId: string | undefined; }' but required in type 'ParsedBidEvent'.
+src/lib/__tests__/auctionFormStorage.test.ts(69,3): error TS2353: Object literal may only specify known properties, and 'pathIssuerPubkey' does not exist in type 'AuctionFormData'.
+src/lib/__tests__/auctionValidatorContext.test.ts(117,87): error TS2741: Property 'legLockedAmount' is missing in type '{ rawEvent: NDKEvent; id: string; bidderPubkey: string; createdAt: number; auctionRootEventId: string; auctionCoordinate: string; sellerPubkey: string; amount: number; currency: "SAT"; mint: string; ... 10 more ...; note: undefined; }' but required in type 'ParsedBidEvent'.
+src/lib/__tests__/auctionValidatorLifecycle.test.ts(113,2): error TS2741: Property 'legLockedAmount' is missing in type '{ rawEvent: NostrEventLike; id: string; bidderPubkey: string; createdAt: number; auctionRootEventId: string; auctionCoordinate: string; sellerPubkey: string; amount: number; ... 11 more ...; prevBidId: string | undefined; }' but required in type 'ParsedBidEvent'.
+src/lib/__tests__/auctionValidatorNut7Poller.test.ts(114,2): error TS2741: Property 'legLockedAmount' is missing in type '{ rawEvent: NDKEvent; id: string; bidderPubkey: string; createdAt: number; auctionRootEventId: string; auctionCoordinate: string; sellerPubkey: string; amount: number; currency: "SAT"; mint: string; ... 10 more ...; note: undefined; }' but required in type 'ParsedBidEvent'.
+src/lib/__tests__/auctionValidatorPublisher.test.ts(63,23): error TS2741: Property 'legLockedAmount' is missing in type '{ rawEvent: NDKEvent; id: string; bidderPubkey: string; createdAt: number; auctionRootEventId: string; auctionCoordinate: string; sellerPubkey: string; amount: number; currency: "SAT"; mint: string; ... 10 more ...; note: undefined; }' but required in type 'ParsedBidEvent'.
+src/lib/__tests__/computeValidatedBids.test.ts(103,2): error TS2741: Property 'legLockedAmount' is missing in type '{ rawEvent: NDKEvent; id: string; bidderPubkey: string; createdAt: number; auctionRootEventId: string; auctionCoordinate: string; sellerPubkey: string; amount: number; currency: "SAT"; ... 10 more ...; prevBidId: string | undefined; }' but required in type 'ParsedBidEvent'.
+src/lib/__tests__/io.test.ts(199,36): error TS2345: Argument of type '(filter: any, opts: any) => { stop: Mock<() => void>; }' is not assignable to parameter of type '() => { stop: Mock<() => void>; }'.
+  Target signature provides too few arguments. Expected 2 or more, but got 0.
+src/lib/__tests__/io.test.ts(199,37): error TS7006: Parameter 'filter' implicitly has an 'any' type.
+src/lib/__tests__/io.test.ts(199,45): error TS7006: Parameter 'opts' implicitly has an 'any' type.
+src/lib/__tests__/io.test.ts(220,11): error TS2493: Tuple type '[]' of length '0' has no element at index '0'.
+src/lib/__tests__/io.test.ts(220,19): error TS2493: Tuple type '[]' of length '0' has no element at index '1'.
+src/lib/__tests__/io.test.ts(221,26): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(expected: undefined): void', gave the following error.
+    Argument of type '{ kinds: number[]; }' is not assignable to parameter of type 'undefined'.
+  Overload 2 of 2, '(expected: undefined): void', gave the following error.
+    Argument of type '{ kinds: number[]; }' is not assignable to parameter of type 'undefined'.
+src/lib/__tests__/io.test.ts(222,11): error TS2352: Conversion of type 'undefined' to type '{ timeoutMs: number; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/lib/__tests__/io.test.ts(223,24): error TS2352: Conversion of type 'undefined' to type '{ relaySet: unknown; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/lib/__tests__/io.test.ts(232,11): error TS2493: Tuple type '[]' of length '0' has no element at index '0'.
+src/lib/__tests__/io.test.ts(232,19): error TS2493: Tuple type '[]' of length '0' has no element at index '1'.
+src/lib/__tests__/io.test.ts(232,25): error TS2493: Tuple type '[]' of length '0' has no element at index '2'.
+src/lib/__tests__/io.test.ts(233,26): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(expected: undefined): void', gave the following error.
+    Argument of type '{ kinds: number[]; }' is not assignable to parameter of type 'undefined'.
+  Overload 2 of 2, '(expected: undefined): void', gave the following error.
+    Argument of type '{ kinds: number[]; }' is not assignable to parameter of type 'undefined'.
+src/lib/__tests__/io.test.ts(234,11): error TS2352: Conversion of type 'undefined' to type '{ closeOnEose: boolean; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/lib/__tests__/io.test.ts(249,11): error TS2493: Tuple type '[]' of length '0' has no element at index '0'.
+src/lib/__tests__/io.test.ts(249,18): error TS2493: Tuple type '[]' of length '0' has no element at index '1'.
+src/lib/__tests__/io.test.ts(250,11): error TS2352: Conversion of type 'undefined' to type '{ rawEvent(): unknown; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/lib/__tests__/io.test.ts(258,11): error TS2493: Tuple type '[]' of length '0' has no element at index '0'.
+src/lib/__tests__/io.test.ts(258,18): error TS2493: Tuple type '[]' of length '0' has no element at index '1'.
+src/lib/__tests__/io.test.ts(259,11): error TS2352: Conversion of type 'undefined' to type '{ rawEvent(): unknown; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/lib/__tests__/io.test.ts(267,11): error TS2493: Tuple type '[]' of length '0' has no element at index '0'.
+src/lib/__tests__/io.test.ts(267,18): error TS2493: Tuple type '[]' of length '0' has no element at index '1'.
+src/lib/__tests__/io.test.ts(268,11): error TS2352: Conversion of type 'undefined' to type '{ rawEvent(): unknown; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/lib/__tests__/nip17OrderTransport.test.ts(162,11): error TS18047: 'result.relayTargets' is possibly 'null'.
+src/lib/__tests__/nip17OrderTransport.test.ts(162,62): error TS18047: 'result.relayTargets' is possibly 'null'.
+src/lib/__tests__/nip17OrderTransport.test.ts(199,11): error TS18047: 'result.relayTargets' is possibly 'null'.
+src/lib/__tests__/nip17OrderTransport.test.ts(199,65): error TS18047: 'result.relayTargets' is possibly 'null'.
+src/lib/__tests__/nip17Relays.test.ts(74,17): error TS2339: Property 'event' does not exist on type 'Nip17DmRelayListResult'.
+  Property 'event' does not exist on type 'Nip17DmRelayListMissingResult'.
+src/lib/__tests__/nip17Relays.test.ts(94,17): error TS2339: Property 'event' does not exist on type 'Nip17DmRelayListResult'.
+  Property 'event' does not exist on type 'Nip17DmRelayListMissingResult'.
+src/lib/__tests__/nip60LockAuctionBidFunds.test.ts(63,21): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+src/lib/__tests__/nip60LockAuctionBidFunds.test.ts(112,56): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+src/lib/__tests__/notifications.test.ts(45,52): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+src/lib/__tests__/theme-contrast.test.ts(73,38): error TS2556: A spread argument must either have a tuple type or be passed to a rest parameter.
+src/lib/__tests__/theme-contrast.test.ts(74,36): error TS2556: A spread argument must either have a tuple type or be passed to a rest parameter.
+src/lib/__tests__/theme-contrast.test.ts(84,38): error TS2556: A spread argument must either have a tuple type or be passed to a rest parameter.
+src/lib/__tests__/theme-contrast.test.ts(85,36): error TS2556: A spread argument must either have a tuple type or be passed to a rest parameter.
+src/lib/auction/bidValidation.ts(263,18): error TS2802: Type 'MapIterator<ParsedValidatorVerdictEvent>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/lib/auction/bidValidation.ts(319,44): error TS2802: Type 'Map<string, ParsedValidatorVerdictEvent[]>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/lib/auction/validation.ts(673,3): error TS2322: Type '{ isValid: true; releaseTiming: ReleaseTiming; derivedChildPubkey: string; }' is not assignable to type 'ReleaseValidityResult'.
+  Property 'decodedTokenSummary' is missing in type '{ isValid: true; releaseTiming: ReleaseTiming; derivedChildPubkey: string; }' but required in type '{ isValid: true; releaseTiming: ReleaseTiming; derivedChildPubkey: string; decodedTokenSummary: { mintUrl: string; amount: number; proofCount: number; }; }'.
+src/lib/auctionPublishValidation.ts(198,31): error TS2802: Type 'ArrayIterator<[number, ProductShippingSelectionInput]>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/lib/cart-persistence.ts(58,27): error TS2677: A type predicate's type must be assignable to its parameter's type.
+  Type '{ productRef: string; quantity: number; shippingRef?: string | null | undefined; }' is not assignable to type '{ shippingRef?: string | undefined; productRef: string; quantity: number; }'.
+    Types of property 'shippingRef' are incompatible.
+      Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+        Type 'null' is not assignable to type 'string | undefined'.
+src/lib/cart-persistence.ts(59,34): error TS18047: 'a' is possibly 'null'.
+src/lib/cart-persistence.ts(59,48): error TS18047: 'b' is possibly 'null'.
+src/lib/cart-persistence.ts(65,3): error TS2322: Type '({ shippingRef?: string | undefined; productRef: string; quantity: number; } | null)[]' is not assignable to type '{ productRef: string; quantity: number; shippingRef?: string | null | undefined; }[]'.
+  Type '{ shippingRef?: string | undefined; productRef: string; quantity: number; } | null' is not assignable to type '{ productRef: string; quantity: number; shippingRef?: string | null | undefined; }'.
+    Type 'null' is not assignable to type '{ productRef: string; quantity: number; shippingRef?: string | null | undefined; }'.
+src/lib/nostr/ndk-events.ts(37,23): error TS2802: Type 'Set<NDKEvent>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/lib/orders/nip17OrderPublish.ts(78,3): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/lib/stores/ndk.ts(372,15): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/lib/stores/nip60.ts(773,39): error TS2802: Type 'MapIterator<[string, NDKPrivateKeySigner]>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/lib/stores/nip60.ts(783,23): error TS2802: Type 'MapIterator<NDKPrivateKeySigner>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/lib/stores/nip60.ts(1173,29): error TS2551: Property 'wallet' does not exist on type 'NDKCashuWallet'. Did you mean 'wallets'?
+src/lib/stores/nip60.ts(1179,20): error TS2339: Property 'relay' does not exist on type 'NDKCashuWallet'.
+src/lib/stores/product-navigation.test.ts(11,27): error TS2352: Conversion of type '(_handler: TimerHandler, _timeout?: number) => ReturnType<typeof setTimeout>' to type 'typeof setTimeout' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Property '__promisify__' is missing in type '(_handler: TimerHandler, _timeout?: number) => ReturnType<typeof setTimeout>' but required in type 'typeof setTimeout'.
+src/lib/stores/product-session.test.ts(16,16): error TS2353: Object literal may only specify known properties, and 'shipping' does not exist in type 'ProductShippingSelection'.
+src/lib/stores/product-session.test.ts(76,18): error TS2353: Object literal may only specify known properties, and 'shipping' does not exist in type 'ProductShippingSelection'.
+src/lib/utils/auctionFormStorage.ts(122,3): error TS2353: Object literal may only specify known properties, and 'pathIssuerPubkey' does not exist in type 'AuctionFormData'.
+src/lib/utils/paymentDetails.ts(147,36): error TS2339: Property 'ON_CHAIN' does not exist on type '{ readonly LIGHTNING_NETWORK: "ln"; }'.
+src/lib/utils/paymentDetails.ts(166,26): error TS2339: Property 'ON_CHAIN' does not exist on type '{ readonly LIGHTNING_NETWORK: "ln"; }'.
+src/lib/utils/paymentDetails.ts(171,26): error TS2339: Property 'ON_CHAIN' does not exist on type '{ readonly LIGHTNING_NETWORK: "ln"; }'.
+src/lib/utils/productFormStorage.ts(53,11): error TS2339: Property 'mainTab' does not exist on type 'ProductFormState'.
+src/lib/utils/productFormStorage.ts(53,30): error TS2339: Property 'productSubTab' does not exist on type 'ProductFormState'.
+src/lib/utils/productShippingSelections.ts(103,17): error TS2339: Property 'shipping' does not exist on type 'ProductShippingSelectionInput'.
+  Property 'shipping' does not exist on type 'ProductShippingSelection'.
+src/lib/utils/productShippingSelections.ts(103,52): error TS2339: Property 'shipping' does not exist on type 'ProductShippingSelectionInput'.
+  Property 'shipping' does not exist on type 'ProductShippingSelection'.
+src/publish/auctions.tsx(1519,34): error TS2802: Type 'Map<string, ParsedBidEvent[]>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/publish/auctions.tsx(1679,21): error TS2345: Argument of type 'NostrEventLike' is not assignable to parameter of type 'NDKEvent'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/publish/auctions.tsx(1714,12): error TS2345: Argument of type 'NostrEventLike' is not assignable to parameter of type 'NDKEvent'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/publish/auctions.tsx(2109,13): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/publish/featured.tsx(375,39): error TS2345: Argument of type '{ kinds: 30409[]; authors: string[]; '#d': "featured_auctions"[]; limit: number; }' is not assignable to parameter of type 'NDKFilter<NDKKind> | NDKFilter<NDKKind>[]'.
+  Type '{ kinds: 30409[]; authors: string[]; '#d': "featured_auctions"[]; limit: number; }' is not assignable to type 'NDKFilter<NDKKind>'.
+    Types of property 'kinds' are incompatible.
+      Type '30409[]' is not assignable to type 'NDKKind[]'.
+        Type '30409' is not assignable to type 'NDKKind'.
+src/publish/orders.test.ts(500,60): error TS2345: Argument of type 'PublishedEvent' is not assignable to parameter of type 'NDKEvent'.
+  Type 'PublishedEvent' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, author, and 72 more.
+src/publish/orders.test.ts(529,60): error TS2345: Argument of type 'PublishedEvent' is not assignable to parameter of type 'NDKEvent'.
+  Type 'PublishedEvent' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, author, and 72 more.
+src/publish/payment.tsx(55,88): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
+  Type 'string[]' is not assignable to type 'string'.
+src/publish/payment.tsx(106,5): error TS2322: Type '"on-chain"' is not assignable to type '"ln"'.
+src/queries/__tests__/LiveChatPanel.test.ts(36,22): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+src/queries/__tests__/auctionListHelpers.test.ts(50,103): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+src/queries/__tests__/auctionListHelpers.test.ts(54,13): error TS2802: Type 'Set<NostrEventLike>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/queries/__tests__/auctionPathReleases.test.ts(52,69): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+src/queries/__tests__/auctionPathReleases.test.ts(56,13): error TS2802: Type 'Set<NostrEvent>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/queries/__tests__/auctionVerdicts.test.ts(64,34): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+src/queries/__tests__/auctionVerdicts.test.ts(71,13): error TS2802: Type 'Set<NostrEvent>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/queries/__tests__/external.test.ts(39,2): error TS2741: Property 'preconnect' is missing in type 'Mock<(url: string, init?: RequestInit | undefined) => Promise<Response>>' but required in type 'typeof fetch'.
+src/queries/__tests__/liveChat.test.ts(41,31): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+src/queries/__tests__/orders-seam.test.ts(77,36): error TS2493: Tuple type '[]' of length '0' has no element at index '0'.
+src/queries/__tests__/orders-seam.test.ts(77,48): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(expected: undefined): void', gave the following error.
+    Argument of type '{ kinds: number[]; '#p': string[]; limit: number; }' is not assignable to parameter of type 'undefined'.
+  Overload 2 of 2, '(expected: undefined): void', gave the following error.
+    Argument of type '{ kinds: number[]; '#p': string[]; limit: number; }' is not assignable to parameter of type 'undefined'.
+src/queries/external.tsx(44,5): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/queries/orders.tsx(1246,39): error TS2802: Type 'Map<string, number>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/routes/_dashboard-layout/dashboard/products/auctions.$auctionId.tsx(177,33): error TS2322: Type '{ pubkey: string; colored: true; className: string; }' is not assignable to type 'IntrinsicAttributes & AvatarUserProps'.
+  Property 'colored' does not exist on type 'IntrinsicAttributes & AvatarUserProps'. Did you mean 'color'?
+src/routes/_dashboard-layout/dashboard/products/auctions.$auctionId.tsx(263,36): error TS2345: Argument of type 'NostrEventLike[]' is not assignable to parameter of type 'ParsedBidEvent[]'.
+  Type 'NostrEventLike' is missing the following properties from type 'ParsedBidEvent': rawEvent, bidderPubkey, createdAt, auctionRootEventId, and 15 more.
+src/routes/_dashboard-layout/dashboard/products/auctions.$auctionId.tsx(434,59): error TS2345: Argument of type 'NostrEventLike | null' is not assignable to parameter of type 'NDKEvent | null | undefined'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/_dashboard-layout/dashboard/products/auctions.$auctionId.tsx(612,26): error TS2740: Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/_dashboard-layout/dashboard/products/auctions.$auctionId.tsx(657,50): error TS2322: Type '{ pubkey: string; colored: true; className: string; }' is not assignable to type 'IntrinsicAttributes & AvatarUserProps'.
+  Property 'colored' does not exist on type 'IntrinsicAttributes & AvatarUserProps'. Did you mean 'color'?
+src/routes/_dashboard-layout/dashboard/products/auctions.$auctionId.tsx(685,54): error TS2322: Type '{ pubkey: string; colored: true; className: string; }' is not assignable to type 'IntrinsicAttributes & AvatarUserProps'.
+  Property 'colored' does not exist on type 'IntrinsicAttributes & AvatarUserProps'. Did you mean 'color'?
+src/routes/_dashboard-layout/dashboard/products/auctions.tsx(239,42): error TS2322: Type '{ pubkey: string; colored: true; deterministicFallbackText: true; className: string; }' is not assignable to type 'IntrinsicAttributes & AvatarUserProps'.
+  Property 'colored' does not exist on type 'IntrinsicAttributes & AvatarUserProps'. Did you mean 'color'?
+src/routes/_dashboard-layout/dashboard/products/auctions.tsx(385,58): error TS2345: Argument of type 'NostrEventLike' is not assignable to parameter of type 'NDKEvent'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/_dashboard-layout/dashboard/products/auctions.tsx(543,106): error TS2345: Argument of type 'NostrEventLike' is not assignable to parameter of type 'NDKEvent'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/_dashboard-layout/dashboard/products/auctions.tsx(670,60): error TS2345: Argument of type 'NostrEventLike' is not assignable to parameter of type 'NDKEvent'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/_dashboard-layout/dashboard/products/auctions.tsx(673,12): error TS2345: Argument of type 'NostrEventLike' is not assignable to parameter of type 'NDKEvent'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/_dashboard-layout/dashboard/products/auctions.tsx(682,13): error TS2740: Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/_dashboard-layout/dashboard/products/auctions.tsx(683,13): error TS2322: Type 'NostrEventLike[]' is not assignable to type 'NDKEvent[]'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/_dashboard-layout/dashboard/products/auctions.tsx(685,13): error TS2322: Type 'NostrEventLike[]' is not assignable to type 'NDKEvent[]'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/_dashboard-layout/dashboard/products/auctions.tsx(686,69): error TS2345: Argument of type 'NostrEventLike' is not assignable to parameter of type 'NDKEvent'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/_dashboard-layout/dashboard/products/bids.tsx(268,24): error TS2345: Argument of type 'NostrEventLike' is not assignable to parameter of type 'NDKEvent'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/_dashboard-layout/dashboard/products/bids.tsx(277,5): error TS2740: Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/_dashboard-layout/dashboard/products/bids.tsx(278,12): error TS2740: Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/_dashboard-layout/dashboard/products/bids.tsx(464,46): error TS2345: Argument of type 'NostrEventLike | null' is not assignable to parameter of type 'NDKEvent | null'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/_dashboard-layout/dashboard/products/bids.tsx(497,45): error TS2740: Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/_dashboard-layout/dashboard/products/bids.tsx(573,54): error TS2322: Type '{ pubkey: string; colored: true; className: string; }' is not assignable to type 'IntrinsicAttributes & AvatarUserProps'.
+  Property 'colored' does not exist on type 'IntrinsicAttributes & AvatarUserProps'. Did you mean 'color'?
+src/routes/auctions.$auctionId.tsx(444,5): error TS2322: Type 'NostrEventLike | null' is not assignable to type 'NDKEvent | null'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/auctions.$auctionId.tsx(445,5): error TS2322: Type 'NostrEventLike[]' is not assignable to type 'NDKEvent[]'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/auctions.$auctionId.tsx(604,14): error TS2802: Type 'MapIterator<AuctionParticipantSummary>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/routes/auctions.$auctionId.tsx(796,27): error TS2740: Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/auctions.$auctionId.tsx(796,45): error TS2322: Type 'NostrEventLike[]' is not assignable to type 'NDKEvent[]'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/auctions.$auctionId.tsx(812,23): error TS2740: Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/auctions.$auctionId.tsx(812,78): error TS2322: Type 'NostrEventLike[]' is not assignable to type 'NDKEvent[]'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/auctions.$auctionId.tsx(891,25): error TS2740: Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/auctions.$auctionId.tsx(979,30): error TS2322: Type 'NostrEventLike[]' is not assignable to type 'NDKEvent[]'.
+  Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/auctions.$auctionId.tsx(979,42): error TS2740: Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/auctions.$auctionId.tsx(1076,18): error TS2740: Type 'NostrEventLike' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, rawEvent, and 73 more.
+src/routes/auctions.index.tsx(328,15): error TS2322: Type '"primaryActive" | "primary"' is not assignable to type '"link" | "default" | "outline" | "destructive" | "secondary" | "ghost" | null | undefined'.
+  Type '"primaryActive"' is not assignable to type '"link" | "default" | "outline" | "destructive" | "secondary" | "ghost" | null | undefined'.
+src/routes/auctions.index.tsx(334,10): error TS2322: Type '"primaryActive" | "primary"' is not assignable to type '"link" | "default" | "outline" | "destructive" | "secondary" | "ghost" | null | undefined'.
+  Type '"primaryActive"' is not assignable to type '"link" | "default" | "outline" | "destructive" | "secondary" | "ghost" | null | undefined'.
+src/routes/auctions.index.tsx(347,11): error TS2322: Type '"primaryActive" | "primary"' is not assignable to type '"link" | "default" | "outline" | "destructive" | "secondary" | "ghost" | null | undefined'.
+  Type '"primaryActive"' is not assignable to type '"link" | "default" | "outline" | "destructive" | "secondary" | "ghost" | null | undefined'.
+src/routes/checkout.tsx(586,6): error TS2322: Type '{ orderId: string; id: string; bolt11?: string | null; amount: number; description: string; recipientName: string; status: PaymentInvoiceStatus; ... 8 more ...; updatedAt?: number; }' is not assignable to type '{ orderId: string; recipientPubkey?: string | undefined; amount: number; description?: string | undefined; id: string; bolt11?: string | undefined; }'.
+  Types of property 'bolt11' are incompatible.
+    Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+      Type 'null' is not assignable to type 'string | undefined'.
+src/routes/posts.$postId.tsx(7,24): error TS2339: Property 'queryClient' does not exist on type '{}'.
+src/routes/posts.index.tsx(7,24): error TS2339: Property 'queryClient' does not exist on type '{}'.
+src/routes/products.$productId.tsx(287,60): error TS2345: Argument of type '() => ({ id: string; name: string; cost: number; currency: string; countries: string[]; service: string; carrier: string | undefined; } | null)[]' is not assignable to parameter of type '() => RichShippingInfo[]'.
+  Type '({ id: string; name: string; cost: number; currency: string; countries: string[]; service: string; carrier: string | undefined; } | null)[]' is not assignable to type 'RichShippingInfo[]'.
+    Type '{ id: string; name: string; cost: number; currency: string; countries: string[]; service: string; carrier: string | undefined; } | null' is not assignable to type 'RichShippingInfo'.
+      Type 'null' is not assignable to type 'RichShippingInfo'.
+src/routes/products.$productId.tsx(305,32): error TS2677: A type predicate's type must be assignable to its parameter's type.
+  Type 'RichShippingInfo' is not assignable to type '{ id: string; name: string; cost: number; currency: string; countries: string[]; service: string; carrier: string | undefined; }'.
+    Types of property 'name' are incompatible.
+      Type 'string | undefined' is not assignable to type 'string'.
+        Type 'undefined' is not assignable to type 'string'.
+src/routes/search.products.tsx(46,14): error TS7006: Parameter 'term' implicitly has an 'any' type.
+src/routes/search.products.tsx(53,32): error TS7006: Parameter 'term' implicitly has an 'any' type.
+src/routes/setup.tsx(77,5): error TS1360: Type '{ name: string; displayName: string; picture: string; banner: string; ownerPk: string; contactEmail: string; allowRegister: boolean; defaultCurrency: string; }' does not satisfy the expected type '{ name: string; displayName: string; picture: string; banner: string; ownerPk: string; allowRegister: boolean; defaultCurrency: string; contactEmail: string | undefined; showNostrLink: boolean; blossom_server?: string | undefined; nip96_server?: string | undefined; }'.
+  Property 'showNostrLink' is missing in type '{ name: string; displayName: string; picture: string; banner: string; ownerPk: string; contactEmail: string; allowRegister: boolean; defaultCurrency: string; }' but required in type '{ name: string; displayName: string; picture: string; banner: string; ownerPk: string; allowRegister: boolean; defaultCurrency: string; contactEmail: string | undefined; showNostrLink: boolean; blossom_server?: string | undefined; nip96_server?: string | undefined; }'.
+src/routes/setup.tsx(82,26): error TS2339: Property 'errors' does not exist on type 'ZodError<{ name: string; displayName: string; picture: string; banner: string; ownerPk: string; allowRegister: boolean; defaultCurrency: string; contactEmail: string | undefined; showNostrLink: boolean; blossom_server?: string | undefined; nip96_server?: string | undefined; }>'.
+src/routes/setup.tsx(82,65): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+src/routes/setup.tsx(82,70): error TS7006: Parameter 'curr' implicitly has an 'any' type.
