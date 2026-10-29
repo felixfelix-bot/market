@@ -1,0 +1,85 @@
+
+=== 2026-07-21T14:50:47Z [COMMENTED] id=PRR_kwDOOFRvT88AAAABGuDfaw ===
+## Analysis
+
+**What this PR does:** Fixes two pricing bugs: (1) Sats field shows fiat value instead of converted sats when editing a fiat-priced product. Root cause: store loaded fiat price into the `price` (sats) field. Fix: store leaves `price` empty for fiat products, new `useEffect` in tabs.tsx calculates sats from `fiatPrice` using exchange rates. (2) Fiat price not saved correctly when entering sats — `handleBitcoinPriceChange` now updates both `price` and `fiatPrice` in fiat mode. Also ensures sats values are integers via `Math.round()`.
+
+**Tradeoffs:**
+- Moving price calculation to UI layer is reasonable but means store state is incomplete until the effect runs.
+- Dependency on `exchangeRates` being loaded — potential flash of empty price if rates load slowly.
+- Redundant `Math.round()` was flagged by Copilot and partially addressed by author.
+
+**Recommendation:** Yes. The fix is well-targeted and addresses root cause rather than patching symptoms. The store change is minimal and the UI-layer calculation is appropriate. hkarani tested and confirmed it works with a video attachment.
+
+**Stale?** Yes — 7 months old, dirty (needs rebase). But validated by hkarani (core contributor) on Jan 22, 2026: "tested it, this works."
+
+**Before merge:**
+1. Rebase.
+2. Verify exchange rate loading timing.
+3. Test the auto-save/draft system edge cases.
+4. Confirm `convertCurrencyToSats` dependency handling.
+
+=== 2026-07-21T14:50:57Z [COMMENTED] id=PRR_kwDOOFRvT88AAAABGuDlIQ ===
+## Analysis
+
+**What this PR does:** Fixes two pricing bugs: (1) Sats field shows fiat value instead of converted sats when editing a fiat-priced product. Root cause: store loaded fiat price into the `price` (sats) field. Fix: store leaves `price` empty for fiat products, new `useEffect` in tabs.tsx calculates sats from `fiatPrice` using exchange rates. (2) Fiat price not saved correctly when entering sats — `handleBitcoinPriceChange` now updates both `price` and `fiatPrice` in fiat mode. Also ensures sats values are integers via `Math.round()`.
+
+**Tradeoffs:**
+- Moving price calculation to UI layer is reasonable but means store state is incomplete until the effect runs.
+- Dependency on `exchangeRates` being loaded — potential flash of empty price if rates load slowly.
+- Redundant `Math.round()` was flagged by Copilot and partially addressed by author.
+
+**Recommendation:** Yes. The fix is well-targeted and addresses root cause rather than patching symptoms. The store change is minimal and the UI-layer calculation is appropriate. hkarani tested and confirmed it works with a video attachment.
+
+**Stale?** Yes — 7 months old, dirty (needs rebase). But validated by hkarani (core contributor) on Jan 22, 2026: "tested it, this works."
+
+**Before merge:**
+1. Rebase.
+2. Verify exchange rate loading timing.
+3. Test the auto-save/draft system edge cases.
+4. Confirm `convertCurrencyToSats` dependency handling.
+
+=== 2026-07-21T14:52:36Z [COMMENTED] id=PRR_kwDOOFRvT88AAAABGuEe8A ===
+Reviewed the full diff. The fix is well-targeted and addresses the root cause rather than patching symptoms.
+
+1. The store change (setting price to empty string for fiat products on load) is minimal and correct — it stops conflating fiat price with sats price.
+
+2. The useEffect in tabs.tsx that calculates sats from fiatPrice using exchange rates is the right approach for the UI layer.
+
+3. The handleBitcoinPriceChange fix (updating both price and fiatPrice in fiat mode) prevents the data corruption bug where sats were saved as fiat.
+
+4. hkarani tested and confirmed it works (Jan 22, 2026, with video attachment). This is the only one of the BenGWeeks PRs with human validation.
+
+5. This PR is 7 months old with merge conflicts (labeled "Needs Refresh", "rebase-needed", "more-than-1-month-behind"). Both files have been heavily modified since (shipping-first workflow, validation hardening). The pricing logic may have been refactored entirely.
+
+Before merge: rebase onto current master, verify the bug still exists (product form significantly reworked), if still exists rewrite fix against current code structure, confirm hkarani's test still passes.
+
+=== 2026-07-21T14:53:55Z [COMMENTED] id=PRR_kwDOOFRvT88AAAABGuFPDg ===
+## Review: Sats Price Display Fix for Fiat-Priced Products
+
+### Summary
+Fixes two pricing bugs: (1) Sats field shows fiat value instead of converted sats when editing a fiat-priced product. Root cause: store loaded fiat price into the `price` (sats) field. Fix: store leaves `price` empty for fiat products, new `useEffect` in `tabs.tsx` calculates sats from `fiatPrice` using exchange rates. (2) Fiat price not saved correctly when entering sats -- `handleBitcoinPriceChange` now updates both `price` and `fiatPrice` in fiat mode. Also ensures sats values are integers via `Math.round()`.
+
+### Tradeoffs
+**Pros:**
+- Well-targeted fix that addresses the root cause rather than patching symptoms
+- Store change is minimal and the UI-layer calculation is appropriate
+- `hkarani` tested and confirmed it works with a video attachment (Jan 22, 2026)
+- Author responded to all Copilot review comments and made a follow-up commit to address redundant `Math.round()`
+
+**Cons:**
+- Setting `price` to empty string on load is a workaround -- it requires the `useEffect` to run to populate it
+- If exchange rates aren't loaded yet, the sats field stays empty until they arrive (potential flash of empty/incorrect state)
+- The `useEffect` dependency array omits `convertCurrencyToSats` (a function) -- works because `exchangeRates` is in deps, but fragile if the function's dependencies change
+- Addresses symptoms rather than the root cause: the store's unclear separation between fiat price and sats price
+
+### Recommendation
+Yes. The fix is correct and addresses a real, verified bug. The approach is pragmatic. A deeper refactor of the store's fiat/sats separation would be better long-term, but this fix works and has been validated.
+
+### Before merge
+1. Rebase onto current master (7 months of divergence -- both files heavily modified since)
+2. Verify the bug still exists in the current codebase (product form workflow has been significantly reworked -- shipping-first workflow, validation hardening)
+3. Verify exchange rate loading timing -- confirm the `useEffect` correctly waits for `exchangeRates`
+4. Test the auto-save/draft system edge cases
+5. If the bug still exists, the fix may need to be rewritten against the current code structure
+
