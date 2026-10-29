@@ -15,7 +15,7 @@ Pinned SHA e989381b1388; live head bbe43a56598c8d0dd6adb1bfba75a3f55d6f1b9d (mer
 8. GATE 2.5: worker-reviewer-ds profile absent on this node (~/.hermes/profiles has glm/kimi/qwen only) -> discharged as independent fresh-context delegate cold audit of the draft (same-family, disclosed; no cross-family token claimed). [DONE — deleg_12758da8, verdict APPROVE_DRAFT_W_AMENDMENTS: all 20 draft claims CONFIRMED, one wording correction (Tear-down-preview failure = teardown-job missing-checkout defect, not "runner provisioning") applied to draft.md BEFORE posting. Auditor 503'd at step 14; steps 15-17 completed by parent first-hand (guard rerun 32/0/97; ssh-prepare.sh exists at base+head; missed-defect sweep). Verdict at artifacts/pr1410_review/audit-verdict.md]
 9. Publish: gh pr review 1410 --repo PlebeianApp/market --body-file (COMMENT, body states APPROVED, cites head SHA). [DONE — felixfelix-bot review id 5694825411 at commit bbe43a56598c, 2026-10-29T08:32:13Z, dedup-checked immediately before posting]
 10. Gate state: prs["1410"] absent from manager/state/plebeian-pr-review-state.json -> root cause of card re-creation; entry added with last_reviewed_sha=bbe43a56598c8d0dd6adb1bfba75a3f55d6f1b9d, review_card=t_29774673, review id 5694825411. [DONE — updater run, file re-read, entry verified; backup .bak_pr1410_* written first]
-11. Card t_29774673 close: kanban_complete with tags declaration as line 1 of result. [PENDING]
+11. Card t_29774673 close: kanban_complete with tags declaration as line 1 of result. [DONE — status=done, result_len=963, result line 1 = "tags: no-code, docs …"; post-flight live engine: tier=docs verdict=pass missing=[] passed=[pushed_or_consolidated] review_artifact=true. Detector loop closed.]
 
 ## Files touched
 
