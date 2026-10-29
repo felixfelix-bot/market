@@ -1,0 +1,45 @@
+# Documentation Version Drift Detector
+#
+# Fails CI when the dependency versions documented in `.claude/` drift from the
+# real versions declared in `package.json`.  This prevents stale version tables
+# after dependency bumps.
+#
+# The check is performed by `scripts/check-doc-versions.ts`, which:
+#   1. Reads `package.json` to extract the actual dependency versions.
+#   2. Scans the `.claude/` documentation files for version references.
+#   3. Compares the two and exits 1 if any key dependency's documented version
+#      has drifted, printing a clear report of every stale reference.
+#
+# Unit tests live next to the script at `scripts/check-doc-versions.test.ts`
+# and can be run locally with:
+#   bun test scripts/check-doc-versions.test.ts
+
+name: Doc Version Check
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  doc-version-check:
+    name: Documentation version drift
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Detect documentation version drift
+        run: bun run scripts/check-doc-versions.ts
