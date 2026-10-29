@@ -12,9 +12,9 @@ Task: Review PlebeianApp/market PR #1200 `ci(relay): add bounded staging readine
 | Independent verification at head in isolated worktree /tmp/wt1200: bash -n OK; 33/33 tests pass; shellcheck 15x SC2015 info-only | DONE | raw/test_run_head.log, raw/shellcheck_head.txt |
 | Carried items confirmed still open at head (observe() SECONDS + bare sleep :629/:631/:651; workflow sleep 5 at deploy-relay.yml:152/:219; no upper bound on RELAY_READINESS_SECONDS in validate_config:53-58) | DONE | (verified in worktree, cited in REPORT) |
 | New-issue sweep (my own linus-method pass): exit-75 invisible to workflow (pre-existing wiring, only new in that the script now *returns* 75); tests not wired into PR CI (deploy-relay.yml has no pull_request trigger -> readiness test only runs on master push); validate_payload untested | DONE — two INFO-grade new observations, none block; both recorded in REPORT, deliberately NOT posted to the PR (dedup) | REPORT.md |
-| Gate 2.5 cold audit (assigned worker-reviewer-ds absent on node -> fresh-context delegate audit, same-family, disclosed) | IN PROGRESS | audit-1200.md |
-| Gate state `prs["1200"].last_reviewed_sha` write | PENDING | update_gate_state.py |
-| REPORT.md + commit + push to fork | PENDING | REPORT.md |
+| Gate 2.5 cold audit (assigned worker-reviewer-ds absent on node -> fresh-context delegate audit, same-family, disclosed) | DONE — AUDIT_VERDICT: CONFIRMED_W_AMENDMENTS; 3 amendments applied (mis-attribution of 8-item list to review body vs comment 5354414353; false novelty claim on exit-75 dropped — it is the review-of-record's own RISK #1; evidence hygiene) | audit-1200.md, draft-verdict.md |
+| Gate state `prs["1200"].last_reviewed_sha` write | DONE — backup .bak-pr1200-noop-20261029, atomic write, verified 46 keys with 1200 present | update_gate_state.py |
+| REPORT.md + commit + push to fork | DONE | REPORT.md |
 | Card complete with tier declaration | PENDING | - |
 
 ## Notes
