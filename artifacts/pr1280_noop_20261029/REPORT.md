@@ -70,15 +70,24 @@ matches `PR #1280` / the pull URL). This is a tier declaration only — no
 ci_evidence/consolidated/tests token is fabricated, and the result text says
 so explicitly.
 
-Actions taken this run:
+Actions taken this run (all observed in tool output):
 1. Wrote the missing own-tid review artifact to BOTH homes:
-   `~/reports/reviews/plebeian-pr-reviews-t_a84ac8e9-glm.md` and
+   `~/reports/reviews/plebeian-pr-reviews-t_a84ac8e9-glm.md` (2693 bytes) and
    `boards/plebeian-pr-reviews/attachments/t_a84ac8e9/REVIEW.md`.
-2. Refreshed gate state prs.1280 (last_checked + note; last_reviewed_sha
-   already == head; `.bak_t_a84ac8e9_<ts>` backup first).
-3. Posted a kanban comment with the dedup rationale + FULL_REVIEW pointer.
-4. Completed the card with `tags: docs, no-code` as line 1 of result.
-5. Post-flight live engine: tier=docs, verdict=pass, missing=[] → loop closed.
+2. Refreshed gate state prs.1280 (backup
+   `.bak_t_a84ac8e9_20261029T063809Z`; last_checked=2026-10-29T06:38:09Z;
+   last_reviewed_sha already == head, re-asserted; 42 keys preserved).
+3. Posted kanban comment (id 566) with the dedup rationale + FULL_REVIEW
+   pointer.
+4. Completed the card: status=done, completed_at=1793256005, result line 1
+   `tags: docs, no-code — tier declaration for a read-only dedup close`,
+   result_len=2318.
+5. Pre-flight sim: tag_tokens=['docs','no-code'] → tier=docs →
+   EVAL {tier: docs, verdict: pass, passed: [pushed_or_consolidated],
+   missing: []}. Post-flight live engine:
+   `gate_engine.py evaluate --board plebeian-pr-reviews --task t_a84ac8e9`
+   → **tier=docs, verdict=pass, missing=[]** (review_artifact=true,
+   review_published=true). Loop closed.
 
 ## 4. GitHub writes: NONE (deliberate)
 
