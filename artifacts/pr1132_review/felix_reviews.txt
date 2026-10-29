@@ -1,0 +1,224 @@
+=== 2026-07-21T14:50:42Z COMMENTED commit=0b639f760 id=4745911514 ===
+## Analysis
+
+**What this PR does:** Improves checkout UX across 8 files. Removes redundant shipping cost text from cart preview. Adds shipping methods summary to OrderFinalizeComponent. Makes chat order messages show human-readable shipping info instead of raw NIP references. Changes "Cost" label to "Total" in ShippingInfoDisplay. Adds total-cost input field with auto-calculated extra cost in product shipping tab. Adds 3 new utility functions for shipping cost calculations.
+
+**Tradeoffs:**
+- Genuine UX improvements — removing redundant shipping display reduces cognitive load.
+- The inline currency conversion logic in tabs.tsx (~60 lines of IIFE inside JSX) should be extracted to a utility function — it will get copy-pasted if left inline.
+- ChatMessageBubble adds 2 new useQuery calls per order creation message, which could increase relay query load if many order messages are rendered.
+- The `formatShippingDisplayText` export in ChatMessageBubble.tsx is a utility function that doesn't belong in a component file.
+- Removing the payment breakdown from cart (seller/community shares) is a significant UX change beyond the stated scope — should be called out explicitly.
+
+**Recommendation:** Mostly yes. The shipping display improvements and helper functions are solid. Would recommend:
+- Extract the currency conversion logic from tabs.tsx into a reusable, testable utility.
+- Move `formatShippingDisplayText` to a utils file.
+- Address the payment breakdown removal — restore it or get explicit approval.
+- Add tests for the new `getProductShippingTotalCost`, `getProductShippingExtraCostFromTotal`, and `formatShippingCostForInput` helpers.
+
+**Relevance:** Active — labeled RFR, Franchovy engaged in comments, last updated Jul 20.
+
+=== 2026-07-21T14:50:52Z COMMENTED commit=0b639f760 id=4745912949 ===
+## Analysis
+
+**What this PR does:** Improves checkout UX across 8 files. Removes redundant shipping cost text from cart preview. Adds shipping methods summary to OrderFinalizeComponent. Makes chat order messages show human-readable shipping info instead of raw NIP references. Changes "Cost" label to "Total" in ShippingInfoDisplay. Adds total-cost input field with auto-calculated extra cost in product shipping tab. Adds 3 new utility functions for shipping cost calculations.
+
+**Tradeoffs:**
+- Genuine UX improvements — removing redundant shipping display reduces cognitive load.
+- The inline currency conversion logic in tabs.tsx (~60 lines of IIFE inside JSX) should be extracted to a utility function — it will get copy-pasted if left inline.
+- ChatMessageBubble adds 2 new useQuery calls per order creation message, which could increase relay query load if many order messages are rendered.
+- The `formatShippingDisplayText` export in ChatMessageBubble.tsx is a utility function that doesn't belong in a component file.
+- Removing the payment breakdown from cart (seller/community shares) is a significant UX change beyond the stated scope — should be called out explicitly.
+
+**Recommendation:** Mostly yes. The shipping display improvements and helper functions are solid. Would recommend:
+- Extract the currency conversion logic from tabs.tsx into a reusable, testable utility.
+- Move `formatShippingDisplayText` to a utils file.
+- Address the payment breakdown removal — restore it or get explicit approval.
+- Add tests for the new `getProductShippingTotalCost`, `getProductShippingExtraCostFromTotal`, and `formatShippingCostForInput` helpers.
+
+**Relevance:** Active — labeled RFR, Franchovy engaged in comments, last updated Jul 20.
+
+=== 2026-07-21T14:52:19Z COMMENTED commit=0b639f760 id=4745925919 ===
+Reviewed the full diff. The shipping display improvements are solid — removing redundant cost info from the cart preview, the shipping methods summary in OrderFinalizeComponent, and the human-readable shipping display in ChatMessageBubble are all good UX wins.
+
+A few items before merge:
+
+1. The inline currency conversion logic in tabs.tsx (~60 lines of IIFE inside JSX) should be extracted to a shared utility function. It handles BTC-pivot SATS conversion with exchange rates — this is the kind of code that will get copy-pasted if left inline.
+
+2. The `formatShippingDisplayText` export in ChatMessageBubble.tsx is a utility function that doesn't belong in a component file. Move it to a utils module.
+
+3. The shipping ref parsing uses a magic number (`30406`) — this should be a named constant.
+
+4. ChatMessageBubble adds two new useQuery calls per order creation message. Consider useMemo or caching to avoid relay query fan-out if many order messages are rendered.
+
+5. Removing the payment breakdown from the cart (seller/community shares) is a significant UX change beyond the stated scope of "shipping display." Either restore it or get explicit maintainer approval that it's intentionally being removed.
+
+6. No formal reviews have been submitted yet despite 4 assigned reviewers. Needs at least one approval before merge.
+
+7. Add tests for the new helper functions (getProductShippingTotalCost, getProductShippingExtraCostFromTotal, formatShippingCostForInput).
+
+=== 2026-07-21T14:53:49Z COMMENTED commit=0b639f760 id=4745939831 ===
+## Review: Shipping Display Improvements
+
+### Summary
+This PR improves checkout and order-detail UX across 8 files: removes redundant shipping cost from cart preview, adds shipping method summary to OrderFinalizeComponent, shows human-readable shipping info in chat order messages (resolving NIP-15 coordinate refs), changes "Cost" to "Total" in ShippingInfoDisplay, and adds a total-cost input with auto-calculated extra cost in the product shipping tab.
+
+### Tradeoffs
+**Pros:**
+- Genuine UX clarity improvements -- removing redundant shipping info from cart reduces cognitive load
+- "Total Cost" concept is clearer than "base cost + product cost" breakdown
+- Chat message improvement (human-readable shipping instead of raw NIP refs) is a real user-facing win
+- New helper functions (`getProductShippingTotalCost`, `getProductShippingExtraCostFromTotal`, `formatShippingCostForInput`) are clean and well-typed
+
+**Cons:**
+- Inline currency conversion logic in `tabs.tsx` (~60 lines of IIFE inside JSX) should be extracted to a shared utility -- it's the kind of code that will be copy-pasted if left inline
+- `ChatMessageBubble` adds 2 new `useQuery` calls per order creation message, which could increase relay query load if many order messages are rendered
+- `formatShippingDisplayText` is a utility function exported from a component file -- should live in a utils module
+- Shipping ref parsing uses magic number `30406` -- should be a named constant
+- Removing the payment breakdown from cart (seller/community shares) is a significant UX change beyond the stated scope of "shipping display"
+
+### Recommendation
+Mostly approve. The shipping display improvements and helper functions are solid. However:
+1. **Extract the currency conversion logic** from `tabs.tsx` into a testable utility function
+2. **Move `formatShippingDisplayText`** to a utils file
+3. **Address the payment breakdown removal** -- either restore it or get explicit approval that it's intentionally being removed
+4. **Add tests** for the new helper functions
+5. Consider `useMemo`/caching for the ChatMessageBubble shipping queries to avoid relay fan-out
+
+
+=== 2026-07-25T23:56:38Z APPROVED commit=8da9d3358 id=4780467232 ===
+Thanks @turizspace — verified the current head (`8da9d33`) against maximotodev's four blockers. All four are resolved:
+
+1. **Aggregate amount with shipping currency** — The `totalAmount` prop is removed from `ShippingInfoDisplay`. `costDisplay` now always renders the shipping option's own `price.amount + currency`. The order total is shown separately in its own "Amount: X sats" field. The mismatch is gone.
+
+2. **NaN in product-form state** — `handleFiatPriceChange` now checks `Number.isFinite(satsValue)` before writing `price` to the store. When the conversion is unavailable, it only updates `fiatPrice` and shows an amber "Exchange rate unavailable" warning. The unit test confirms NaN returns from missing rates.
+
+3. **Coherent cost model** — The labels now describe one consistent model:
+   - "Base Cost:" → read-only shipping option price
+   - "Product-specific extra cost (currency)" → persisted as `extraCost` string
+   - "Total with shipping:" → correctly combines product sats + shipping sats
+
+   One small cleanup: `updateTotalCost()` (line 816) is defined but never called — looks like a leftover from when there was a total-cost input field. Safe to remove.
+
+4. **Shared shipping reference parser + identity validation** — `parseShippingReference` validates pubkeys via `HEX_KEYS_REGEX`, handles d-tags with colons, and only accepts 64-hex legacy event IDs. `fetchShippingOption` and `fetchShippingOptionByCoordinates` now verify the returned event matches the requested kind, id, pubkey, and d-tag. Good defensive layer against relay ambiguity.
+
+The centralized `MempoolService` conversion methods and the NaN-over-zero semantic are a solid improvement. Worth keeping the `isFinite` discipline in any future callers.
+
+=== 2026-08-20T10:20:53Z APPROVED commit=bfa3bf405 id=4981605082 ===
+## Re-review — PR #1132 (head `bfa3bf40`)
+
+Reviewing the latest commit which addresses maximotodev's blocking concern about V4V percentage denominators.
+
+### V4V denominator issue — RESOLVED ✓
+
+The latest commit fixes the denominator mixing. Both `sellerPercentage` and `communityPercentage` now use `totalWithShipping` as their denominator:
+
+```typescript
+const sellerPercentage = totalWithShipping > 0 ? (sellerAmount / totalWithShipping) * 100 : 100
+const communityPercentage = totalWithShipping > 0 ? (shares.communityAmount / totalWithShipping) * 100 : 0
+```
+
+Verified with the e2e fixture (product=65,000 sats, V4V=10%, shipping=10,000 sats):
+- Seller: 68,500 sat (91.33%)
+- Community: 6,500 sat (8.67%)
+- Sum: 100.00% ✓
+
+E2E expectations in `buyer-purchase.spec.ts` match: `68,500 sat (91.33%)` and `6,500 sat (8.67%)`.
+
+### Previously raised issues — all addressed
+
+1. **Shipping ref parsing** — `parseShippingReference` validates pubkeys via `HEX_KEYS_REGEX`, handles d-tags with colons, only accepts 64-hex legacy event IDs. `fetchShippingOption` and `fetchShippingOptionByCoordinates` verify returned event kind/identity. ✓
+2. **NaN in product form state** — `handleFiatPriceChange` guards `Number.isFinite(satsValue)` before writing to store; amber warning shown when conversion unavailable. ✓
+3. **Coherent shipping cost model** — Labels aligned: "Base Cost:" → read-only, "Product-specific extra cost" → persisted as `extraCost`, "Total with shipping" → combined in sats. ✓
+4. **Tests in CI-covered paths** — Moved to `src/lib/__tests__/` and `src/queries/__tests__/`. ✓
+5. **ShippingInfoDisplay "Cost:" label** — Reverted to accurate "Cost:" label. ✓
+6. **Currency conversion extracted to MempoolService** — `convertSatsToCurrency` and `convertCurrencyToSats` are now static methods, tested with unit tests. ✓
+7. **`formatShippingDisplayText` moved to utils** — Lives in `productShippingSelections.ts`, not in a component file. ✓
+8. **Named shipping kind constant** — Uses `SHIPPING_KIND` instead of magic `30406`. ✓
+9. **Helper tests added** — `getProductShippingTotalCost`, `formatShippingDisplayText` covered. ✓
+10. **Dead code cleaned** — `totalByCurrency` removed from `CartContent`, unused `ShippingTab` code removed. ✓
+
+### Verdict
+
+No new issues found. The blocking V4V denominator concern is resolved, and all previously raised items have been addressed. Approving.
+
+=== 2026-08-25T06:12:06Z COMMENTED commit=10dd8dd86 id=5015503663 ===
+Thanks — the cart/shipping preview is noticeably less redundant, and normalizing both the seller and community percentages to the `totalWithShipping` denominator in `updateSellerData` is a solid fix.
+
+1. **RISK** — `src/components/sheet-contents/products/tabs.tsx` (`handleSatsPriceChange`): the `hasExchangeRates` guard was dropped from the sats→fiat display sync. With a fiat currency selected but rates not yet loaded, typing a sats price now sets `fiatDisplayValue` to `"0.00"` (it used to be left untouched). That `"0.00"` also trips the new `fiatConversionUnavailable` warning, rendering "Exchange rate unavailable for {currency}; enter a sats price or switch currency." while the merchant is actively typing in the sats field — the warning isn't gated on `currencyMode === 'fiat'`, so it fires in sats mode too. Publication stays safe (`fiatPrice` is no longer written here), but the display is misleading. Suggest re-guarding the sync on `hasExchangeRates` (the effect at ~line 227 already does) and/or scoping the warning to `currencyMode === 'fiat'`.
+
+2. **NIT** — `src/components/CartItem.tsx`: `selectedShippingOption` (the `useMemo` at ~line 98) is now dead code. Its only consumers (`selectedShippingCostText` / `selectedShippingBreakdownText`) were removed with the cart-preview cleanup, and `ShippingSelector` is already driven by `selectedId={currentShippingId}`. Drop it, or wire it up if it was meant to be passed down.
+
+Happy to help with either — nice work.
+
+=== 2026-08-25T08:24:24Z COMMENTED commit=c9c0b9bd7 id=5016485713 ===
+Thanks for the follow-up on the checkout/shipping clarity work — PTO the resolution of the previously-noted tabs.tsx and CartItem.tsx issues. One new finding in this delta (prev_sha → c9c0b9bd):
+
+**RISK — tabs.tsx `fiatConversionUnavailable` (now gated on `currencyMode === 'fiat'`) leaves a silently stale fiat display in sats mode**
+The fix re-adds `hasExchangeRates` to `handleBitcoinPriceChange` (good — that resolves the prior "0.00" write) and adds `currencyMode === 'fiat' &&` to the `fiatConversionUnavailable` warning. But in **sats mode** with a fiat currency selected and rates unavailable, the fiat field is now *neither updated nor warned*. `handleBitcoinPriceChange` skips the sync when `!hasExchangeRates`, so `fiatDisplayValue` keeps whatever value it previously held (a leftover conversion), and because the warning is suppressed outside fiat mode there is no indication it may be stale. Before this change the user at least saw "exchange rate unavailable"; now they can be silently shown an outdated fiat equivalent in a UI whose purpose is cost clarity. Suggest also clearing/marking the fiat field (or a warning independent of `currencyMode`) when rates are unavailable, even in sats mode.
+
+Happy to help tighten this up if useful.
+
+=== 2026-08-26T06:32:54Z COMMENTED commit=cacab2180 id=5027396581 ===
+Thanks for this cleanup — shipping display and the V4V/percentage fix look solid. Two new findings:
+
+1. [RISK] `src/components/sheet-contents/products/tabs.tsx` ShippingTab — "Total with shipping" double-converts BTC-priced products. `price` is always stored in **sats** (`handleBitcoinPriceChange` does `convertBtcToSats` before storing; the product store loads the sats value for SATS/BTC products). But the new BTC branch computes `productSats = bitcoinUnit === 'BTC' ? convertCurrencyToSatsValue(Number(price), 'BTC') : Number(price)`. When `productCurrency === 'BTC'` and `bitcoinUnit === 'BTC'`, `price` is already sats (e.g. `100000000` for 1 BTC), yet `convertCurrencyToSatsValue(_, 'BTC')` multiplies by 100,000,000 again → ~1e16 sats. The "Product price" and "Total with shipping" displays are then wrong by 8 orders of magnitude. For the BTC case, `price` should be used directly as sats (no second conversion), matching the SATS branch.
+
+2. [NIT] `OrderFinalizeComponent.tsx` — the "Order Total" block still renders `Subtotal: {formatSats(totalInSats)}` and `Total: {formatSats(totalInSats)}` (identical), and `totalInSats` already includes shipping. The new "Shipping Methods" block this PR adds shows each method's cost in its fiat/own currency, while the Order Total is sats-only with no shipping line — so a buyer can't reconcile the displayed shipping cost against the total. Since this PR's stated goal is "total cost clarity," consider splitting Subtotal (ex-shipping) / Shipping / Total here, or at least relabel the "Subtotal" line.
+
+Happy to help with either fix.
+
+
+=== 2026-09-19T22:39:50Z COMMENTED commit=b492322c6 id=5258123343 ===
+## Review — PR #1132 @ `b492322c`
+
+Thanks @turizspace — verified the consolidated head `b492322c` against @maximotodev's four change-request items from 2026-09-06. All four are resolved.
+
+### Verification of the four change-request items
+
+1. **Canonical product pricing** — `src/lib/utils/productPriceResolution.ts` introduces `applyBitcoinPriceEdit`, `applyFiatPriceEdit`, `deriveSatsPriceFromFiat`, and `resolvePublishPrice`. Both edit directions now go through the shared helpers. When rates are unavailable the sats price is left unresolved (`''`) rather than coerced to `'0'`, and `resolvePublishPrice` fails closed on `unresolved-sats-price` / `missing-fiat-price` instead of publishing a zero-priced product. `src/lib/__tests__/productPriceResolution.test.ts` covers both edit directions plus the missing-rate transitions.
+
+2. **Historical shipping costs** — `src/components/orders/detail/ShippingInfoDisplay.tsx` removes the `price: { amount, currency }` block entirely. `OrderDetailComponent.tsx` no longer surfaces the current 30406 event's price as the purchased cost. `ChatMessageBubble.tsx:339` resolves the reference but renders only the method title via `formatShippingDisplayText` (which usescard `shippingOption.title`, not the price).
+
+3. **Shipping-only total** — `src/components/sheet-contents/products/tabs.tsx:971-976` now renders `base shipping + product-specific extra = total shipping` in the shipping option's own currency (e.g. `8 USD + 15 USD = 23 USD`), with the sats product+shipping total on a separate labelled line. This matches #831's requested equation.
+
+4. **Shared shipping reference parsing** — `parseShippingReference` in `src/queries/shipping.tsx:451-472` handles `30406:<pubkey>:<d-tag>` with colons inside the d-tag (split-then-join) and validates the legacy 64-hex event-id path via `HEX_KEYS_REGEX`. Cart consumers `setShippingMethod` (`src/lib/stores/cart.ts:814`) and `fetchShippingEventFromQueries` (`cart.ts:360`) both route through the shared parser — previously they used their own exact-three-segment split. Round-trip + cart-resolution regression coverage is in `src/queries/__tests__/shippingReferences.test.ts` and the new `fetches seller shipping options when a d-tag contains colons` case in `src/lib/stores/cart.test.ts`.
+
+### Checks
+
+- `bun run test:unit`: **369 pass / 0 fail** at `b492322c`.
+- CI on head: `unit-integration`, `e2e-grep`, `prettier`, `security-scan`, `footprint` all pass; `e2e-full` skipped (per repo config).
+- No conflict markers, no stray `console.log` / `TODO` in the diff (the one `console.log` at `e2e/scenarios/index.ts:35` is an e2e-seed diagnostic, intentional).
+
+### Findings
+
+- [INFO] `src/components/sheet-contents/products/tabs.tsx:143` — `getPublishCurrency` is defined but never called. The publish path goes through `resolvePublishPrice` via `ProductFormContent.tsx`. Dead code, safe to remove in a follow-up.
+- [INFO] `src/components/messages/ChatMessageBubble.tsx:328-336` — adds two new `useQuery` calls per order-creation message. Acceptable for typical thread sizes, but worth noting if a thread ever renders many order messages.
+
+No BLOCK / RISK items.
+
+### Verdict
+
+**APPROVED** — the four change-request items are resolved with shared helpers, regression tests cover the new behaviour, and CI is green on the reviewed head.
+
+---
+*Reviewed by felixfelix-bot (Hermes Agent) on behalf of c03rad0r, against head `b492322c682dc4b5b787f0076f8b527df8c47b67`.*
+
+
+=== 2026-10-01T11:30:42Z COMMENTED commit=5382a05ba id=5378649017 ===
+Thanks @turizspace — this lane re-reviewed the delta since its comment review at `b492322c` (2026-09-19): `abfa7bfa` ("Resolve implementation", 6 files) and `5382a05b` (spec assertion fix), at head `5382a05b`. The `fa334957` master merge between them was verified byte-identical by the 2026-09-22 reviews and is not re-reviewed.
+
+Verified at this head:
+- The per-PR gate alternation (`.github/workflows/e2e.yml:151`) now runs both new describes (`e2e/tests/checkout-shipping.spec.ts:49,86`), and the membership guard (`src/lib/__tests__/e2e-workflow-gate-membership.test.ts:23`) reads the checkout spec — a rename/drop fails a unit test, same shape as the OG family.
+- `getPublishCurrency` is gone (0 occurrences under `src/`); `applyBitcoinPriceEdit`'s unused `currencyMode` param is dropped and its doc comment now matches `resolvePublishPrice`'s authority split.
+- The cart drawer renders Subtotal/Shipping/Total again (`src/components/sheet-contents/cart/CartContent.tsx:151-161`); the drawer and checkout both read `totalInSats`/`totalShippingInSats` from the same store fields (`src/routes/checkout.tsx:49`), so the two views agree by construction.
+- The unresolved-shipping spec now asserts the reachable terminal state (auto-selected single option → unresolved error + disabled Continue, `checkout-shipping.spec.ts:101-106`); `selectShippingForItem` is still exercised by the sibling describe (`:67`, `:73`).
+- CI re-verified at this head this run: `e2e-grep`, `unit-integration`, `prettier`, `security-scan`, `footprint` all success; `e2e-full` skipped per config. This closes the "CI state unverified at this head" note from the 2026-09-23 review.
+
+No new issues in the delta — zero [BLOCK]/[RISK]/[NIT]. Items already on the thread (PR description refresh, the inert `recordBuyerVideo` line, the ungated `Product Management` describe) remain open and are not re-raised.
+
+Happy to help with any of the open thread items if useful.
+
+*Reviewed by felixfelix-bot (Hermes Agent) on behalf of c03rad0r — delta review at head `5382a05ba6c3dca00041ed0cbf481e108bbfbad2`.*
+
+

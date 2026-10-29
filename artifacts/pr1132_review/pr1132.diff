@@ -1,0 +1,1930 @@
+diff --git a/.github/workflows/e2e.yml b/.github/workflows/e2e.yml
+index bdb745467..1fd80a089 100644
+--- a/.github/workflows/e2e.yml
++++ b/.github/workflows/e2e.yml
+@@ -138,13 +138,17 @@ jobs:
+         # broke every applesauce RelayPool publish/request in the browser —
+         # including this family and Order Details. `patches/rxjs@7.8.2.patch`
+         # restores those names and the family is green locally.
++        # `Checkout shipping selection` and `Checkout unresolved shipping
++        # selection` (e2e/tests/checkout-shipping.spec.ts) are gated here so
++        # the shipping-selection and unresolved-delivery checkout flows are
++        # exercised on every PR.
+         # `OG Meta Tags` (e2e/tests/og-meta-tags.spec.ts, issue #459) is gated
+         # here so server-rendered product previews are exercised on every PR.
+         # It runs on the local relay/dev server like every other family in this
+         # job: no new triggers, permissions, secrets, or env are introduced.
+         # `src/lib/__tests__/e2e-workflow-gate-membership.test.ts` fails if a
+         # describe in that spec stops matching this pattern.
+-        run: bun run test:e2e -- --grep 'Navigation|User Profile|Shipping Option Creation|Community Tab Progressive Loading|Order Details|Marketplace Display|V4V Dashboard Management|Receiving Payments Configuration|Product Page - View Only|Lightning Mock|OG Meta Tags|Authentication' --repeat-each=2
++        run: bun run test:e2e -- --grep 'Navigation|User Profile|Shipping Option Creation|Checkout shipping selection|Checkout unresolved shipping selection|Community Tab Progressive Loading|Order Details|Marketplace Display|V4V Dashboard Management|Receiving Payments Configuration|Product Page - View Only|Lightning Mock|OG Meta Tags|Authentication' --repeat-each=2
+ 
+       - name: Show server logs on failure
+         if: failure()
+diff --git a/e2e/scenarios/index.ts b/e2e/scenarios/index.ts
+index fc6a85853..fa34c05bf 100644
+--- a/e2e/scenarios/index.ts
++++ b/e2e/scenarios/index.ts
+@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid'
+ 
+ useWebSocketImplementation(WebSocket)
+ 
+-export type ScenarioName = 'none' | 'base' | 'merchant' | 'marketplace'
++export type ScenarioName = 'none' | 'base' | 'merchant' | 'merchant-unresolved-shipping' | 'marketplace'
+ 
+ // Track which scenarios have been seeded in this worker
+ const seededScenarios = new Set<ScenarioName>()
+@@ -32,6 +32,10 @@ export async function ensureScenario(scenario: ScenarioName): Promise<void> {
+ 				await ensureScenario('base')
+ 				await seedMerchant(relay)
+ 				break
++			case 'merchant-unresolved-shipping':
++				await ensureScenario('merchant')
++				await seedUnresolvedShippingFixture(relay)
++				break
+ 			case 'marketplace':
+ 				await ensureScenario('merchant')
+ 				await seedMarketplace(relay)
+@@ -224,6 +228,34 @@ async function seedMarketplace(relay: Relay) {
+ 	})
+ }
+ 
++/**
++ * Fixture for checkout validation: the shipping event exists and is selectable,
++ * but its service is not a recognized delivery mode. This is the only seeded
++ * scenario that should show the unresolved-delivery warning after selection.
++ */
++async function seedUnresolvedShippingFixture(relay: Relay) {
++	console.log('  Seeding: unresolved shipping checkout fixture')
++
++	await seedShippingOption(relay, devUser1.sk, {
++		title: 'Unsupported E2E Delivery',
++		price: '0',
++		currency: 'sats',
++		service: 'unsupported-e2e-service',
++		countries: [],
++	})
++
++	await seedProduct(relay, devUser1.sk, {
++		title: 'Unresolved Shipping E2E Product',
++		description: 'Fixture product for checkout delivery-requirement validation.',
++		price: '1000',
++		currency: 'SATS',
++		status: 'on-sale',
++		category: 'Test',
++		stock: '1',
++		shippingOptions: [`30406:${devUser1.pk}:unsupported-e2e-delivery`],
++	})
++}
++
+ // --- Low-level seed helpers ---
+ 
+ async function seedUserProfile(relay: Relay, user: { sk: string; pk: string }, name: string, displayName: string) {
+diff --git a/e2e/tests/buyer-purchase.spec.ts b/e2e/tests/buyer-purchase.spec.ts
+index 39ff90921..12a34c24a 100644
+--- a/e2e/tests/buyer-purchase.spec.ts
++++ b/e2e/tests/buyer-purchase.spec.ts
+@@ -58,6 +58,9 @@ test.describe('Buyer Purchase Flow', () => {
+ 		await expect(buyerPage.getByText(/Community Share/)).toBeVisible()
+ 		await expect(buyerPage.getByText('6,500 sat')).toBeVisible()
+ 		await expect(buyerPage.getByText('68,500 sat')).toBeVisible()
++		// Both percentages use the final total of 75,000 sat as their denominator.
++		await expect(buyerPage.getByText('68,500 sat (91.33%)')).toBeVisible()
++		await expect(buyerPage.getByText('6,500 sat (8.67%)')).toBeVisible()
+ 
+ 		// Checkout button should be enabled now that shipping is selected
+ 		const checkoutButton = buyerPage.getByRole('button', { name: /Checkout/i })
+diff --git a/e2e/tests/checkout-shipping.spec.ts b/e2e/tests/checkout-shipping.spec.ts
+new file mode 100644
+index 000000000..1b49c1b18
+--- /dev/null
++++ b/e2e/tests/checkout-shipping.spec.ts
+@@ -0,0 +1,108 @@
++import type { Page } from '@playwright/test'
++import { expect, test } from '../fixtures'
++
++// This opt-in fixture setting records both passing checkout flows under test-results for the CI artifact.
++test.use({ recordBuyerVideo: true })
++
++const seededPhysicalProducts = ['Bitcoin Hardware Wallet', 'Nostr T-Shirt']
++
++async function addSeededProductsAndOpenCheckout(page: Page, productNames: string[]): Promise<void> {
++	await page.goto('/products')
++
++	for (const productName of productNames) {
++		const productCard = page.locator('[data-testid="product-card"]').filter({ hasText: productName })
++		await expect(productCard).toBeVisible({ timeout: 15_000 })
++		await productCard.getByRole('button', { name: /add to cart/i }).click()
++		await expect(productCard.getByRole('button', { name: /add/i })).toBeVisible()
++	}
++
++	await page
++		.getByRole('button')
++		.filter({ has: page.locator('.i-basket') })
++		.click()
++
++	const cartDialog = page.getByRole('dialog', { name: /your cart/i })
++	await expect(cartDialog).toBeVisible()
++	await cartDialog.getByRole('button', { name: /^checkout$/i }).click()
++	await expect(page.getByText('Shipping Address', { exact: true })).toBeVisible({ timeout: 15_000 })
++}
++
++async function selectShippingForItem(page: Page, itemIndex: number, optionName: string, expectedSelectorCount: number): Promise<void> {
++	const cartSummary = page.locator('[data-slot="card"]:visible').filter({ has: page.getByText('Cart Summary', { exact: true }) })
++	const shippingSelectors = cartSummary.getByRole('combobox')
++
++	await expect(shippingSelectors).toHaveCount(expectedSelectorCount)
++	await shippingSelectors.nth(itemIndex).click()
++	await page.getByRole('option', { name: new RegExp(optionName, 'i') }).click()
++}
++
++async function fillPhysicalDeliveryAddress(page: Page): Promise<void> {
++	await page.locator('#name').fill('E2E Test Buyer')
++	await page.locator('#firstLineOfAddress').fill('123 Test Street')
++	await page.locator('#zipPostcode').fill('SW1A 1AA')
++	await page.locator('#country').fill('United Kingdom')
++	await page.locator('[data-country-item]').filter({ hasText: 'United Kingdom' }).first().click()
++	await page.locator('#city').fill('London')
++	await page.keyboard.press('Escape')
++}
++
++test.describe('Checkout shipping selection', () => {
++	test.use({ scenario: 'merchant' })
++
++	test('blocks only unselected seeded items, then allows checkout once their shipping options resolve', async ({ buyerPage }) => {
++		test.setTimeout(60_000)
++		await addSeededProductsAndOpenCheckout(buyerPage, seededPhysicalProducts)
++
++		const continueButton = buyerPage.locator('button[form="shipping-form"]')
++		const missingShippingWarning = buyerPage.getByText('Please select shipping options for all items in your cart.')
++		const unresolvedShippingError = buyerPage.getByText(
++			'Delivery requirements could not be verified for the selected shipping options. Please reselect shipping before continuing.',
++		)
++
++		// A missing selection is the one expected blocking state.
++		await expect(missingShippingWarning).toBeVisible()
++		await expect(unresolvedShippingError).not.toBeVisible()
++		await expect(continueButton).toBeDisabled()
++
++		await selectShippingForItem(buyerPage, 0, 'Worldwide Standard', seededPhysicalProducts.length)
++
++		// Selecting one item is not enough: the warning remains until every item has a method.
++		await expect(missingShippingWarning).toBeVisible()
++		await expect(continueButton).toBeDisabled()
++
++		await selectShippingForItem(buyerPage, 1, 'Worldwide Standard', seededPhysicalProducts.length)
++
++		// Seeded addressable shipping references must resolve normally after selection.
++		await expect(missingShippingWarning).not.toBeVisible()
++		await expect(unresolvedShippingError).not.toBeVisible()
++		await expect(continueButton).toBeEnabled({ timeout: 15_000 })
++
++		await fillPhysicalDeliveryAddress(buyerPage)
++		await continueButton.click()
++		await expect(buyerPage.getByText('Order Summary')).toBeVisible({ timeout: 15_000 })
++	})
++})
++
++test.describe('Checkout unresolved shipping selection', () => {
++	test.use({ scenario: 'merchant-unresolved-shipping' })
++
++	test('shows the unresolved-delivery error only for an unsupported selected shipping service', async ({ buyerPage }) => {
++		test.setTimeout(60_000)
++		// The merchant-unresolved-shipping scenario seeds this product and its
++		// selectable shipping event specifically for the failure-state assertion.
++		await addSeededProductsAndOpenCheckout(buyerPage, ['Unresolved Shipping E2E Product'])
++
++		const continueButton = buyerPage.locator('button[form="shipping-form"]')
++		const missingShippingWarning = buyerPage.getByText('Please select shipping options for all items in your cart.')
++		const unresolvedShippingError = buyerPage.getByText(
++			'Delivery requirements could not be verified for the selected shipping options. Please reselect shipping before continuing.',
++		)
++
++		// This single-option fixture is selected automatically when it enters the
++		// cart. Its unsupported delivery service must produce the unresolved state,
++		// not the missing-selection warning.
++		await expect(missingShippingWarning).not.toBeVisible()
++		await expect(unresolvedShippingError).toBeVisible({ timeout: 15_000 })
++		await expect(continueButton).toBeDisabled()
++	})
++})
+diff --git a/e2e/tests/products.spec.ts b/e2e/tests/products.spec.ts
+index a2e851f64..4777ca258 100644
+--- a/e2e/tests/products.spec.ts
++++ b/e2e/tests/products.spec.ts
+@@ -173,6 +173,38 @@ test.describe('Product Management', () => {
+ 		await expect(merchantPage.getByTestId('product-name-input')).toHaveValue('Back Nav Product')
+ 	})
+ 
++	test('warns that the fiat equivalent may be stale in sats mode when rates are unavailable', async ({ merchantPage }) => {
++		await merchantPage.addInitScript(() => {
++			const NativeWebSocket = window.WebSocket
++			window.WebSocket = class extends NativeWebSocket {
++				constructor(url: string | URL, protocols?: string | string[]) {
++					if (String(url).includes('relay.contextvm.org')) {
++						throw new Error('Blocked external currency relay in e2e test')
++					}
++					super(url, protocols)
++				}
++			} as typeof WebSocket
++		})
++		await merchantPage.route('https://api.yadio.io/**', (route) => route.abort())
++		await merchantPage.goto('/dashboard/products/products/new')
++		await waitForProductForm(merchantPage)
++
++		await merchantPage.getByTestId('product-name-input').fill('Stale Fiat Warning Product')
++		await merchantPage.getByTestId('product-description-input').fill('Verifies the sats-mode stale fiat warning')
++		await merchantPage.getByTestId('product-next-button').click()
++
++		const currencySelect = merchantPage.getByRole('combobox').first()
++		await currencySelect.click()
++		await merchantPage.getByRole('option', { name: 'USD', exact: true }).click()
++
++		const fiatPriceInput = merchantPage.locator('#fiat-price')
++		await fiatPriceInput.fill('25')
++		await merchantPage.getByRole('radio', { name: /Fix the price in sats/i }).click()
++
++		await expect(fiatPriceInput).toHaveValue('25')
++		await expect(merchantPage.getByText('Exchange rate unavailable for USD; the displayed fiat equivalent may be stale.')).toBeVisible()
++	})
++
+ 	test('publish remains disabled until the full required set is valid', async ({ merchantPage }) => {
+ 		await merchantPage.goto('/dashboard/products/products/new')
+ 		await waitForProductForm(merchantPage)
+diff --git a/src/components/CartItem.tsx b/src/components/CartItem.tsx
+index 7b7bb5182..74bf0a38b 100644
+--- a/src/components/CartItem.tsx
++++ b/src/components/CartItem.tsx
+@@ -95,11 +95,6 @@ export default function CartItem({
+ 		[productShippingSelections, sellerShippingOptions],
+ 	)
+ 
+-	const selectedShippingOption = useMemo(() => {
+-		if (!currentShippingId) return null
+-		return productShippingOptions.find((option) => option.shippingRef === currentShippingId || option.id === currentShippingId) ?? null
+-	}, [currentShippingId, productShippingOptions])
+-
+ 	const hasResolvedSellerShippingState = sellerShippingOptionsQuery.isSuccess || sellerShippingOptionsQuery.data !== undefined
+ 	const isShippingOptionsLoading = productQuery.isLoading || (productShippingSelections.length > 0 && !hasResolvedSellerShippingState)
+ 	const isShippingOptionsUnavailable = productQuery.isError || (!hasResolvedSellerShippingState && sellerShippingOptionsQuery.isError)
+@@ -143,43 +138,6 @@ export default function CartItem({
+ 		setQuantity(amount)
+ 	}, [amount])
+ 
+-	const formatShippingCost = (cost: number | null | undefined): string => {
+-		return typeof cost === 'number' && Number.isFinite(cost) ? cost.toLocaleString() : ''
+-	}
+-
+-	const formatShippingAmount = (cost: number | null | undefined, shippingCurrency?: string | null): string => {
+-		return [formatShippingCost(cost), shippingCurrency?.trim()].filter(Boolean).join(' ')
+-	}
+-
+-	const cartSelectedShipping = (() => {
+-		const product = cartStore.state.cart.products[productId]
+-		if (!product || typeof product.shippingCost !== 'number' || !Number.isFinite(product.shippingCost)) return null
+-		return {
+-			cost: product.shippingCost,
+-			currency: product.shippingCostCurrency,
+-		}
+-	})()
+-
+-	const selectedShippingCost = selectedShippingOption
+-		? {
+-				cost: selectedShippingOption.cost,
+-				currency: selectedShippingOption.currency,
+-			}
+-		: cartSelectedShipping
+-
+-	const selectedShippingCostText = selectedShippingCost
+-		? formatShippingAmount(selectedShippingCost.cost, selectedShippingCost.currency)
+-		: ''
+-	const hasAdditiveShippingMetadata =
+-		selectedShippingOption && Number.isFinite(selectedShippingOption.baseCost) && Number.isFinite(selectedShippingOption.extraCostAmount)
+-	const selectedShippingBreakdownText =
+-		hasAdditiveShippingMetadata && selectedShippingOption.extraCostAmount !== 0
+-			? `${formatShippingAmount(selectedShippingOption.baseCost, selectedShippingOption.currency)} base cost + ${formatShippingAmount(
+-					selectedShippingOption.extraCostAmount,
+-					selectedShippingOption.currency,
+-				)} product cost`
+-			: ''
+-
+ 	if (isLoading) {
+ 		return (
+ 			<li className="flex gap-4 pb-4 border-b border-gray-300 [.bg-gray-100_&]:border-white">
+@@ -304,12 +262,6 @@ export default function CartItem({
+ 					)}
+ 
+ 					{!hasShipping && <div className="text-sm font-medium text-red-600">Select a shipping option before continuing.</div>}
+-
+-					{hasShipping && selectedShippingCostText && (
+-						<div className="text-sm text-muted-foreground">Shipping cost: {selectedShippingCostText}</div>
+-					)}
+-
+-					{selectedShippingBreakdownText && <div className="text-xs text-muted-foreground">{selectedShippingBreakdownText}</div>}
+ 				</div>
+ 			)}
+ 		</li>
+diff --git a/src/components/CartSummary.tsx b/src/components/CartSummary.tsx
+index 518aff6f6..d5d3af2dc 100644
+--- a/src/components/CartSummary.tsx
++++ b/src/components/CartSummary.tsx
+@@ -83,7 +83,7 @@ export function CartSummary({
+ 					const data = sellerData[sellerPubkey] || {
+ 						satsTotal: 0,
+ 						currencyTotals: {},
+-						shares: { sellerAmount: 0, communityAmount: 0, sellerPercentage: 90 },
++						shares: { sellerAmount: 0, communityAmount: 0, sellerPercentage: 100, communityPercentage: 0 },
+ 						shippingSats: 0,
+ 					}
+ 
+@@ -146,7 +146,7 @@ export function CartSummary({
+ 									<div className="flex justify-between">
+ 										<p className="text-sm">Community Share: </p>
+ 										<p className="text-sm">
+-											{formatSats(data.shares.communityAmount)} sat ({(100 - data.shares.sellerPercentage).toFixed(2)}%)
++											{formatSats(data.shares.communityAmount)} sat ({data.shares.communityPercentage.toFixed(2)}%)
+ 										</p>
+ 									</div>
+ 								)}
+diff --git a/src/components/checkout/OrderFinalizeComponent.tsx b/src/components/checkout/OrderFinalizeComponent.tsx
+index 4dfe902bf..61d351e3d 100644
+--- a/src/components/checkout/OrderFinalizeComponent.tsx
++++ b/src/components/checkout/OrderFinalizeComponent.tsx
+@@ -27,8 +27,9 @@ export function OrderFinalizeComponent({
+ 	onViewOrders,
+ 	deliveryRequirements,
+ }: OrderFinalizeComponentProps) {
+-	const { cart } = useStore(cartStore)
++	const { cart, totalShippingInSats } = useStore(cartStore)
+ 	const [pickupAddresses, setPickupAddresses] = useState<Array<{ sellerName: string; address: string }>>([])
++	const subtotalInSats = Math.max(0, totalInSats - totalShippingInSats)
+ 
+ 	const isAllPickup =
+ 		deliveryRequirements.isResolved &&
+@@ -47,6 +48,49 @@ export function OrderFinalizeComponent({
+ 		return Math.round(sats).toLocaleString()
+ 	}
+ 
++	const formatShippingAmount = (amount: number, currency: string | null): string => {
++		const formattedAmount = Number.isFinite(amount) ? amount.toLocaleString() : ''
++		return [formattedAmount, currency?.trim()].filter(Boolean).join(' ')
++	}
++
++	const selectedShippingMethods = useMemo(() => {
++		const summaries = new Map<
++			string,
++			{
++				id: string
++				name: string
++				cost: number
++				currency: string | null
++				itemCount: number
++			}
++		>()
++
++		for (const product of Object.values(cart.products)) {
++			if (!product.shippingMethodId) continue
++
++			const currency = product.shippingCostCurrency?.trim() || null
++			const key = `${product.shippingMethodId}:${currency ?? ''}`
++			const existing = summaries.get(key)
++			const shippingCost = Number.isFinite(product.shippingCost) ? product.shippingCost : 0
++
++			if (existing) {
++				existing.cost += shippingCost
++				existing.itemCount += 1
++				continue
++			}
++
++			summaries.set(key, {
++				id: key,
++				name: product.shippingMethodName?.trim() || 'Selected shipping method',
++				cost: shippingCost,
++				currency,
++				itemCount: 1,
++			})
++		}
++
++		return Array.from(summaries.values())
++	}, [cart.products])
++
+ 	// Collect pickup addresses for display only; delivery requirements are resolved by checkout state.
+ 	useEffect(() => {
+ 		const checkShippingOrders = async () => {
+@@ -259,13 +303,36 @@ export function OrderFinalizeComponent({
+ 				)
+ 			)}
+ 
++			{selectedShippingMethods.length > 0 && (
++				<div className="bg-gray-50 rounded-lg p-4">
++					<h3 className="font-medium text-gray-900 mb-3">
++						{selectedShippingMethods.length === 1 ? 'Shipping Method' : 'Shipping Methods'}
++					</h3>
++					<div className="space-y-2">
++						{selectedShippingMethods.map((method) => (
++							<div key={method.id} className="flex items-center justify-between gap-4 text-sm">
++								<div>
++									<p className="font-medium text-gray-900">{method.name}</p>
++									{method.itemCount > 1 && <p className="text-xs text-gray-500">{method.itemCount} items</p>}
++								</div>
++								{method.currency && <span className="font-medium text-gray-700">{formatShippingAmount(method.cost, method.currency)}</span>}
++							</div>
++						))}
++					</div>
++				</div>
++			)}
++
+ 			{/* Order Total */}
+ 			<div className="bg-gray-50 rounded-lg p-4">
+ 				<h3 className="font-medium text-gray-900 mb-3">Order Total</h3>
+ 				<div className="space-y-2">
+ 					<div className="flex justify-between text-sm">
+ 						<span className="text-gray-600">Subtotal:</span>
+-						<span className="font-medium">{formatSats(totalInSats)} sats</span>
++						<span className="font-medium">{formatSats(subtotalInSats)} sats</span>
++					</div>
++					<div className="flex justify-between text-sm">
++						<span className="text-gray-600">Shipping:</span>
++						<span className="font-medium">{formatSats(totalShippingInSats)} sats</span>
+ 					</div>
+ 					<div className="border-t pt-2 mt-3">
+ 						<div className="flex justify-between font-semibold text-lg">
+diff --git a/src/components/messages/ChatMessageBubble.tsx b/src/components/messages/ChatMessageBubble.tsx
+index f4d93959f..93c82ce24 100644
+--- a/src/components/messages/ChatMessageBubble.tsx
++++ b/src/components/messages/ChatMessageBubble.tsx
+@@ -14,7 +14,14 @@ import { useQuery } from '@tanstack/react-query'
+ import { fetchProductByATag, useProductTitle, useProductPrice, useProductImages } from '@/queries/products'
+ import { getCoordsFromATag } from '@/lib/utils/coords'
+ import { extractActualContent, isSafeImageUrl } from '@/lib/utils/message-content'
++import {
++	getShippingInfo,
++	parseShippingReference,
++	shippingOptionByCoordinatesQueryOptions,
++	shippingOptionQueryOptions,
++} from '@/queries/shipping'
+ import { Link } from '@tanstack/react-router'
++import { formatShippingDisplayText } from '@/lib/utils/productShippingSelections'
+ 
+ // Interface for embedded product event data
+ interface EmbeddedProductEvent {
+@@ -316,6 +323,21 @@ const OrderCreationMessage = ({ event }: { event: NDKEvent }) => {
+ 	const email = getTagValue(event, 'email')
+ 	const phone = getTagValue(event, 'phone')
+ 
++	const parsedShippingData = parseShippingReference(shipping || '')
++
++	const { data: shippingOptionByCoordinates } = useQuery({
++		...shippingOptionByCoordinatesQueryOptions(parsedShippingData.pubkey || '', parsedShippingData.dTag || ''),
++		enabled: Boolean(parsedShippingData.pubkey && parsedShippingData.dTag),
++	})
++
++	const { data: shippingOptionById } = useQuery({
++		...shippingOptionQueryOptions(parsedShippingData.id || ''),
++		enabled: Boolean(parsedShippingData.id && !parsedShippingData.pubkey),
++	})
++
++	const shippingOption = shippingOptionByCoordinates || shippingOptionById
++	const shippingDisplayText = formatShippingDisplayText(shipping, shippingOption ? getShippingInfo(shippingOption) : null)
++
+ 	return (
+ 		<div className="text-sm space-y-1">
+ 			<div className="flex items-center font-semibold mb-1">
+@@ -344,7 +366,7 @@ const OrderCreationMessage = ({ event }: { event: NDKEvent }) => {
+ 			)}
+ 			{shipping && (
+ 				<p className="text-xs mt-1 break-words">
+-					<strong>Shipping:</strong> {shipping}
++					<strong>Shipping:</strong> {shippingDisplayText || shipping}
+ 				</p>
+ 			)}
+ 			{address && (
+diff --git a/src/components/orders/OrderDetailComponent.tsx b/src/components/orders/OrderDetailComponent.tsx
+index 2f4ee258f..da3a50ea7 100644
+--- a/src/components/orders/OrderDetailComponent.tsx
++++ b/src/components/orders/OrderDetailComponent.tsx
+@@ -204,29 +204,18 @@ export function OrderDetailComponent({ order }: OrderDetailComponentProps) {
+ 	})
+ 
+ 	// Parse shipping reference and fetch shipping option details
+-	const parsedShippingData = useMemo(() => {
+-		if (!shippingRef) return null
+-
+-		if (shippingRef.includes(':')) {
+-			const parts = shippingRef.split(':')
+-			if (parts.length === 3 && parts[0] === '30406') {
+-				return { pubkey: parts[1], dTag: parts[2] }
+-			}
+-		}
+-
+-		return null
+-	}, [shippingRef])
++	const parsedShippingData = useMemo(() => parseShippingReference(shippingRef || ''), [shippingRef])
+ 
+ 	// Fetch shipping option by coordinates if we have parsed data
+ 	const { data: shippingOptionByCoords } = useQuery({
+-		...shippingOptionByCoordinatesQueryOptions(parsedShippingData?.pubkey || '', parsedShippingData?.dTag || ''),
+-		enabled: !!parsedShippingData,
++		...shippingOptionByCoordinatesQueryOptions(parsedShippingData.pubkey || '', parsedShippingData.dTag || ''),
++		enabled: Boolean(parsedShippingData.pubkey && parsedShippingData.dTag),
+ 	})
+ 
+ 	// Fetch shipping option by ID if we don't have coordinates
+ 	const { data: shippingOptionById } = useQuery({
+-		...shippingOptionQueryOptions(parseShippingReference(shippingRef || '')),
+-		enabled: !!shippingRef && !parsedShippingData,
++		...shippingOptionQueryOptions(parsedShippingData.id || ''),
++		enabled: Boolean(parsedShippingData.id && !parsedShippingData.pubkey),
+ 	})
+ 
+ 	// Use the appropriate shipping option
+diff --git a/src/components/orders/detail/ShippingInfoDisplay.tsx b/src/components/orders/detail/ShippingInfoDisplay.tsx
+index ebef0139c..4fa7b1ddf 100644
+--- a/src/components/orders/detail/ShippingInfoDisplay.tsx
++++ b/src/components/orders/detail/ShippingInfoDisplay.tsx
+@@ -1,7 +1,6 @@
+ interface ShippingInfoDisplayProps {
+ 	shippingInfo: {
+ 		title: string
+-		price: { amount: string | number; currency: string }
+ 		service?: string
+ 		carrier?: string
+ 		duration?: { min?: string | number; max?: string | number; unit?: string }
+@@ -17,10 +16,6 @@ export function ShippingInfoDisplay({ shippingInfo }: ShippingInfoDisplayProps)
+ 				<span className="text-sm text-muted-foreground">Method:</span>
+ 				<span className="ml-2 font-medium">{shippingInfo.title}</span>
+ 			</div>
+-			<div>
+-				<span className="text-sm text-muted-foreground">Cost:</span>
+-				<span className="ml-2 font-medium">{`${shippingInfo.price.amount} ${shippingInfo.price.currency}`}</span>
+-			</div>
+ 			{shippingInfo.service && (
+ 				<div>
+ 					<span className="text-sm text-muted-foreground">Service Type:</span>
+diff --git a/src/components/sheet-contents/cart/CartContent.tsx b/src/components/sheet-contents/cart/CartContent.tsx
+index e213328ec..aff17fa70 100644
+--- a/src/components/sheet-contents/cart/CartContent.tsx
++++ b/src/components/sheet-contents/cart/CartContent.tsx
+@@ -11,7 +11,7 @@ import { EmptyCartScreen } from './EmptyCartScreen'
+ import { UserCard } from '@/components/UserCard'
+ 
+ export function CartContent({ className = '' }: { className?: string }) {
+-	const { cart, sellerData, productsBySeller, totalInSats, totalShippingInSats, totalByCurrency, shippingByCurrency } = useStore(cartStore)
++	const { cart, sellerData, productsBySeller, totalInSats, totalShippingInSats } = useStore(cartStore)
+ 
+ 	const [parent, enableAnimations] = useAutoAnimate()
+ 	const navigate = useNavigate()
+@@ -79,7 +79,7 @@ export function CartContent({ className = '' }: { className?: string }) {
+ 							const data = sellerData[sellerPubkey] || {
+ 								satsTotal: 0,
+ 								currencyTotals: {},
+-								shares: { sellerAmount: 0, communityAmount: 0, sellerPercentage: 90 },
++								shares: { sellerAmount: 0, communityAmount: 0, sellerPercentage: 100, communityPercentage: 0 },
+ 								shippingSats: 0,
+ 							}
+ 
+@@ -100,18 +100,11 @@ export function CartContent({ className = '' }: { className?: string }) {
+ 													onRemove={handleRemoveProduct}
+ 													hideShipping={true}
+ 												/>
+-												<div className="mt-2 text-sm text-muted-foreground">
+-													{product.shippingMethodId ? (
+-														<span>
+-															Shipping: {product.shippingMethodName || 'Selected'}
+-															{product.shippingCost > 0 && product.shippingCostCurrency
+-																? ` - ${product.shippingCost} ${product.shippingCostCurrency}`
+-																: ''}
+-														</span>
+-													) : (
++												{!product.shippingMethodId && (
++													<div className="mt-2 text-sm text-muted-foreground">
+ 														<span>Select shipping at checkout</span>
+-													)}
+-												</div>
++													</div>
++												)}
+ 											</div>
+ 										))}
+ 									</ul>
+@@ -125,35 +118,22 @@ export function CartContent({ className = '' }: { className?: string }) {
+ 										</div>
+ 									))}
+ 
+-									<div className="flex justify-between mt-1">
+-										<p className="text-sm">Shipping:</p>
+-										<p className="text-sm font-semibold">{formatSats(data.shippingSats)} sat</p>
+-									</div>
+-
+-									<div className="flex justify-between mt-1 font-semibold">
+-										<p className="text-sm">Total:</p>
+-										<p className="text-sm">{formatSats(data.satsTotal)} sat</p>
+-									</div>
+-
+ 									<div className="mt-3">
+ 										<p className="text-sm font-semibold">Payment Breakdown</p>
+-
+ 										<div className="h-2 w-full bg-gray-800 mt-1 rounded-full overflow-hidden">
+ 											<div className="h-full bg-blue-500" style={{ width: `${data.shares.sellerPercentage}%` }} />
+ 										</div>
+-
+ 										<div className="flex justify-between mt-1">
+-											<p className="text-sm">Merchant: </p>
++											<p className="text-sm">Merchant:</p>
+ 											<p className="text-sm">
+ 												{formatSats(data.shares.sellerAmount)} sat ({data.shares.sellerPercentage.toFixed(2)}%)
+ 											</p>
+ 										</div>
+-
+ 										{data.shares.communityAmount > 0 && (
+ 											<div className="flex justify-between">
+-												<p className="text-sm">Community Share: </p>
++												<p className="text-sm">Community Share:</p>
+ 												<p className="text-sm">
+-													{formatSats(data.shares.communityAmount)} sat ({(100 - data.shares.sellerPercentage).toFixed(2)}%)
++													{formatSats(data.shares.communityAmount)} sat ({data.shares.communityPercentage.toFixed(2)}%)
+ 												</p>
+ 											</div>
+ 										)}
+@@ -175,9 +155,9 @@ export function CartContent({ className = '' }: { className?: string }) {
+ 							<p className="text-sm">Shipping:</p>
+ 							<p className="text-sm">{formatSats(totalShippingInSats)} sat</p>
+ 						</div>
+-						<div className="flex justify-between text-lg font-bold">
+-							<p>Total:</p>
+-							<p>{formatSats(totalInSats)} sat</p>
++						<div className="flex justify-between font-semibold">
++							<p className="text-sm">Total:</p>
++							<p className="text-sm">{formatSats(totalInSats)} sat</p>
+ 						</div>
+ 					</div>
+ 
+diff --git a/src/components/sheet-contents/products/tabs.tsx b/src/components/sheet-contents/products/tabs.tsx
+index 1c477fc5f..aeb4b7489 100644
+--- a/src/components/sheet-contents/products/tabs.tsx
++++ b/src/components/sheet-contents/products/tabs.tsx
+@@ -11,10 +11,15 @@ import { useNDK } from '@/lib/stores/ndk'
+ import { productFormActions, productFormStore, type ProductShippingForm } from '@/lib/stores/product'
+ import { uiStore } from '@/lib/stores/ui'
+ import { attachShippingOptionByRef } from '@/lib/utils/productShippingQuickCreate'
+-import { resolveProductShippingSelections } from '@/lib/utils/productShippingSelections'
+-import { applyFiatPriceEdit, deriveSatsPriceFromFiat } from '@/lib/utils/productPriceResolution'
++import { resolveProductShippingSelections, getProductShippingTotalCost } from '@/lib/utils/productShippingSelections'
++import {
++	applyBitcoinPriceEdit,
++	applyFiatPriceEdit,
++	deriveSatsPriceFromFiat,
++	isFiatDisplayConversionUnavailable,
++} from '@/lib/utils/productPriceResolution'
+ import { MempoolService } from '@/lib/utils/mempool'
+-import { useBtcExchangeRates, type SupportedCurrency } from '@/queries/external'
++import { useBtcExchangeRates } from '@/queries/external'
+ import { usePublishShippingOptionMutation, type ShippingFormData } from '@/publish/shipping'
+ import { createShippingReference, getShippingInfo, useShippingOptionsByPubkey } from '@/queries/shipping'
+ import { useForm } from '@tanstack/react-form'
+@@ -51,26 +56,12 @@ export function DetailTab() {
+ 	// guarded to avoid storing or publishing a 0-derived price.
+ 	const hasExchangeRates = !!exchangeRates && Object.keys(exchangeRates).length > 0
+ 
+-	const convertSatsToCurrency = (sats: number, targetCurrency: string): number => {
+-		if (targetCurrency === 'SATS') return sats
+-		if (targetCurrency === 'BTC') return convertSatsToBtc(sats)
+-		if (!exchangeRates) return 0
+-
+-		const btcAmount = sats / 100_000_000 // Convert sats to BTC
+-		const rate = exchangeRates[targetCurrency as SupportedCurrency]
+-		return rate ? btcAmount * rate : 0
++	const convertSatsToCurrencyValue = (sats: number, targetCurrency: string): number => {
++		return MempoolService.convertSatsToCurrency({ sats, targetCurrency, exchangeRates })
+ 	}
+ 
+-	const convertCurrencyToSats = (amount: number, fromCurrency: string): number => {
+-		if (fromCurrency === 'SATS') return amount
+-		if (fromCurrency === 'BTC') return convertBtcToSats(amount)
+-		if (!exchangeRates) return 0
+-
+-		const rate = exchangeRates[fromCurrency as SupportedCurrency]
+-		if (!rate) return 0
+-
+-		const btcAmount = amount / rate
+-		return Math.round(btcAmount * 100_000_000) // Convert BTC to sats
++	const convertCurrencyToSatsValue = (amount: number, fromCurrency: string): number => {
++		return MempoolService.convertCurrencyToSats({ amount, fromCurrency, exchangeRates })
+ 	}
+ 
+ 	const form = useForm({
+@@ -97,39 +88,28 @@ export function DetailTab() {
+ 
+ 	// Handle Bitcoin price changes (SATS/BTC field)
+ 	const handleBitcoinPriceChange = (value: string) => {
+-		const numValue = parseFloat(value) || 0
+-
+-		// Convert to SATS for storage (sats should always be integers)
+-		const satsValue = bitcoinUnit === 'SATS' ? Math.round(numValue) : convertBtcToSats(numValue)
+-
+-		// Update fiat field if a fiat currency is selected and visible.
+-		// Requires exchange rates: without them convertSatsToCurrency returns 0 and
+-		// we would write fiatPrice: '0.00' into the store, which fiat-mode publish
+-		// then emits as the product price. Skip the sats->fiat sync instead.
+-		if (currency !== 'SATS' && currency !== 'BTC' && hasExchangeRates) {
+-			const fiatValue = convertSatsToCurrency(satsValue, currency)
+-			const fiatValueStr = fiatValue.toFixed(2)
+-			setFiatDisplayValue(fiatValueStr)
+-			// Also update state.fiatPrice so it's used when publishing in fiat mode
+-			productFormActions.updateValues({ price: satsValue.toString(), fiatPrice: fiatValueStr })
+-		} else {
+-			productFormActions.updateValues({ price: satsValue.toString() })
+-		}
++		const outcome = applyBitcoinPriceEdit(
++			value,
++			bitcoinUnit,
++			convertSatsToCurrencyValue,
++			{
++				currency,
++				isFiatCurrency: currency !== 'SATS' && currency !== 'BTC',
++				hasExchangeRates,
++			},
++			convertBtcToSats,
++		)
++		if (!outcome) return
++
++		productFormActions.updateValues({ price: outcome.price, fiatPrice: outcome.fiatPrice })
++		setFiatDisplayValue(outcome.fiatPrice)
+ 	}
+ 
+ 	// Handle fiat price changes
+ 	const handleFiatPriceChange = (value: string) => {
+-		// Store the raw input value without formatting
+ 		setFiatDisplayValue(value)
+-
+-		// Derive the sats price only while exchange rates are available;
+-		// otherwise keep the fiat edit and leave the sats price unresolved
+-		// until rates arrive (convertCurrencyToSats returns 0 without rates,
+-		// and a stored 0 would be published as a real price).
+-		const outcome = applyFiatPriceEdit(value, convertCurrencyToSats, { currency, hasExchangeRates })
+-		if (outcome) {
+-			productFormActions.updateValues(outcome)
+-		}
++		const outcome = applyFiatPriceEdit(value, convertCurrencyToSatsValue, { currency, hasExchangeRates })
++		if (outcome) productFormActions.updateValues(outcome)
+ 	}
+ 
+ 	// Get display value for Bitcoin field
+@@ -158,33 +138,6 @@ export function DetailTab() {
+ 		setCurrencyMode(newCurrencyMode)
+ 	}
+ 
+-	// Function to determine what gets published to the protocol
+-	const getPublishCurrency = (): { price: string; currency: string } => {
+-		if (currency === 'SATS' || currency === 'BTC') {
+-			// When Bitcoin currency is selected, always publish in SATS
+-			const bitcoinValue = parseFloat(price || '0')
+-			if (bitcoinUnit === 'BTC') {
+-				// Convert BTC to SATS for publishing
+-				const satsValue = bitcoinValue * 100000000
+-				return { price: satsValue.toString(), currency: 'SATS' }
+-			} else {
+-				// Already in SATS
+-				return { price: price || '0', currency: 'SATS' }
+-			}
+-		} else {
+-			// Fiat currency selected - check radio group selection
+-			if (currencyMode === 'fiat') {
+-				// Use fiat currency
+-				return { price: fiatDisplayValue, currency: currency }
+-			} else {
+-				// Use sats as currency (calculated on spot)
+-				const bitcoinValue = parseFloat(price || '0')
+-				const satsValue = bitcoinUnit === 'BTC' ? bitcoinValue * 100000000 : bitcoinValue
+-				return { price: satsValue.toString(), currency: 'SATS' }
+-			}
+-		}
+-	}
+-
+ 	// Toggle Bitcoin unit (SATS/BTC)
+ 	const toggleBitcoinUnit = () => {
+ 		const newUnit = bitcoinUnit === 'SATS' ? 'BTC' : 'SATS'
+@@ -200,6 +153,8 @@ export function DetailTab() {
+ 
+ 	// Check if radio group should be visible
+ 	const showRadioGroup = showFiatField
++	const fiatConversionUnavailable =
++		showFiatField && isFiatDisplayConversionUnavailable({ fiatDisplayValue, currency, hasExchangeRates }, convertCurrencyToSatsValue)
+ 
+ 	// Sync local state from store when store values change (for edit mode)
+ 	useEffect(() => {
+@@ -217,7 +172,7 @@ export function DetailTab() {
+ 	useEffect(() => {
+ 		const derivedSats = deriveSatsPriceFromFiat(
+ 			{ currencyMode: storeCurrencyMode, fiatPrice, price, currency, hasExchangeRates },
+-			convertCurrencyToSats,
++			convertCurrencyToSatsValue,
+ 		)
+ 		if (derivedSats !== null) {
+ 			productFormActions.updateValues({ price: derivedSats })
+@@ -236,7 +191,7 @@ export function DetailTab() {
+ 		if (showFiatField && price && hasExchangeRates) {
+ 			const satsValue = parseFloat(price) || 0
+ 			if (satsValue > 0) {
+-				const fiatValue = convertSatsToCurrency(satsValue, currency)
++				const fiatValue = convertSatsToCurrencyValue(satsValue, currency)
+ 				// Only update if the field is not currently being edited
+ 				// This prevents overwriting user input during typing
+ 				if (document.activeElement?.id !== 'fiat-price') {
+@@ -284,6 +239,13 @@ export function DetailTab() {
+ 							onChange={(e) => handleFiatPriceChange(e.target.value)}
+ 							className="w-full"
+ 						/>
++						{fiatConversionUnavailable && (
++							<p className="text-xs text-amber-600">
++								{currencyMode === 'sats'
++									? `Exchange rate unavailable for ${currency}; the displayed fiat equivalent may be stale.`
++									: `Exchange rate unavailable for ${currency}; enter a sats price or switch currency.`}
++							</p>
++						)}
+ 					</div>
+ 				)}
+ 
+@@ -679,7 +641,7 @@ const QUICK_SHIPPING_TEMPLATES: Array<{
+ ]
+ 
+ export function ShippingTab() {
+-	const { shippings } = useStore(productFormStore)
++	const { shippings, price, fiatPrice, currency: productCurrency, currencyMode } = useStore(productFormStore)
+ 	const { getUser } = useNDK()
+ 	const [user, setUser] = useState<any>(null)
+ 	const [isCreatingShipping, setIsCreatingShipping] = useState(false)
+@@ -848,6 +810,12 @@ export function ShippingTab() {
+ 		}
+ 	}
+ 
++	const { data: exchangeRates } = useBtcExchangeRates()
++
++	const convertCurrencyToSatsValue = (amount: number, fromCurrency: string): number => {
++		return MempoolService.convertCurrencyToSats({ amount, fromCurrency, exchangeRates })
++	}
++
+ 	const resolvedSelectedShippings = useMemo(
+ 		() => resolveProductShippingSelections(shippings, availableShippingOptions),
+ 		[shippings, availableShippingOptions],
+@@ -876,19 +844,26 @@ export function ShippingTab() {
+ 						{resolvedSelectedShippings.map((shipping, index) => {
+ 							const option = shipping.option
+ 							return (
+-								<div key={index} className="flex items-center gap-3 p-3 border rounded-md bg-gray-50">
++								<div key={index} className="flex flex-col md:flex-row items-start md:items-center gap-3 p-3 border rounded-md bg-gray-50">
+ 									{option?.service ? <ServiceIcon service={option.service} /> : <AlertTriangle className="w-4 h-4 text-amber-500" />}
+-									<div className="flex-1">
+-										<div className="font-medium">
++
++									<div className="flex-1 min-w-0">
++										<div className="font-medium truncate">
+ 											{option?.name || (shippingOptionsQuery.isFetched ? 'Unavailable shipping option' : 'Resolving shipping option...')}
+ 										</div>
+ 										{option ? (
+-											<div className="text-sm text-gray-500">
+-												{option.cost} {option.currency} •{' '}
+-												{option.countries && option.countries.length > 1
+-													? `${option.countries.length} countries`
+-													: option.countries?.[0] || 'No countries'}{' '}
+-												• {option.service || 'Unknown service'}
++											<div className="text-sm text-gray-500 truncate flex items-center gap-2">
++												<span className="text-xs text-muted-foreground">Base Cost:</span>
++												<span className="font-medium">
++													{option.cost} {option.currency}
++												</span>
++												<span className="text-gray-500">•</span>
++												<span className="truncate">
++													{option.countries && option.countries.length > 1
++														? `${option.countries.length} countries`
++														: option.countries?.[0] || 'No countries'}{' '}
++													• {option.service || 'Unknown service'}
++												</span>
+ 											</div>
+ 										) : shippingOptionsQuery.isFetched ? (
+ 											<div className="text-sm text-amber-600">This shipping reference is no longer available: {shipping.shippingRef}</div>
+@@ -896,22 +871,101 @@ export function ShippingTab() {
+ 											<div className="text-sm text-gray-500">Looking up current shipping metadata...</div>
+ 										)}
+ 									</div>
+-									<div className="flex items-center gap-2">
++
++									<div className="flex flex-col gap-1">
++										<Label htmlFor={`shipping-extra-cost-${index}`} className="text-xs text-muted-foreground">
++											Product-specific extra cost
++											<span className="ml-1">({option?.currency || 'currency'})</span>
++										</Label>
+ 										<Input
++											id={`shipping-extra-cost-${index}`}
+ 											type="number"
+ 											step="0.01"
+ 											min="0"
+ 											value={shipping.extraCost}
+ 											onChange={(e) => updateExtraCost(index, e.target.value)}
+-											placeholder="Add cost specific to this product"
++											placeholder="Extra cost for this product"
+ 											className="w-40 sm:w-56 md:w-76 text-sm"
+ 										/>
++									</div>
++
++									{/* Product price + combined total */}
++									{price ? (
++										<div className="mt-2 md:mt-0 md:ml-4 flex flex-col items-end text-right md:min-w-[140px]">
++											{(() => {
++												// We display product + total in SATS regardless of seller-selected currency.
++
++												let productSats = 0
++												if (productCurrency === 'SATS') {
++													productSats = Number(price) || 0
++												} else if (productCurrency === 'BTC') {
++													// The form stores Bitcoin-denominated product prices in sats.
++													productSats = Number(price) || 0
++												} else {
++													// Fiat currency
++													if (currencyMode === 'fiat' && fiatPrice) {
++														productSats = convertCurrencyToSatsValue(Number(fiatPrice) || 0, productCurrency)
++													} else {
++														// If the form stored a sats value in `price`, use it
++														productSats = Number(price) || 0
++													}
++												}
++
++												// Shipping option total cost in its own currency
++												const shippingBase = option ? Number(option.cost) || 0 : 0
++												const shippingExtra = Number(shipping.extraCost) || 0
++												const shippingTotal = option ? getProductShippingTotalCost(shippingBase, shipping.extraCost) : 0
++
++												// Convert shipping total to SATS
++												const shippingSats = (() => {
++													if (!option) return 0
++													const fromCurrency = option.currency || 'USD'
++													const converted = convertCurrencyToSatsValue(shippingTotal, fromCurrency)
++													return Number.isFinite(converted) ? Math.round(converted) : NaN
++												})()
++
++												const combinedSats = Number.isFinite(shippingSats) ? Math.round(productSats + shippingSats) : NaN
++
++												const formatSats = (n: number | string) => {
++													const num = Number(n)
++													if (!Number.isFinite(num)) return '—'
++													return num.toLocaleString()
++												}
++												const formatShippingAmount = (amount: number) => amount.toLocaleString(undefined, { maximumFractionDigits: 2 })
++
++												const productDisplay = formatSats(Math.round(productSats))
++												const combinedDisplay = Number.isFinite(combinedSats) ? formatSats(Math.round(combinedSats)) : '—'
++
++												return (
++													<div className="ml-4 flex flex-col items-end text-right">
++														{option && (
++															<>
++																<div className="text-xs text-gray-500">Shipping cost:</div>
++																<div className="text-sm font-semibold font-mono">
++																	{formatShippingAmount(shippingBase)} {option.currency} + {formatShippingAmount(shippingExtra)}{' '}
++																	{option.currency} = {formatShippingAmount(shippingTotal)} {option.currency}
++																</div>
++															</>
++														)}
++														<div className="text-xs text-gray-500">Product price:</div>
++														<div className="text-sm font-semibold font-mono">{productDisplay} SATS</div>
++														<div className="text-xs text-gray-500 mt-1">Total with shipping:</div>
++														<div className="text-sm font-semibold font-mono">{combinedDisplay} SATS</div>
++													</div>
++												)
++											})()}
++										</div>
++									) : null}
++
++									{/* Move remove button after price block for consistent alignment */}
++									<div className="ml-2 md:ml-4 mt-2 md:mt-0">
+ 										<Button
+ 											type="button"
+ 											variant="outline"
+ 											size="sm"
+ 											onClick={() => removeShippingOption(index)}
+-											className="text-red-600 hover:text-red-700"
++											aria-label="Remove shipping option"
++											className="h-8 w-8 p-0 flex items-center justify-center text-red-600 hover:text-red-700"
+ 										>
+ 											<X className="w-4 h-4" />
+ 										</Button>
+@@ -937,6 +991,7 @@ export function ShippingTab() {
+ 							<p>No shipping options available.</p>
+ 							<p className="text-sm mt-2">Quick-create a shipping option to get started:</p>
+ 						</div>
++
+ 						{showPickupForm ? (
+ 							<div className="border rounded-md p-4 space-y-4 bg-gray-50">
+ 								<div className="flex items-center gap-2">
+diff --git a/src/lib/__tests__/currency.test.ts b/src/lib/__tests__/currency.test.ts
+new file mode 100644
+index 000000000..bed555406
+--- /dev/null
++++ b/src/lib/__tests__/currency.test.ts
+@@ -0,0 +1,46 @@
++import { describe, expect, test } from 'bun:test'
++import { MempoolService } from '@/lib/utils/mempool'
++
++describe('currency conversion helpers', () => {
++	test('converts sats to fiat using BTC as the pivot currency', () => {
++		const exchangeRates = {
++			USD: 100_000,
++			EUR: 90_000,
++		} as Record<string, number>
++
++		expect(MempoolService.convertSatsToCurrency({ sats: 50_000_000, targetCurrency: 'USD', exchangeRates })).toBe(50_000)
++		expect(MempoolService.convertSatsToCurrency({ sats: 100_000_000, targetCurrency: 'EUR', exchangeRates })).toBe(90_000)
++	})
++
++	test('converts fiat values back to sats', () => {
++		const exchangeRates = {
++			USD: 100_000,
++		} as Record<string, number>
++
++		expect(MempoolService.convertCurrencyToSats({ amount: 50_000, fromCurrency: 'USD', exchangeRates })).toBe(50_000_000)
++		expect(MempoolService.convertCurrencyToSats({ amount: 25, fromCurrency: 'USD', exchangeRates })).toBe(25_000)
++	})
++
++	test('handles BTC and SATS directly without extra branching', () => {
++		const exchangeRates = {
++			USD: 100_000,
++		} as Record<string, number>
++
++		expect(MempoolService.convertCurrencyToSats({ amount: 1, fromCurrency: 'BTC', exchangeRates })).toBe(100_000_000)
++		expect(MempoolService.convertCurrencyToSats({ amount: 5_000, fromCurrency: 'SATS', exchangeRates })).toBe(5_000)
++	})
++
++	test('returns NaN when fiat conversion rates are undefined for the selected currency', () => {
++		const result = MempoolService.convertCurrencyToSats({ amount: 25, fromCurrency: 'USD', exchangeRates: undefined })
++		expect(Number.isNaN(result)).toBe(true)
++	})
++
++	test('returns NaN when the selected currency rate is missing from exchange rates', () => {
++		const exchangeRates = {
++			EUR: 90_000,
++		} as Record<string, number>
++
++		const result = MempoolService.convertCurrencyToSats({ amount: 25, fromCurrency: 'USD', exchangeRates })
++		expect(Number.isNaN(result)).toBe(true)
++	})
++})
+diff --git a/src/lib/__tests__/e2e-workflow-gate-membership.test.ts b/src/lib/__tests__/e2e-workflow-gate-membership.test.ts
+index 869968f49..40cd33c37 100644
+--- a/src/lib/__tests__/e2e-workflow-gate-membership.test.ts
++++ b/src/lib/__tests__/e2e-workflow-gate-membership.test.ts
+@@ -1,18 +1,16 @@
+ /**
+- * Guards per-PR gate membership for the `OG Meta Tags` e2e family
+- * (`.github/workflows/e2e.yml`).
++ * Guards per-PR gate membership for the `OG Meta Tags` and checkout shipping
++ * e2e families (`.github/workflows/e2e.yml`).
+  *
+  * The `e2e-grep` job runs one single-quoted `--grep` alternation of
+  * deterministic test families on every pull request / push; that gate is the
+  * only place the `OG Meta Tags` specs are exercised on a PR (the scheduled
+  * `e2e-full` job also runs them, but it is not a merge gate).
+  *
+- * A family that is renamed or added to `e2e/tests/og-meta-tags.spec.ts`
+- * without a matching entry in the gate pattern silently drops out of CI. This
+- * guard ties the spec and the workflow together: every `test.describe` title
+- * in the OG spec must be matched by the gate pattern, so removing the
+- * `|OG Meta Tags` term (or renaming a describe) fails a unit test instead of
+- * quietly narrowing CI coverage.
++ * A family that is renamed or added to a gated spec without a matching entry
++ * in the gate pattern silently drops out of CI. This guard ties the specs and
++ * the workflow together, so removing a gate term or renaming a describe fails
++ * a unit test instead of quietly narrowing CI coverage.
+  */
+ import { readFile } from 'node:fs/promises'
+ import { join } from 'node:path'
+@@ -22,6 +20,7 @@ import { describe, expect, test } from 'bun:test'
+ const REPO_ROOT = join(import.meta.dir, '..', '..', '..')
+ const WORKFLOW_PATH = join(REPO_ROOT, '.github', 'workflows', 'e2e.yml')
+ const OG_SPEC_PATH = join(REPO_ROOT, 'e2e', 'tests', 'og-meta-tags.spec.ts')
++const CHECKOUT_SHIPPING_SPEC_PATH = join(REPO_ROOT, 'e2e', 'tests', 'checkout-shipping.spec.ts')
+ 
+ /**
+  * The single-quoted `--grep '<pattern>'` used by the per-PR `e2e-grep` gate.
+@@ -37,13 +36,13 @@ async function gatePattern(): Promise<string> {
+ 	return match![1]
+ }
+ 
+-/** Every `test.describe('<title>'` title in the OG spec. */
+-async function ogDescribeTitles(): Promise<string[]> {
+-	const spec = await readFile(OG_SPEC_PATH, 'utf8')
++/** Every `test.describe('<title>'` title in a gated spec. */
++async function describeTitles(path: string): Promise<string[]> {
++	const spec = await readFile(path, 'utf8')
+ 	return [...spec.matchAll(/test\.describe\(\s*'([^']+)'/g)].map((match) => match[1])
+ }
+ 
+-describe('e2e-grep gate membership (OG Meta Tags family)', () => {
++describe('e2e-grep gate membership', () => {
+ 	test('the per-PR gate has a bounded alternation, not a run-everything wildcard', async () => {
+ 		const pattern = (await gatePattern()).trim()
+ 		expect(pattern.length).toBeGreaterThan(0)
+@@ -52,8 +51,13 @@ describe('e2e-grep gate membership (OG Meta Tags family)', () => {
+ 		expect(pattern.split('|').length).toBeGreaterThan(1)
+ 	})
+ 
+-	test('every OG Meta Tags describe title is matched by the per-PR gate pattern', async () => {
+-		const [pattern, titles] = await Promise.all([gatePattern(), ogDescribeTitles()])
++	test('every gated describe title is matched by the per-PR gate pattern', async () => {
++		const [pattern, ogTitles, checkoutTitles] = await Promise.all([
++			gatePattern(),
++			describeTitles(OG_SPEC_PATH),
++			describeTitles(CHECKOUT_SHIPPING_SPEC_PATH),
++		])
++		const titles = [...ogTitles, ...checkoutTitles]
+ 		expect(titles.length).toBeGreaterThan(0)
+ 		const gate = new RegExp(pattern)
+ 		const ungated = titles.filter((title) => !gate.test(title))
+diff --git a/src/lib/__tests__/productPriceResolution.test.ts b/src/lib/__tests__/productPriceResolution.test.ts
+index eb938cf72..e36e8f7ca 100644
+--- a/src/lib/__tests__/productPriceResolution.test.ts
++++ b/src/lib/__tests__/productPriceResolution.test.ts
+@@ -9,7 +9,13 @@ mock.module('@/publish/products', () => ({
+ 
+ import { publishProduct } from '@/publish/products'
+ import { productFormActions } from '@/lib/stores/product'
+-import { applyFiatPriceEdit, deriveSatsPriceFromFiat, resolvePublishPrice } from '@/lib/utils/productPriceResolution'
++import {
++	applyBitcoinPriceEdit,
++	applyFiatPriceEdit,
++	deriveSatsPriceFromFiat,
++	isFiatDisplayConversionUnavailable,
++	resolvePublishPrice,
++} from '@/lib/utils/productPriceResolution'
+ 
+ // Deterministic converter for tests: 1 unit of currency = 100_000 sats.
+ // Like the real converter, it returns 0 for currencies it has no rate for.
+@@ -62,6 +68,74 @@ describe('applyFiatPriceEdit', () => {
+ 	})
+ })
+ 
++describe('applyBitcoinPriceEdit', () => {
++	test('keeps the fiat display value in sync with a sats edit', () => {
++		expect(
++			applyBitcoinPriceEdit(
++				'2500000',
++				'SATS',
++				(sats) => sats / 100_000,
++				{
++					currency: 'USD',
++					isFiatCurrency: true,
++					hasExchangeRates: true,
++				},
++				(btc) => btc * 100_000_000,
++			),
++		).toEqual({ price: '2500000', fiatPrice: '25.00' })
++	})
++
++	test('clears the fiat display value when sats conversion is unavailable', () => {
++		expect(
++			applyBitcoinPriceEdit(
++				'2500000',
++				'SATS',
++				() => 0,
++				{
++					currency: 'USD',
++					isFiatCurrency: true,
++					hasExchangeRates: false,
++				},
++				(btc) => btc * 100_000_000,
++			),
++		).toEqual({ price: '2500000', fiatPrice: '' })
++	})
++})
++
++describe('isFiatDisplayConversionUnavailable', () => {
++	test('marks a visible fiat equivalent unavailable when rates disappear', () => {
++		expect(
++			isFiatDisplayConversionUnavailable({ fiatDisplayValue: '25.00', currency: 'USD', hasExchangeRates: false }, convertUsdLike),
++		).toBe(true)
++	})
++
++	test('does not warn when there is no fiat equivalent displayed', () => {
++		expect(isFiatDisplayConversionUnavailable({ fiatDisplayValue: '', currency: 'USD', hasExchangeRates: false }, convertUsdLike)).toBe(
++			false,
++		)
++	})
++
++	test('warns for an invalid displayed fiat value', () => {
++		expect(
++			isFiatDisplayConversionUnavailable({ fiatDisplayValue: 'not-a-number', currency: 'USD', hasExchangeRates: true }, convertUsdLike),
++		).toBe(true)
++	})
++
++	test('marks a visible fiat equivalent unavailable when its selected rate is missing', () => {
++		const missingRate = () => Number.NaN
++
++		expect(isFiatDisplayConversionUnavailable({ fiatDisplayValue: '25.00', currency: 'USD', hasExchangeRates: true }, missingRate)).toBe(
++			true,
++		)
++	})
++
++	test('accepts a visible fiat equivalent with an available selected rate', () => {
++		expect(isFiatDisplayConversionUnavailable({ fiatDisplayValue: '25.00', currency: 'USD', hasExchangeRates: true }, convertUsdLike)).toBe(
++			false,
++		)
++	})
++})
++
+ describe('deriveSatsPriceFromFiat (rates-unavailable -> rates-arrive transition)', () => {
+ 	test('derives the sats price once rates arrive after an edit made without rates', () => {
+ 		// 1. Merchant edits the fiat price while rates are unavailable.
+diff --git a/src/lib/utils/productShippingSelections.test.ts b/src/lib/__tests__/productShippingSelections.test.ts
+similarity index 93%
+rename from src/lib/utils/productShippingSelections.test.ts
+rename to src/lib/__tests__/productShippingSelections.test.ts
+index b393a1e0e..6e58a629b 100644
+--- a/src/lib/utils/productShippingSelections.test.ts
++++ b/src/lib/__tests__/productShippingSelections.test.ts
+@@ -1,6 +1,8 @@
+ import { beforeEach, describe, expect, test } from 'bun:test'
+ import {
+ 	findReusablePublishedShippingSelection,
++	formatShippingDisplayText,
++	getProductShippingTotalCost,
+ 	normalizeProductShippingSelections,
+ 	normalizePublishedProductShippingTags,
+ 	resolveProductShippingSelections,
+@@ -169,6 +171,19 @@ describe('product shipping selection normalization', () => {
+ 	})
+ })
+ 
++describe('shipping cost helpers', () => {
++	test('calculates total cost from a base cost and extra cost string', () => {
++		expect(getProductShippingTotalCost(10, '2.5')).toBe(12.5)
++		expect(getProductShippingTotalCost(undefined, '5')).toBe(5)
++	})
++
++	test('formats shipping display text from the resolved shipping option', () => {
++		expect(
++			formatShippingDisplayText('30406:merchant:standard', { title: 'Standard Shipping', price: { amount: 5, currency: 'USD' } } as any),
++		).toBe('Standard Shipping')
++	})
++})
++
+ describe('findReusablePublishedShippingSelection', () => {
+ 	const sellerPubkey = 'seller-a'
+ 	const reusableShippingRef = '30406:seller-a:standard'
+diff --git a/src/lib/stores/cart.test.ts b/src/lib/stores/cart.test.ts
+index f374b081e..0cac5630d 100644
+--- a/src/lib/stores/cart.test.ts
++++ b/src/lib/stores/cart.test.ts
+@@ -141,6 +141,39 @@ describe('cart store persistence orchestration', () => {
+ 		expect(cartStore.state.lastCartIntentUpdatedAt).toBe(300)
+ 	})
+ 
++	test('fetches seller shipping options when a d-tag contains colons', async () => {
++		const shippingRef = `30406:${sellerPubkey}:zone:europe:express`
++		cartTestUtils.setSyncDependencies({
++			getProductEvent: async () =>
++				({
++					pubkey: sellerPubkey,
++					tags: [['shipping_option', shippingRef, '2']],
++				}) as any,
++			getShippingEvent: async () =>
++				({
++					pubkey: sellerPubkey,
++					tags: [
++						['d', 'zone:europe:express'],
++						['title', 'European Express'],
++						['price', '8', 'USD'],
++						['service', 'express'],
++					],
++				}) as any,
++		})
++		cartStore.setState((state) => ({
++			...state,
++			productsBySeller: {
++				[sellerPubkey]: [{ id: 'product-1', sellerPubkey, amount: 1 } as any],
++			},
++		}))
++
++		await cartActions.fetchAndSetSellerShippingOptions()
++
++		expect(cartStore.state.sellerShippingOptions[sellerPubkey]).toEqual([
++			expect.objectContaining({ id: shippingRef, cost: 10, currency: 'USD' }),
++		])
++	})
++
+ 	test('user mutation schedules debounced publish', async () => {
+ 		const published: any[] = []
+ 		cartTestUtils.setSyncDependencies({
+diff --git a/src/lib/stores/cart.ts b/src/lib/stores/cart.ts
+index e168d28b3..0b6a5a128 100644
+--- a/src/lib/stores/cart.ts
++++ b/src/lib/stores/cart.ts
+@@ -7,6 +7,7 @@ import { getProductId, getProductPrice, getProductSellerPubkey, productQueryOpti
+ import {
+ 	getShippingInfo,
+ 	getShippingPrice,
++	parseShippingReference,
+ 	shippingOptionQueryOptions,
+ 	shippingOptionsByPubkeyQueryOptions,
+ 	shippingOptionByCoordinatesQueryOptions,
+@@ -21,6 +22,7 @@ import {
+ 	resolvePublishedProductShippingOptions,
+ 	type ProductShippingSelection,
+ } from '@/lib/utils/productShippingSelections'
++import { MempoolService } from '@/lib/utils/mempool'
+ import NDK, { NDKEvent, type NDKSigner } from '@nostr-dev-kit/ndk'
+ import { QueryClient } from '@tanstack/react-query'
+ import { useStore } from '@tanstack/react-store'
+@@ -114,7 +116,7 @@ interface CartState {
+ 		{
+ 			satsTotal: number
+ 			currencyTotals: Record<string, number>
+-			shares: { sellerAmount: number; communityAmount: number; sellerPercentage: number }
++			shares: { sellerAmount: number; communityAmount: number; sellerPercentage: number; communityPercentage: number }
+ 			shippingSats: number
+ 		}
+ 	>
+@@ -355,19 +357,14 @@ const fetchProductEventFromQueries = async (id: string, sellerPubkey?: string):
+ 
+ const fetchShippingEventFromQueries = async (shippingReferenceId: string): Promise<NDKEvent | null> => {
+ 	try {
+-		if (shippingReferenceId.startsWith(`${SHIPPING_KIND}:`)) {
+-			const parts = shippingReferenceId.split(':')
+-			if (parts.length === 3) {
+-				const pubkey = parts[1]
+-				const dTag = parts[2]
+-
+-				const event = (await cartQueryClient.fetchQuery(shippingOptionByCoordinatesQueryOptions(pubkey, dTag))) as NDKEvent | null
+-				return event
+-			} else {
+-				console.warn(`Invalid shipping reference format: ${shippingReferenceId}`)
+-				return null
+-			}
++		const reference = parseShippingReference(shippingReferenceId)
++		if (reference.pubkey && reference.dTag) {
++			return (await cartQueryClient.fetchQuery(
++				shippingOptionByCoordinatesQueryOptions(reference.pubkey, reference.dTag),
++			)) as NDKEvent | null
+ 		}
++		if (reference.id) return (await cartQueryClient.fetchQuery(shippingOptionQueryOptions(reference.id))) as NDKEvent | null
++		console.warn(`Invalid shipping reference format: ${shippingReferenceId}`)
+ 		return null
+ 	} catch (error) {
+ 		console.error(`Failed to fetch shipping event ${shippingReferenceId} via queryClient:`, error)
+@@ -814,7 +811,8 @@ export const cartActions = {
+ 		let validatedShippingId = shipping.id || null
+ 		if (shipping.id && typeof shipping.id === 'string' && shipping.id.trim().length > 0) {
+ 			const trimmedId = shipping.id.trim()
+-			if (!trimmedId.endsWith(':') && trimmedId.split(':').length === 3) {
++			const parsedReference = parseShippingReference(trimmedId)
++			if ((parsedReference.pubkey && parsedReference.dTag) || parsedReference.id) {
+ 				validatedShippingId = trimmedId
+ 			} else {
+ 				console.warn('Invalid shipping ID format:', shipping.id)
+@@ -1485,17 +1483,17 @@ export const cartActions = {
+ 		if (!exchangeRates || !amount) return 0
+ 
+ 		const upperCurrency = currency.toUpperCase()
++		const sats = MempoolService.convertCurrencyToSats({
++			amount,
++			fromCurrency: upperCurrency,
++			exchangeRates,
++		})
+ 
+-		if (upperCurrency === 'SATS') return Math.round(amount)
+-		if (upperCurrency === 'BTC') return Math.round(amount * numSatsInBtc)
+-
+-		const rate = exchangeRates[upperCurrency]
+-		if (!rate) {
++		if (!Number.isFinite(sats)) {
+ 			console.warn(`Exchange rate not found for ${upperCurrency}`)
+ 			return 0
+ 		}
+ 
+-		const sats = (amount / rate) * numSatsInBtc
+ 		return Math.round(sats)
+ 	},
+ 
+@@ -1591,16 +1589,21 @@ export const cartActions = {
+ 
+ 				// V4V shares are calculated ONLY from product price, not including shipping
+ 				const shares = cartActions.calculateShares(sellerPubkey, sellerTotal)
++				const totalWithShipping = sellerTotal + shippingSats
++				const sellerAmount = shares.sellerAmount + shippingSats
++
++				// Add shipping cost entirely to the seller's amount (shipping is not shared with V4V).
++				// Both displayed percentages use the final amount paid as their denominator.
++				const sellerPercentage = totalWithShipping > 0 ? (sellerAmount / totalWithShipping) * 100 : 100
++				const communityPercentage = totalWithShipping > 0 ? (shares.communityAmount / totalWithShipping) * 100 : 0
+ 
+-				// Add shipping cost entirely to seller's amount (shipping is not shared with V4V)
+ 				const adjustedShares = {
+-					sellerAmount: shares.sellerAmount + shippingSats,
+-					communityAmount: shares.communityAmount, // V4V shares stay the same
+-					sellerPercentage: shares.sellerPercentage, // Keep original percentage for display
++					sellerAmount,
++					communityAmount: shares.communityAmount,
++					sellerPercentage,
++					communityPercentage,
+ 				}
+ 
+-				const totalWithShipping = sellerTotal + shippingSats
+-
+ 				newSellerData[sellerPubkey] = {
+ 					satsTotal: totalWithShipping,
+ 					currencyTotals,
+@@ -1723,11 +1726,8 @@ export const cartActions = {
+ 
+ 					for (const shippingRef of Array.from(productShippingRefs)) {
+ 						try {
+-							// Parse the shipping reference
+-							const parts = shippingRef.split(':')
+-							if (parts.length !== 3) continue
+-
+-							const [kind, pubkey, dTag] = parts
++							const parsedReference = parseShippingReference(shippingRef)
++							if (!parsedReference.pubkey && !parsedReference.id) continue
+ 
+ 							// Fetch the shipping event
+ 							const shippingEvent = await getShippingEvent(shippingRef)
+diff --git a/src/lib/utils/mempool.ts b/src/lib/utils/mempool.ts
+index 68d94d03e..7aab98ac6 100644
+--- a/src/lib/utils/mempool.ts
++++ b/src/lib/utils/mempool.ts
+@@ -47,6 +47,44 @@ export class MempoolService {
+ 	/**
+ 	 * Fetches transactions for a given Bitcoin address
+ 	 */
++	static convertSatsToCurrency({
++		sats,
++		targetCurrency,
++		exchangeRates,
++	}: {
++		sats: number
++		targetCurrency: string
++		exchangeRates: Record<string, number> | undefined
++	}): number {
++		if (targetCurrency === 'SATS') return sats
++		if (targetCurrency === 'BTC') return this.satoshisToBtc(sats)
++		if (!exchangeRates) return 0
++
++		const btcAmount = sats / 100_000_000
++		const rate = exchangeRates[targetCurrency]
++		return rate ? btcAmount * rate : 0
++	}
++
++	static convertCurrencyToSats({
++		amount,
++		fromCurrency,
++		exchangeRates,
++	}: {
++		amount: number
++		fromCurrency: string
++		exchangeRates: Record<string, number> | undefined
++	}): number {
++		if (fromCurrency === 'SATS') return amount
++		if (fromCurrency === 'BTC') return this.btcToSatoshis(amount)
++		if (!exchangeRates) return NaN
++
++		const rate = exchangeRates[fromCurrency]
++		if (!rate) return NaN
++
++		const btcAmount = amount / rate
++		return Math.round(btcAmount * 100_000_000)
++	}
++
+ 	static async fetchAddressTransactions(address: string): Promise<MempoolTransaction[]> {
+ 		const response = await fetch(`${MEMPOOL_API_BASE}/address/${address}/txs`)
+ 		if (!response.ok) {
+diff --git a/src/lib/utils/productPriceResolution.ts b/src/lib/utils/productPriceResolution.ts
+index 82f6bc725..f131d4602 100644
+--- a/src/lib/utils/productPriceResolution.ts
++++ b/src/lib/utils/productPriceResolution.ts
+@@ -12,6 +12,44 @@ export type FiatPriceEditOutcome = {
+ 	fiatPrice: string
+ } | null
+ 
++export type BitcoinPriceEditOutcome = {
++	price: string
++	fiatPrice: string
++} | null
++
++/**
++ * Applies a Bitcoin price edit to the form state.
++ *
++ * The fiat display value is refreshed from the sats edit when possible and
++ * cleared when the conversion cannot be confirmed. Publication authority is
++ * resolved separately by resolvePublishPrice.
++ */
++export function applyBitcoinPriceEdit(
++	rawValue: string,
++	bitcoinUnit: 'SATS' | 'BTC',
++	convert: (sats: number, currency: string) => number,
++	context: { currency: string; isFiatCurrency: boolean; hasExchangeRates: boolean },
++	convertBtcToSats: (btc: number) => number,
++): BitcoinPriceEditOutcome {
++	if (rawValue === '') return { price: '', fiatPrice: '' }
++
++	const numValue = parseFloat(rawValue)
++	if (isNaN(numValue)) return null
++
++	const satsValue = bitcoinUnit === 'SATS' ? Math.round(numValue) : convertBtcToSats(numValue)
++	const price = satsValue.toString()
++	if (!context.isFiatCurrency || !context.hasExchangeRates || satsValue === 0) {
++		return { price, fiatPrice: '' }
++	}
++
++	const fiatValue = convert(satsValue, context.currency)
++	if (!Number.isFinite(fiatValue)) {
++		return { price, fiatPrice: '' }
++	}
++
++	return { price, fiatPrice: fiatValue.toFixed(2) }
++}
++
+ /**
+  * Applies a fiat price edit to the form state.
+  *
+@@ -64,6 +102,31 @@ export type SatsDerivationState = {
+ 	hasExchangeRates: boolean
+ }
+ 
++export type FiatDisplayConversionState = {
++	fiatDisplayValue: string
++	currency: string
++	hasExchangeRates: boolean
++}
++
++/**
++ * Returns whether a displayed fiat equivalent cannot be confirmed with the
++ * current exchange-rate data. This deliberately does not depend on currency
++ * mode: in sats-fixed mode, a visible fiat equivalent can be stale after
++ * exchange rates disappear.
++ */
++export function isFiatDisplayConversionUnavailable(
++	state: FiatDisplayConversionState,
++	convert: (amount: number, currency: string) => number,
++): boolean {
++	if (state.fiatDisplayValue === '') return false
++
++	const fiatValue = Number(state.fiatDisplayValue)
++	if (!Number.isFinite(fiatValue)) return true
++	if (!state.hasExchangeRates) return true
++
++	return !Number.isFinite(convert(fiatValue, state.currency))
++}
++
+ /**
+  * Derives the sats price from the fiat price once exchange rates are
+  * available (fiat-fixed mode only).
+diff --git a/src/lib/utils/productShippingSelections.ts b/src/lib/utils/productShippingSelections.ts
+index d37371c20..a2948adb8 100644
+--- a/src/lib/utils/productShippingSelections.ts
++++ b/src/lib/utils/productShippingSelections.ts
+@@ -1,4 +1,5 @@
+ import type { RichShippingInfo } from '@/lib/stores/cart'
++import type { getShippingInfo } from '@/queries/shipping'
+ 
+ export type ProductShippingSelection = {
+ 	shippingRef: string
+@@ -98,9 +99,10 @@ export const findReusablePublishedShippingSelection = ({
+ }
+ 
+ export const normalizeProductShippingSelection = (input: ProductShippingSelectionInput): ProductShippingSelection | null => {
++	const legacyShipping = 'shipping' in input ? input.shipping : null
+ 	const shippingRef =
+ 		(typeof input.shippingRef === 'string' && input.shippingRef.trim()) ||
+-		(typeof input.shipping?.id === 'string' && input.shipping.id.trim()) ||
++		(typeof legacyShipping?.id === 'string' && legacyShipping.id.trim()) ||
+ 		''
+ 
+ 	if (!shippingRef) return null
+@@ -182,3 +184,20 @@ export const resolvePublishedProductShippingOptions = ({
+ 			}
+ 		})
+ }
++
++// Helper for displaying a shipping option's base and per-product extra cost.
++export const getProductShippingTotalCost = (baseCost: number | undefined, extraCost: string): number => {
++	const base = typeof baseCost === 'number' && Number.isFinite(baseCost) ? baseCost : 0
++	const extra = Number(extraCost) || 0
++	return base + extra
++}
++
++export const formatShippingDisplayText = (shippingRef: string | undefined, shippingOption: ReturnType<typeof getShippingInfo> | null) => {
++	if (!shippingRef) return ''
++	if (!shippingOption) return shippingRef
++
++	const title = shippingOption.title?.trim()
++
++	if (!title) return shippingRef
++	return title
++}
+diff --git a/src/publish/shipping.test.ts b/src/publish/shipping.test.ts
+deleted file mode 100644
+index 4a560eb1f..000000000
+--- a/src/publish/shipping.test.ts
++++ /dev/null
+@@ -1,12 +0,0 @@
+-import { describe, expect, test } from 'bun:test'
+-import { buildPublishedShippingOption } from '@/publish/shipping'
+-
+-describe('published shipping option identity', () => {
+-	test('derives canonical shippingRef from mutation result identity', () => {
+-		expect(buildPublishedShippingOption('event-123', 'merchant-pubkey', 'shipping_abc')).toEqual({
+-			eventId: 'event-123',
+-			shippingDTag: 'shipping_abc',
+-			shippingRef: '30406:merchant-pubkey:shipping_abc',
+-		})
+-	})
+-})
+diff --git a/src/queries/__tests__/shipping.test.ts b/src/queries/__tests__/shipping.test.ts
+new file mode 100644
+index 000000000..d809281ea
+--- /dev/null
++++ b/src/queries/__tests__/shipping.test.ts
+@@ -0,0 +1,43 @@
++import { afterEach, describe, expect, test } from 'bun:test'
++import { naddrFromAddress } from '@/lib/nostr/naddr'
++import { ndkActions } from '@/lib/stores/ndk'
++import { getShippingEvent } from '../shipping'
++
++type ShippingEvent = NonNullable<Awaited<ReturnType<typeof getShippingEvent>>>
++
++const SELLER_PUBKEY = 'a'.repeat(64)
++const SHIPPING_D_TAG = 'worldwide-standard'
++const SHIPPING_REFERENCE = `30406:${SELLER_PUBKEY}:${SHIPPING_D_TAG}`
++const realGetNDK = ndkActions.getNDK
++
++afterEach(() => {
++	;(ndkActions as { getNDK: () => unknown }).getNDK = realGetNDK as () => unknown
++})
++
++describe('getShippingEvent', () => {
++	test('resolves an addressable cart shipping reference by its coordinate', async () => {
++		const shippingEvent = {
++			kind: 30406,
++			pubkey: SELLER_PUBKEY,
++			content: '',
++			tags: [
++				['d', SHIPPING_D_TAG],
++				['service', 'standard'],
++			],
++			id: '0'.repeat(64),
++			created_at: Math.floor(Date.now() / 1000),
++			// `sig` is required by NostrEvent, but we use a cast for test mocking.
++			sig: '0'.repeat(128),
++		} as unknown as ShippingEvent
++		let fetchedReference: string | undefined
++		;(ndkActions as { getNDK: () => unknown }).getNDK = () => ({
++			fetchEvent: async (reference: string) => {
++				fetchedReference = reference
++				return shippingEvent
++			},
++		})
++
++		await expect(getShippingEvent(SHIPPING_REFERENCE)).resolves.toBe(shippingEvent)
++		expect(fetchedReference).toBe(naddrFromAddress(30406, SELLER_PUBKEY, SHIPPING_D_TAG))
++	})
++})
+diff --git a/src/queries/__tests__/shippingReferences.test.ts b/src/queries/__tests__/shippingReferences.test.ts
+new file mode 100644
+index 000000000..f68dba634
+--- /dev/null
++++ b/src/queries/__tests__/shippingReferences.test.ts
+@@ -0,0 +1,35 @@
++import { describe, expect, test } from 'bun:test'
++import { buildPublishedShippingOption } from '@/publish/shipping'
++import { parseShippingReference } from '@/queries/shipping'
++
++describe('published shipping option identity', () => {
++	test('derives canonical shippingRef from mutation result identity', () => {
++		expect(buildPublishedShippingOption('event-123', 'merchant-pubkey', 'shipping_abc')).toEqual({
++			eventId: 'event-123',
++			shippingDTag: 'shipping_abc',
++			shippingRef: '30406:merchant-pubkey:shipping_abc',
++		})
++	})
++})
++
++describe('shared shipping reference parsing', () => {
++	test('round-trips canonical coordinates with colons in the d-tag', () => {
++		const reference = `30406:${'a'.repeat(64)}:zone:europe:express`
++		const parsed = parseShippingReference(reference)
++		expect(parsed).toEqual({
++			kind: 30406,
++			pubkey: 'a'.repeat(64),
++			dTag: 'zone:europe:express',
++		})
++		expect(`30406:${parsed.pubkey}:${parsed.dTag}`).toBe(reference)
++	})
++
++	test('accepts a legacy direct event-id path only when it is a validated 64-hex identifier', () => {
++		expect(parseShippingReference('a'.repeat(64))).toEqual({
++			kind: undefined,
++			pubkey: undefined,
++			dTag: undefined,
++			id: 'a'.repeat(64),
++		})
++	})
++})
+diff --git a/src/queries/external.tsx b/src/queries/external.tsx
+index b080aea89..84ea788a6 100644
+--- a/src/queries/external.tsx
++++ b/src/queries/external.tsx
+@@ -3,8 +3,7 @@ import { currencyKeys } from './queryKeyFactory'
+ import { CURRENCIES, getCurrencyServerRelays } from '@/lib/constants'
+ import { configStore } from '@/lib/stores/config'
+ import { PlebianCurrencyClient } from '@/lib/ctxcn-client'
+-
+-const numSatsInBtc = 100000000
++import { MempoolService } from '@/lib/utils/mempool'
+ export type SupportedCurrency = (typeof CURRENCIES)[number]
+ 
+ export const CURRENCY_CACHE_CONFIG = {
+@@ -124,21 +123,25 @@ export const fetchCurrencyExchangeRate = async (currency: SupportedCurrency): Pr
+ export const convertCurrencyToSats = async (currency: string, amount: number): Promise<number | null> => {
+ 	if (!currency || !amount || amount <= 0.0001) return null
+ 
+-	if (['sats', 'sat'].includes(currency.toLowerCase())) {
++	const normalizedCurrency = currency.toUpperCase()
++	if (['SATS', 'SAT'].includes(normalizedCurrency)) {
+ 		return amount
+ 	}
+ 
+ 	try {
+-		const normalizedCurrency = currency.toUpperCase()
+-
+ 		if (CURRENCIES.includes(normalizedCurrency as SupportedCurrency)) {
+ 			const rate = await fetchCurrencyExchangeRate(normalizedCurrency as SupportedCurrency)
++			const sats = MempoolService.convertCurrencyToSats({
++				amount,
++				fromCurrency: normalizedCurrency,
++				exchangeRates: { [normalizedCurrency]: rate },
++			})
+ 
+-			return (amount / rate) * numSatsInBtc
+-		} else {
+-			console.warn(`Unsupported currency: ${currency}`)
+-			return null
++			return Number.isFinite(sats) ? sats : null
+ 		}
++
++		console.warn(`Unsupported currency: ${currency}`)
++		return null
+ 	} catch (error) {
+ 		console.error(`Currency conversion failed for ${currency}:`, error)
+ 		return null
+diff --git a/src/queries/shipping.tsx b/src/queries/shipping.tsx
+index eafe41135..10b1225b2 100644
+--- a/src/queries/shipping.tsx
++++ b/src/queries/shipping.tsx
+@@ -1,5 +1,6 @@
+ import { ORDER_MESSAGE_TYPE, ORDER_PROCESS_KIND, SHIPPING_STATUS } from '@/lib/schemas/order'
+ import { SHIPPING_KIND } from '@/lib/schemas/shippingOption'
++import { HEX_KEYS_REGEX } from '@/lib/constants'
+ import { ndkActions } from '@/lib/stores/ndk'
+ import { isValidHexKey } from '@/lib/utils'
+ import { naddrFromAddress } from '@/lib/nostr/naddr'
+@@ -113,6 +114,12 @@ export const fetchShippingOption = async (id: string) => {
+ 	if (!event) {
+ 		throw new Error('Shipping option not found')
+ 	}
++	if (event.kind !== SHIPPING_KIND) {
++		throw new Error('Shipping option kind mismatch')
++	}
++	if (event.id !== id) {
++		throw new Error('Shipping option identity mismatch')
++	}
+ 
+ 	return event
+ }
+@@ -133,6 +140,16 @@ export const fetchShippingOptionByCoordinates = async (pubkey: string, dTag: str
+ 	if (!event) {
+ 		throw new Error('Shipping option not found')
+ 	}
++	if (event.kind !== SHIPPING_KIND) {
++		throw new Error('Shipping option kind mismatch')
++	}
++	if (event.pubkey !== pubkey) {
++		throw new Error('Shipping option pubkey mismatch')
++	}
++	const eventDTag = event.tags.find((t) => t[0] === 'd')?.[1]
++	if (eventDTag !== dTag) {
++		throw new Error('Shipping option d-tag mismatch')
++	}
+ 
+ 	return event
+ }
+@@ -161,6 +178,8 @@ export const fetchShippingOptionsByPubkey = async (pubkey: string) => {
+ 
+ // --- REACT QUERY OPTIONS ---
+ 
++const SHIPPING_OPTION_DETAIL_STALE_TIME_MS = 300000
++
+ /**
+  * React Query options for fetching a single shipping option
+  * @param id Shipping option ID
+@@ -170,6 +189,7 @@ export const shippingOptionQueryOptions = (id: string) =>
+ 	queryOptions({
+ 		queryKey: shippingKeys.details(id),
+ 		queryFn: () => fetchShippingOption(id),
++		staleTime: SHIPPING_OPTION_DETAIL_STALE_TIME_MS,
+ 	})
+ 
+ /**
+@@ -182,6 +202,7 @@ export const shippingOptionByCoordinatesQueryOptions = (pubkey: string, dTag: st
+ 	queryOptions({
+ 		queryKey: shippingKeys.byCoordinates(pubkey, dTag),
+ 		queryFn: () => fetchShippingOptionByCoordinates(pubkey, dTag),
++		staleTime: SHIPPING_OPTION_DETAIL_STALE_TIME_MS,
+ 	})
+ 
+ /**
+@@ -202,7 +223,7 @@ export const shippingOptionsByPubkeyQueryOptions = (pubkey: string) =>
+ 		queryKey: shippingKeys.byPubkey(pubkey),
+ 		queryFn: () => fetchShippingOptionsByPubkey(pubkey),
+ 		enabled: isValidHexKey(pubkey),
+-		staleTime: 300000, // Added staleTime of 5 minutes (300,000 ms)
++		staleTime: SHIPPING_OPTION_DETAIL_STALE_TIME_MS,
+ 	})
+ 
+ // --- HELPER FUNCTIONS (DATA EXTRACTION) ---
+@@ -415,21 +436,39 @@ export const createShippingReference = (pubkey: string, id: string): string => {
+ 	return `${SHIPPING_KIND}:${pubkey}:${id}`
+ }
+ 
++export type ParsedShippingReference = {
++	kind?: number
++	pubkey?: string
++	dTag?: string
++	id?: string
++}
++
+ /**
+- * Parses a shipping reference to extract the event ID
+- * @param reference The shipping reference (either composite "30406:pubkey:id" or direct ID)
+- * @returns The event ID (d tag value)
++ * Parses a shipping reference using the shared addressable coordinate format.
++ * Supports: "30406:pubkey:d-tag" with a full non-empty remainder as d-tag,
++ * and a legacy direct event-id path only when the identifier is a validated 64-hex event ID.
+  */
+-export const parseShippingReference = (reference: string): string => {
+-	// If it's a composite reference (contains colons), extract the ID part
+-	if (reference.includes(':')) {
+-		const parts = reference.split(':')
+-		if (parts.length === 3 && parts[0] === SHIPPING_KIND.toString()) {
+-			return parts[2] // Return the ID part
++export const parseShippingReference = (reference: string): ParsedShippingReference => {
++	const trimmed = reference.trim()
++	if (!trimmed) return {}
++
++	if (trimmed.includes(':')) {
++		const [kindPart, pubkeyPart, ...dTagParts] = trimmed.split(':')
++		const dTag = dTagParts.join(':').trim()
++		if (kindPart === SHIPPING_KIND.toString() && HEX_KEYS_REGEX.test(pubkeyPart ?? '') && dTag.length > 0) {
++			return {
++				kind: SHIPPING_KIND,
++				pubkey: pubkeyPart,
++				dTag,
++			}
+ 		}
+ 	}
+-	// Otherwise, assume it's already a direct ID
+-	return reference
++
++	if (HEX_KEYS_REGEX.test(trimmed)) {
++		return { id: trimmed }
++	}
++
++	return {}
+ }
+ 
+ export type ShippingUpdateParams = {
+@@ -614,13 +653,25 @@ export const getShippingInfo = (event: NDKEvent) => {
+ }
+ 
+ /**
+- * Gets the event that created a shipping option based on its ID
+- * @param id The shipping option event ID
+- * @returns A promise that resolves to the NDKEvent or null if not found
++ * Gets a shipping option event from either an addressable shipping coordinate
++ * or a legacy event ID.
++ *
++ * Cart selections use the canonical `30406:<pubkey>:<d-tag>` coordinate, so
++ * they must be fetched by coordinates rather than treated as an event ID.
+  */
+ export const getShippingEvent = async (id: string) => {
+ 	try {
+-		return await fetchShippingOption(id)
++		const reference = parseShippingReference(id)
++
++		if (reference.pubkey && reference.dTag) {
++			return await fetchShippingOptionByCoordinates(reference.pubkey, reference.dTag)
++		}
++
++		if (reference.id) {
++			return await fetchShippingOption(reference.id)
++		}
++
++		return null
+ 	} catch (error) {
+ 		console.error(`Failed to fetch shipping event: ${id}`, error)
+ 		return null
