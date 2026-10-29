@@ -24,7 +24,7 @@ import { clearProductFormDraft, getProductFormDraft, saveProductFormDraft } from
 import { resolvePublishPrice } from '@/lib/utils/productPriceResolution'
 import { normalizeProductShippingSelections, type ProductShippingSelection } from '@/lib/utils/productShippingSelections'
 import { uiActions, uiStore } from '@/lib/stores/ui'
-import NDK, { type NDKSigner } from '@nostr-dev-kit/ndk'
+import { getUser } from '@/lib/nostr/io'
 import { QueryClient } from '@tanstack/react-query'
 import { Store } from '@tanstack/store'
 import type { z } from 'zod'
@@ -239,7 +239,7 @@ export const productFormActions = {
 			const dimensionsTag = getProductDimensions(event)
 			const shippingTags = getProductShippingOptions(event)
 
-			// First category from NDKEvent is considered "Main" category.
+			// First category from the listing event is considered "Main" category.
 			// The next 3 are the "sub-categories".
 			const mainCategoryFromTags = categories.at(0)?.at(1)
 			const subCategoriesFromTags = categories.slice(1, 4).map((tag, index) => ({
@@ -424,7 +424,7 @@ export const productFormActions = {
 		}
 	},
 
-	continuePublishing: async (signer: NDKSigner, ndk: NDK, queryClient?: QueryClient): Promise<boolean | string> => {
+	continuePublishing: async (queryClient?: QueryClient): Promise<boolean | string> => {
 		const state = productFormStore.state
 
 		// Resolve the price/currency pair to publish from the form's
@@ -465,10 +465,10 @@ export const productFormActions = {
 
 			if (state.editingProductId) {
 				// Update existing product using the d tag
-				result = await updateProduct(state.editingProductId, formData, signer, ndk)
+				result = await updateProduct(state.editingProductId, formData)
 			} else {
 				// Create new product
-				result = await publishProduct(formData, signer, ndk)
+				result = await publishProduct(formData)
 			}
 
 			// Clear the draft after successful publish
@@ -479,7 +479,7 @@ export const productFormActions = {
 			// Invalidate queries if queryClient is provided
 			if (queryClient) {
 				// Get current user pubkey for targeted invalidation
-				const user = await signer.user()
+				const user = await getUser()
 				const userPubkey = user?.pubkey
 
 				// Invalidate relevant queries
@@ -499,9 +499,9 @@ export const productFormActions = {
 		}
 	},
 
-	publishProduct: async (signer: NDKSigner, ndk: NDK, queryClient?: QueryClient): Promise<boolean | string> => {
+	publishProduct: async (queryClient?: QueryClient): Promise<boolean | string> => {
 		// V4V check is now handled in the UI layer, so we can directly publish
-		return productFormActions.continuePublishing(signer, ndk, queryClient)
+		return productFormActions.continuePublishing(queryClient)
 	},
 }
 
