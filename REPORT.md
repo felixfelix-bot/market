@@ -1,71 +1,81 @@
-# REPORT.md — PR #1138 "Auctions V1" delta review
+# REPORT.md — PR #1285 stale re-review / NO-OP
 
-**Task:** review PlebeianApp/market PR #1138 (Franchovy, DRAFT, base master).
-**Run:** 2026-10-28. Branch `preflight/pr1138-20261023`.
-**Dispatch freeze:** `~/.hermes/bot/.dispatch_frozen` did **not** exist on this host (`ls` → ENOENT). Noted only; the freeze was not lifted, modified, or worked around, and nothing was dispatched.
+**Task:** Review PlebeianApp/market PR #1285 at dispatched head `5ea90a06f94215e7d01c93670fba97018b81d9af` (hkarani, external, branch `security/1112-add-relay-bid-spam-dos-protection`).
+**Run:** 2026-10-28; workspace `/home/c03rad0r/repos/market`.
+**Outcome:** NO-OP. Both the dispatched SHA and the eventual merged head already have reviews from this lane. No new review text was created or published.
 
----
+## 1. Live PR state, re-fetched
 
-## 1. Head verification — IT MOVED, reviewed the new head
+- URL: https://github.com/PlebeianApp/market/pull/1285
+- State: **MERGED**, not open for a new-head re-review.
+- Base: `auctions` (the dispatch's `master` label is stale).
+- Merged at: `2026-09-21T21:53:49Z`.
+- Merge commit: `0a48b028ee1c7830813617d2b708094d2de2b010`.
+- Final head: `f100daad527cc1ef5d6021de4a3533f87697281e`, not the dispatched `5ea90a06...`.
+- Final diff: 17 files. The required `gh pr diff`, PR metadata, inline-comment and issue-comment fetches were performed; the thread currently has 11 inline comments and 11 issue comments.
 
-| | |
-|---|---|
-| Scheduled head | `50199dce5a11c1d33d42bfe8bdda55447e6ab5d7` |
-| **Head at review time (verbatim)** | **`6be7496cc2089db2e2da04bb083312ae6d43a79d`** |
-| Moved? | **YES — 312 commits** (`git rev-list --count 50199dce..6be7496cc` = 312) |
-| Base | `master`, `base.sha = c8c06fd74dd3d259dfc43bf79f7da2c3590eb664` |
-| State | `open`, `draft: true`, `mergeable: false`, `mergeable_state: dirty`, 133 commits behind `master` (`d4757b40`, 2026-10-17) |
+## 2. Exact coverage already exists at both relevant SHAs
 
-This head is not new to anyone who read the preflight already in this worktree: `PREFLIGHT-1138.md` + `MANIFEST.md` (commits `e872ce8a`, `b3fceb18`, `c18ea56a`) had independently established `6be7496cc` as the live tip and produced the 387-file manifest. That work was reused rather than redone; every fact it supplied was re-derived here before being relied on (see §3).
+### Dispatched pin
 
-## 2. Review inventory — a review was owed, and it is now posted
+GitHub review **5231741100** by `felixfelix-bot` is a `COMMENTED` review whose `commit_id` is exactly `5ea90a06f94215e7d01c93670fba97018b81d9af`, submitted `2026-09-17T05:53:52Z`.
 
-Before this run: `gh api …/pulls/1138/reviews` filtered on `commit_id == 6be7496cc…` → **0**. The nearest posted review (5328118447, 2026-09-26) covered `eacc4256`, which is 6 commits behind the tip.
+URL: https://github.com/PlebeianApp/market/pull/1285#pullrequestreview-5231741100
 
-**Posted:** review **5690837398**, `state: COMMENTED`, `commit_id: 6be7496cc2089db2e2da04bb083312ae6d43a79d`, body length 11863 chars (byte-equal to `docs/pr1138-review/review-body.md`).
-URL: https://github.com/PlebeianApp/market/pull/1138#pullrequestreview-5690837398
+Its body explicitly scopes the review to `4c665564...5ea90a06`, which is the delta this dispatch requested. It already contains the replay-lifecycle finding, cap/fan-out findings, CI/prettier observations, and verification ledger. Therefore this run is not an uncovered new-head review: the requested head was already reviewed by the same identity.
 
-Used `--comment`, not `--approve`: the PR is a draft, conflicting with master, has no e2e evidence at this head, and carries live unresolved RISKs. Nothing was approved.
+### Merged head
 
-## 3. Diff scope — the PR's own delta, verified against the API
+GitHub review **5328576103** by `felixfelix-bot` is a `COMMENTED` review whose `commit_id` is exactly `f100daad527cc1ef5d6021de4a3533f87697281e`, submitted `2026-09-27T02:35:44Z`.
 
-`c8c06fd7..6be7496cc` = `git diff --shortstat` **387 files changed, 79922 insertions(+), 1579 deletions(-)** — an exact match to the API's `changed_files`/`additions`/`deletions`. So the range *is* the PR's own delta, not a merge-base artifact.
+URL: https://github.com/PlebeianApp/market/pull/1285#pullrequestreview-5328576103
 
-Within it, the genuinely unreviewed window is `eacc4256..6be7496cc`: **6 commits, 10 files, +166 / −27** (re-measured: `git rev-list --count` = 6, `git diff --shortstat` = 10 files / 166 / 27). That window is what the review reads line by line.
+The merged tree and the final head carry the same `src/server/auction-validator/subscriber.ts` blob: `2977fa62cea12fb44ec48dd74c8b5c4c0346d58c`.
 
-The 10 files: `useNut7Polling.ts` + its test, `piiSentinelFixture.ts` (new), six privacy suites refactored onto it, and the seller-dashboard route. Commit lineage: `34c333ef` → `6ee42e60` → `a64ec4fe` → `a305ecda` → `95eeefca` → `6be7496cc` (a merge of `eacc4256` and `95eeefca`; `git diff 95eeefca..6be7496cc` is empty, so the merge introduced nothing new).
+`git merge-base --is-ancestor 5ea90a06 f100daad` returns false: the branch was rewritten after the pinned review. This does not create a coverage gap, because each SHA has its own lane review. The later artifact explicitly describes the pin as pre-rebase and the merged-head review as the first review of the file state that actually merged.
 
-Also noted: `#1138` is the **base** of the stack, not a stacked child (`base.ref=master`, head repo is `PlebeianApp/market`), so no parent's files leak into this diff — the inverse holds, our merged #1280 content is *inside* it.
+## 3. Prior feedback and dedup
 
-## 4. Verification performed (real execution, not inspection only)
+The full review/comment thread was fetched before deciding. The two `PREV_ISSUES` in the dispatch were not re-raised. No new finding was drafted, so there is nothing to dedup or publish.
 
-- **Unit baseline:** detached worktree at `6be7496cc`, symlinked `node_modules`, ran the 7 touched suites → **131 pass / 0 fail / 726 expect() calls**.
-- **Mutation A — revert the dashboard fix** (`useNut7Polling(parsedBids, …)` → raw `bids`): suite **stayed green (131/0)**. Recorded honestly: the seller-dashboard call-site fix is **unpinned by any test**. The only e2e touching that route (`e2e/tests/auction-invalid-event-gate.spec.ts:266`) asserts a malformed-auction notice, not NUT-7 evidence.
-- **Mutation B — delete the `proofYs` guard** in `useNut7Polling.ts:27-29`: **2 of 3 tests fail** (`TypeError: undefined is not an object (evaluating 'mintUrl.trim')`). The guard's test really bites.
-- **Probe — the guard's blind spot:** a projection with `proofYs` but no `mint` throws the same `TypeError` at `useNut7Polling.ts:30` (`probe_nut7.test.ts`, run at the head, then deleted). This is the NIT in the posted review.
-- **CI at head:** 8 check-runs — 7 success (Build, prettier, e2e-grep, instance-literals, footprint, auctions-surface, Deploy to AuctionsDev), **`e2e-full` skipped**. No e2e evidence at this SHA.
-- **Prior findings re-verified against the code, not relayed:**
-  - 4992989990 BLOCK 1 (fail-open quorum) — **FIXED**: `auctions.tsx:1362` and `:1364` throw on null-fetch / parse-fail.
-  - 4992989990 RISK 2 + RISK 3 — **LIVE**: `auctions.tsx:1373-1381` counts raw relay verdicts with no per-validator latest dedup and no eligibility screen (contrast `bidValidation.ts:386-394`, `:398-412`); `publisher.ts:95-102` republishes only the arriving bid, so the demoted winner's `won_pending_settlement` is not retracted.
-  - 5328118447 RISK 1 — **LIVE**: `git grep -ic dleq src/server/auction-validator/` → zero matches; `pickWinningBid` (`lifecycle.ts:459`) sorts by `bid.amount` over `valid_bid_placed`.
-  - 5328118447 RISK 2 — **LIVE**: `isWithinRelayTagIndexBudget` (`nip53.ts:56`) is referenced only from `nip53.test.ts`; `buildLiveActivityTags` emits `['a', params.auctionCoord]` at `:126` unasserted.
-  - 4987152393 BLOCKs 1–2 (restart flips verdicts to `bid_invalid`): `index.ts:94` awaits `recoverObservedAt` before `subscriber.start()` at `:111`, and `subscriber.ts:415` prefers `seedObservedAt`. Recorded as addressed by the code as written.
-- **New finding raised by this review:** the *public* detail route (`src/routes/auctions.$auctionId.tsx:479-485`) calls `computeValidatedBids` **without** `nut7States`, while `AuctionSettlement.tsx:207` polls with them — the same defect class `a305ecda` just fixed on the seller surface, mirrored on the buyer surface.
-- **Small concrete finding:** `ctxcn.config.json.bak` (9 lines) is committed by `3239b2bb` in this PR's range and is not in master.
-- **Inline threads:** `gh api …/pulls/1138/comments` → `[]` and GraphQL `reviewThreads.totalCount` = 0 (per the preflight, re-confirmed by the empty comments endpoint). Nothing to reply to in-thread; the review body answers the three unanswered prior reviews by name instead.
+The earlier at-pin review 5231741100 already covers the `4c665564..5ea90a06` subscriber delta. The later merged-head review 5328576103 records closure checks for earlier findings and one separately tracked non-blocking concurrency risk. Repeating either would be duplicate review noise on a merged PR.
 
-## 5. Verdict posted
+## 4. Existing durable audit and manager state
 
-No new BLOCKs in the delta — the four substantive changes in it are correct and (for the `proofYs` guard) genuinely test-covered. Two RISKs from prior reviews remain live and unfixed, plus the tag-index budget and the public-page NUT-7 gap, none introduced by this delta. `COMMENTED`, explicitly not an approval and not a merge authorisation.
+Durable prior artifact:
+`/home/c03rad0r/reports/reviews/plebeian-pr-reviews-t_6488d793-kimi.md`
 
-## 6. Files touched
+It records the merged-head review's actual verification, publication read-back, and three-round opposite-family Gate 2.5 history: round 1 REJECTED, round 2 REJECTED, round 3 APPROVED, followed by the disclosed cosmetic calibration. This run does not claim to have rerun those tests or audits.
 
-- `docs/pr1138-review/review-body.md` — the posted review body (byte-identical to what GitHub holds, 11863 chars).
-- `REPORT.md` — this file. NOTE: this path was a **tracked** file holding the 2026-10-12 PR #1280 round-4 report; `PREFLIGHT-1138.md` deliberately wrote elsewhere to avoid that collision. The prior content is intact at `git show 380347a1:REPORT.md` and was not modified in history — only the worktree copy was replaced, per the task's "full report at `<worktree>/REPORT.md`" contract.
-- `PROGRESS.md` — crash-recovery log.
+Manager state at `/home/c03rad0r/.hermes/profiles/manager/state/plebeian-pr-review-state.json` already has:
 
-`MANIFEST.md` and `PREFLIGHT-1138.md` were left as the prior worker wrote them; no review-owed claim in them was contradicted by this run.
+- `prs.1285.last_reviewed_sha = f100daad527cc1ef5d6021de4a3533f87697281e`
+- `prs.1285.disposition = reviewed-merged-approved-risk`
+- `prs.1285.review_card = t_6488d793`
+- `prs.1285.review_url = https://github.com/PlebeianApp/market/pull/1285#pullrequestreview-5328576103`
+
+The loop-closure record is present and correct, so no state-file edit was made.
+
+## 5. Workflow disposition
+
+- New diff review: **not owed**; the requested delta and final merged state are already covered.
+- Draft review comment: **none**, because there are no new findings and no new publication is appropriate.
+- Gate 2.5: **not dispatched**; there is no new draft to audit. No fresh cross-family verdict is claimed. The historical audit described above belongs to the earlier run, not this one.
+- Summary PR comment: **not posted** (would duplicate existing coverage on a merged PR).
+- Formal approval: **not submitted** (merged PR; no new verdict owed).
+- Contribution PR: **not created**. The merged-head artifact says the existing follow-up card `t_6cff5b70` already owns the recorded risk's fix gate.
+- Merge/push to the PR or deployment: **not performed**.
+
+## 6. Repository deliverables
+
+- `docs/pr1285-noop/determination.md` — concise evidence and decision.
+- `PROGRESS.md` — finding/status/files checklist for this no-op.
+- `REPORT.md` — this full report.
+- `docs/pr1285-noop/previous-pr1138/REPORT.original.txt` — byte-for-byte preservation of the tracked `HEAD:REPORT.md`, which this task-required report replaces in the worktree. The `.txt` suffix keeps the historical snapshot out of the repo-wide Markdown formatter.
+- `docs/pr1285-noop/previous-pr1138/PROGRESS.original.txt` — byte-for-byte preservation of the preceding PR #1138 progress file, likewise excluded from formatting to preserve its bytes.
+
+No source or test files changed, so no behavior tests were run. Documentation checks are recorded in `PROGRESS.md`/the final commit evidence. Pre-existing unrelated modifications to `MANIFEST.md`, `artifacts/pr1306_dedup/*`, `src/lib/auction/reserveGuard.ts`, and `e2e/baseline-results/` were left untouched.
 
 ## 7. Remaining steps
 
-None. The review is posted at the live tip and the reviewed SHA is recorded (`6be7496cc2089db2e2da04bb083312ae6d43a79d`) in the review's own footer and in §1 above, so the next sweep can tell coverage is at tip. Two follow-ups belong to the author, not to this card: rebase onto `master` and un-draft, and run `e2e-full` at the tagged head.
+None for the PR review itself. The only remaining worker bookkeeping is to validate, commit, and push this no-op documentation milestone without including unrelated worktree changes.

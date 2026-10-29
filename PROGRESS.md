@@ -1,25 +1,29 @@
-# PROGRESS.md — PR #1138 review (re-run at moved head)
+# PROGRESS.md — PR #1285 no-op review verification
 
 ## Finding
-Head moved since scheduling: `50199dce` -> **`6be7496cc2089db2e2da04bb083312ae6d43a79d`** (312 commits).
-Preflight already in worktree (`PREFLIGHT-1138.md`, `MANIFEST.md`) covered this head; reused, re-derived.
-Review surface = `eacc4256..6be7496cc` (6 commits, 10 files, +166/-27). Own delta 387/+/79922/-1579 == API.
+
+The dispatch is stale. It pins `5ea90a06f94215e7d01c93670fba97018b81d9af`, but felixfelix-bot already reviewed that exact SHA in review 5231741100. PR #1285 later merged at `f100daad527cc1ef5d6021de4a3533f87697281e`, and the same lane published retrospective review 5328576103 at that exact merged head. No new review, approval, or contribution PR is owed.
 
 ## Status
-- [x] head re-verified via gh api -> 6be7496cc, draft, mergeable=dirty, 133 behind master
-- [x] review inventory -> 0 reviews at 6be7496cc before this run; 0 inline comments (no thread to answer)
-- [x] own-delta scale check == API byte-for-byte
-- [x] unit baseline at head: 131 pass / 0 fail / 726 expects (7 touched suites, detached worktree)
-- [x] mutation A (revert dashboard call site) -> STILL GREEN -> call-site fix unpinned by tests (reported)
-- [x] mutation B (delete proofYs guard) -> 2/3 fail -> guard test bites
-- [x] probe: guard misses `mint` -> TypeError at useNut7Polling.ts:30 -> NIT raised
-- [x] re-verified prior findings at head: 4992989990 BLOCK1 FIXED; RISK2+RISK3 LIVE; 5328118447 RISK1+RISK2 LIVE
-- [x] drafted review body, verified every cited file:line against the head
-- [x] POSTED review 5690837398 @ 6be7496cc, state=COMMENTED, body_len=11863 (matches file)
-- [x] worktree /home/c03rad0r/worktrees/pr1138-head removed
-- [x] REPORT.md written; PREFLIGHT/MANIFEST untouched
+
+- [x] Re-fetched PR metadata, changed-file list, inline comments, issue comments, and reviews.
+- [x] Verified live state: MERGED into `auctions` at 2026-09-21T21:53:49Z, merge commit `0a48b028ee1c7830813617d2b708094d2de2b010`.
+- [x] Verified review 5231741100 has `commit_id == 5ea90a06...` (the dispatch pin).
+- [x] Verified review 5328576103 has `commit_id == f100daad...` (the merged head).
+- [x] Verified the manager state already records `prs.1285.last_reviewed_sha == f100daad...` and the review URL.
+- [x] Read the durable artifact for the earlier merged-head review, including its completed three-round cross-family audit.
+- [x] Confirmed the merged tree carries the same subscriber blob as the merged head (`2977fa62cea12fb44ec48dd74c8b5c4c0346d58c`).
+- [x] No new findings raised; no GitHub PR writes performed.
+- [x] Gate 2.5 not dispatched: there is no new draft or publication to audit, and no new cross-family verdict is claimed.
+- [x] Full report written to `REPORT.md`; previous PR #1138 reports preserved byte-for-byte as non-Markdown snapshots under `docs/pr1285-noop/previous-pr1138/`.
+- [x] `git diff --check` passes; `bun run format:check` fails only on pre-existing `docs/pr1138-review/review-body.md`; a task-scoped Prettier check passes.
 
 ## Files touched
-- docs/pr1138-review/review-body.md  (posted body, byte-identical to GitHub's copy)
-- REPORT.md   (replaced a tracked PR#1280 deliverable — prior content preserved at git 380347a1:REPORT.md)
-- PROGRESS.md
+
+- `REPORT.md`
+- `PROGRESS.md`
+- `docs/pr1285-noop/determination.md`
+- `docs/pr1285-noop/previous-pr1138/REPORT.original.txt`
+- `docs/pr1285-noop/previous-pr1138/PROGRESS.original.txt`
+
+All other pre-existing worktree changes are out of scope and left untouched.
