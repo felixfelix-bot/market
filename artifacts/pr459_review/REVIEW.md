@@ -4,7 +4,7 @@ Two correctness bugs block this. One of them the head commit claims to fix and d
 
 ## [BLOCK] `src/routes/products.$productId.tsx:390` — hook called after conditional early returns
 
-`useDocumentMeta(...)` at :390 is called *after* three conditional `return`s (:258 loading spinner, :267 error, :289 not-found). Every hook above it runs on every render; this one runs only when `product` is truthy. Direct-link a product page — the exact scenario this feature targets — and you get:
+`useDocumentMeta(...)` at :390 is called _after_ three conditional `return`s (:258 loading spinner, :267 error, :289 not-found). Every hook above it runs on every render; this one runs only when `product` is truthy. Direct-link a product page — the exact scenario this feature targets — and you get:
 
 - render 1: no product yet → early return at :258 → 18 hooks consumed (useCart :153, useStore :154/:156, useNavigate :155, useQueryClient :157, useEffect :160, useQuery :164/:200, useBreakpoint :206, useState :209-:212, useConfigQuery :215, useEntityPermissions :219, useBlacklistSettings :222, useFeaturedProducts :223, useHeroBackground :255)
 - render 2: product resolves → early return skipped → `useDocumentMeta` is the 19th hook

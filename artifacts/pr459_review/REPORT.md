@@ -19,7 +19,7 @@ Gate state: `~/.hermes/profiles/manager/state/plebeian-pr-review-state.json` now
 - **[RISK]** — client-side injection is invisible to the JS-less crawlers the PR title targets (Twitter/Facebook/Slack/Discord/Telegram/iMessage); only Googlebot benefits. Author's PR note acknowledges SSR is required.
 - **[INFO]** — superseded by MERGED #1232 (same feature title; maintainer maxime-tt: "Closing this in favor of #1232"); branch is 826 commits behind master with 1 conflict in the same file. Recommended close-as-superseded, not rebase.
 - **[INFO]** — corrected prior review 4745940450's "duplicate meta description" claim: no description meta exists in src/index.html at head and no other injector.
-- **[NIT] :99,108-109** — `og:type "product"` isn't a valid OG type; product:price:* is a defunct FB commerce namespace.
+- **[NIT] :99,108-109** — `og:type "product"` isn't a valid OG type; product:price:\* is a defunct FB commerce namespace.
 - **[NIT] :387** — `description.substring(0,157)` truncates UTF-16 code units; emoji-bearing relay content can be split into a lone surrogate half. Superseder's `truncateForMeta` is code-point-safe for this reason.
 
 ## Dedup duty (performed before posting)
@@ -28,7 +28,7 @@ Live PR had: 1 copilot COMMENTED review (old head 6d500c018f), 5 BenGWeeks self-
 
 ## Gate 2.5 (cold audit before posting)
 
-- Named gate-2 profile `worker-reviewer-ds` is ABSENT on this node (~/.hermes/profiles holds only reviewer-glm/kimi/qwen + manager/worker-*). The audit was discharged as a fresh-context independent subagent (delegate_task) — same-family; NOT cited as cross-family.
+- Named gate-2 profile `worker-reviewer-ds` is ABSENT on this node (~/.hermes/profiles holds only reviewer-glm/kimi/qwen + manager/worker-\*). The audit was discharged as a fresh-context independent subagent (delegate_task) — same-family; NOT cited as cross-family.
 - The subagent ran ~18 verification commands over ~9 minutes, confirming: hook-order defect (:390 after :258/:267/:289), dead price guard (:231/:396 vs :117), og:image claim, #1232 MERGED, 826-behind count, master's absolutizeImageUrl. Its final LLM message died on HTTP 503 (glm-5.3 capacity exhausted, exit_reason=max_iterations), so the verdict was reconstructed from its verified transcript + dispatcher-completed steps 7-10 (index.html check, missed-defect sweep, tone check, citation re-verification).
 - Audit verdict: **CONFIRMED_W_AMENDMENTS**. Amendments applied before publishing: (1) hook count corrected 14/15 → 18/19 with per-hook line cites; (2) stale "590 commits behind" removed (826 is current); (3) [NIT] surrogate-pair truncation added (:387); (4) hook-body line citations corrected (:117, :108-109, :99); (5) "PR text says" → the untrusted-relay-data constraint is from repo AGENTS.md, not the PR. The audit caught my hook-count error and citation drift — the two things it existed to catch.
 - Audit artifact: artifacts/pr459_review/audit/audit-verdict.md (also BRIEF.md with the full method).
@@ -45,6 +45,7 @@ Live PR had: 1 copilot COMMENTED review (old head 6d500c018f), 5 BenGWeeks self-
 ## Commits (this lane)
 
 All on branch `review/pr459-20261029` pushed to `fork` (felixfelix-bot/market):
+
 - `0a360d00` verification + draft review at head db60d4d7
 - `936bee88` line-citation corrections in draft
 - `b02a495f` gate 2.5 cold audit CONFIRMED_W_AMENDMENTS + audit artifacts + gate-state updater
