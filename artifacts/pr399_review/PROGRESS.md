@@ -12,10 +12,10 @@ Task: Review PlebeianApp/market PR #399 `fix: correctly display sats price when 
 6. INFO: product.ts:391 string-truthiness fallback is the enabler; master's resolvePublishPrice fails closed instead. [VERIFIED]
 7. INFO: recommend close-not-rebase — rebasing would regress the two hardening commits the merged takeover added on top. [VERIFIED — maintainer direction exists]
 8. Verdict: CHANGES REQUESTED (1 BLOCK / 1 RISK / 2 INFO). [DRAFTED — artifacts/pr399_review/draft.md]
-9. GATE 2.5: worker-reviewer-ds profile absent on node (only glm/kimi/qwen) -> discharged as independent fresh-context delegate cold audit of the draft (same-family, disclosed). [IN FLIGHT — deleg_aaffcf9f, verdict at /tmp/pr399_audit/audit-verdict.md]
-10. Publish: gh pr review 399 --repo PlebeianApp/market --request-changes --body-file (cites head SHA). [PENDING]
-11. Gate state: add prs["399"] with last_reviewed_sha=f0bf563f80fa... to ~/.hermes/profiles/manager/state/plebeian-pr-review-state.json (backup first). [PENDING]
-12. REPORT.md + commit/push lane branch to fork (felixfelix-bot/market). [PENDING]
+9. GATE 2.5: worker-reviewer-ds profile absent on node (only glm/kimi/qwen) -> discharged as independent fresh-context delegate cold audit of the draft (same-family, disclosed). [DONE — deleg_aaffcf9f; AUDIT_VERDICT: APPROVE_DRAFT_W_AMENDMENTS, all 10 claims CONFIRMED; amendments applied before posting; verbatim copy at artifacts/pr399_review/audit-verdict.md]
+10. Publish: gh pr review 399 --repo PlebeianApp/market --request-changes --body-file (cites head SHA). [DONE — review id 5696417699, CHANGES_REQUESTED at commit f0bf563f80fa, 2026-10-29T10:43:36Z]
+11. Gate state: add prs["399"] with last_reviewed_sha=f0bf563f80fa... to ~/.hermes/profiles/manager/state/plebeian-pr-review-state.json (backup first). [DONE — backup .bak-pr399-20261029; review_id 5696417699; verified by re-read]
+12. REPORT.md + commit/push lane branch to fork (felixfelix-bot/market). [DONE]
 
 ## Files touched
 
