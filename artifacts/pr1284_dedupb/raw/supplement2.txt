@@ -1,0 +1,35 @@
+$ gh pr list --repo PlebeianApp/market --state all --limit 200 --json number,headRefName,state --jq '.[] | select(.headRefName|test("contrib"))'
+{"headRefName":"core/validation-contribution","number":1418,"state":"MERGED"}
+--- exit: 0 ---
+
+$ gh pr list --repo PlebeianApp/market --state all --limit 200 --json number,headRefName --jq '[.[] | select(.headRefName|test("contrib-1284"))] | length'
+0
+--- exit: 0 ---
+
+$ gh pr list --repo felixfelix-bot/market --state all --limit 100 --json number,headRefName,state --jq '.[] | select(.headRefName|test("contrib-1284"))'
+--- exit: 0 ---
+
+$ gh pr list --repo felixfelix-bot/market --state all --limit 100 --json number --jq 'length'
+100
+--- exit: 0 ---
+
+$ gh api "repos/felixfelix-bot/market/branches?per_page=100" --paginate --jq '.[].name' | grep -i -E "contrib-1284|1284"
+fix/1284-selfhost-config-findings
+review/pr1284-dedupa-20261029
+review/pr1284-dup-20261029
+review/pr1284-noop-t3ead2add-20261029
+worker-heavy/1284-publish-review
+--- exit: 0 ---
+
+$ gh pr list --repo hkarani/market --state all --limit 200 --json number,headRefName --jq '[.[] | select(.headRefName|test("contrib"))] | length'
+0
+--- exit: 0 ---
+
+$ gh search prs --repo PlebeianApp/market "contrib-1284" --limit 20 --json number,title,state,url
+[]
+--- exit: 0 ---
+
+$ gh search prs --owner hkarani "contrib-1284" --limit 20 --json number,title,state,url,repository
+[]
+--- exit: 0 ---
+

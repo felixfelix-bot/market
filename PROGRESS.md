@@ -39,3 +39,18 @@ finding -> status -> files touched
 - Verification gates: 11/11 path tokens, 10/10 `:line` refs, 24/24 quotes character-exact, ids monotonic -> PASS -> artifacts/pr1286_citations/CITATION_INVENTORY.md
 - STEP 4/5: JSON written (24 rows); 11 uncited claims listed separately -> done -> /tmp/pr1286_citations.json
 - Zero GitHub writes: no `gh` command of any kind was invoked -> done -> none
+
+## 2026-10-29 — PR #1284 DEDUP B (fork branches + PR comments), card t_d2852d00
+
+- CMD1 `gh pr list --repo hkarani/market --head "felixfelix-bot/contrib-1284-*"` -> `[]` exit 0 (`--head` is exact-match, not a glob — so 1a/1b carry the negative) -> artifacts/pr1284_dedupb/raw/commands.txt
+- CMD1a branch grep on 393 hkarani/market branches -> no match exit 1; widened `1284|contrib` grep also no match -> same file
+- CMD1b hkarani PR list `| grep -i 1284` -> no match exit 1; fork has 0 PRs in any state -> same file
+- CMD2/CMD2a comment grep -> 2 lines exit 0 (`Contribution PR opened against this branch: **#1313**` + `Contribution PR: **none needed**`), both dumps byte-identical -> same file
+- CMD3 PlebeianApp 200-PR window `| grep -i contrib-1284` -> no match exit 1; structural jq form -> 0; only upstream contrib head is #1418 `core/validation-contribution` (unrelated) -> raw/supplement2.txt
+- HIT #1313: MERGED 2026-09-14T06:14:51Z, head `fix/1284-selfhost-config-findings`, head repo felixfelix-bot/market (NOT hkarani), base = #1284's own head `feat/924-auction-self-hosted-context`; search total_count=1 -> raw/supplement.txt
+- #1284 itself MERGED 2026-09-25T12:32:41Z at `22a1cebd`; 6 comments, all felixfelix-bot; no new comment since 2026-09-25 -> done
+- Bot fork has only `contrib-1286-sig` (no contrib-1284-*); `gh search prs "contrib-1284"` -> `[]` in both repos -> done
+- Posted `DEDUP B` comment to t_d2852d00: 11721 submitted / 11720 stored, verdict "prior contribution PR exists: yes" -> done -> artifacts/pr1284_dedupb/dedup_b_comment.md
+- Pre-existing `[2026-09-25 23:18] worker-heavy` DEDUP B comment (9511) disclosed + re-derived live; no claim falsified; window rolled #1160–1396 -> #1182–1425 -> done
+- Zero GitHub writes: no PR/branch/issue/comment created, edited, closed, or merged; no push -> done -> none
+- Root REPORT.md left intact (owned by card t_6a82b4dc / PR #1286 worker, commit 226ecc13) — authoritative copy at artifacts/pr1284_dedupb/REPORT.md -> done

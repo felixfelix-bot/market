@@ -1,0 +1,67 @@
+Reviewing PR #1284 at `f764b89ff` ("feat(config): add self-hosting instance configuration foundation"). The instance-config foundation itself is well-built (zod schemas, env/Kind-31990 layering, defensive copies, real tests). However, the PR is an 18,602-line rollup touching ~150 files across at least 6 distinct feature domains (instance config, ADR-0004 auctions, deploy workflow hardening, e2e infra + local Cashu mint, NIP-17 order reads, V4V refactor, theme migration, media helpers). Findings:
+
+1. [RISK] **PR scope/title mismatch** — The title underrepresents this as config-only, but the diff rewrites the auction settlement validator, deletes the NUT-7 poller, adds a 574-line relay deploy script, adds ADR-0004 (459 lines), and refactors NIP-17 reads. If a single regression lands, none of this is bisectable or revertable in isolation. Recommend splitting: instance-config, ADR-0004 auctions, deploy/e2e infra, NIP-17, V4V, theme, media.
+
+2. [RISK] **`fetchAppSettings` now throws on failure** — `src/lib/appSettings.ts`: previously returned `null` on relay errors, timeouts, parse errors; now `throw`s. The startup caller (`initializeAppSettings`) catches and calls `process.exit(1)`. A transient relay blip at boot now hard-kills the server instead of booting degraded. If that is intentional, please document it explicitly (and consider whether the runtime `setAppSettings()` path can be re-triggered after a late relay reconnect). If unintentional, restore the `return null` fallthrough so a flaky relay does not abort process start.
+
+3. [NIT] **`resolveCvmServerPubkey` relocated `lib/cvm-identity.ts` → `server/runtime.ts`** — `scripts/fetch-btc-price.ts` and `scripts/seed.ts` now import from the server runtime, which evaluates other env reads (`APP_RELAY_URL`, `APP_PRIVATE_KEY`, `PORT`, etc.) at module load time. Standalone scripts must now satisfy the full server environment to resolve a single pubkey. Consider keeping a small pure helper in `lib/` and having `server/runtime.ts` re-export it, so non-server callers do not inherit the runtime singleton's module-init requirements.
+
+4. [NIT] **`deploy-simple/relay/install-staging-relay.sh`** — the name reads as "install" but the preflight (`preflight()`) requires the service to be already active, enabled, running, `NRestarts == 0`, with binary+unit+env owned root:root with strict modes. It is a *re-deploy* / *swap-binary* script, not an installer. A fresh host or a host where the relay ever auto-restarted will fail preflight. Consider renaming (e.g. `redeploy-staging-relay.sh`) or documenting the "must already be installed and healthy" precondition at the top.
+
+5. [NIT] **`.env.example` instance block** — `INSTANCE_ALLOW_REGISTER=true` is given as the example (commented out, so inert), but the in-code default in `DEFAULT_INSTANCE_CONFIG` is already `allowRegister: true`. A fresh self-hosted instance with no `INSTANCE_*` env and no Kind-31990 settings will report `allowRegister: true` from `/api/config` even though the operator has not chosen. Consider defaulting to `false` for the open-source default (matches the self-hosting direction; operators opt IN to public registration, not opt out).
+
+Happy to help split the diff or tighten any of the above.
+Thanks @hkarani — solid precedence chain and good regression coverage.
+
+Reviewed tip `5963fc77bd1c16b6b113f4d6f3c6ad42136725b1`. New findings:
+
+1. [RISK] `src/lib/stores/ndk.ts:417` (and `:448`) — zap monitoring silently loses `ZAP_RELAYS`. `/api/config` now always returns `publicRelays` (defaults to `DEFAULT_PUBLIC_RELAYS` for existing deployments), and `resolveZapRelays` only falls back to `ZAP_RELAYS` when the arg is `undefined` — which never happens now. `wss://relay.coinos.io`, `wss://nwc.primal.net`, `wss://relay.primal.net` drop out of the zap NDK on plebeian.market prod; zap receipts published only to those relays go undetected → invoice status stuck pending. Union `ZAP_RELAYS` in, or pass the override only when explicitly configured (the `resolveZapRelays` docstring still claims it always unions `ZAP_RELAYS`).
+
+2. [RISK] `src/routes/_dashboard-layout/dashboard/app-settings/app-miscelleneous.tsx:138` — Handler ID is editable in the owner UI, but discovery reads only `process.env.INSTANCE_HANDLER_ID` at boot (`src/server/startup.ts:26`). Publish under a new handlerId → event leaves the `#d` query chain → on restart settings silently revert to the legacy event, or with no legacy event `needsSetup` flips true and users land in `/setup`. Derive the chain from the resolved config or warn that env must change in lockstep.
+
+3. [NIT] `src/lib/instance-config.ts:101` — `optionalBoolean` compares the raw string, so `INSTANCE_ALLOW_REGISTER="true "` (trailing space / CRLF) throws in `setAppSettings` → `process.exit(1)` at boot. Trim before comparing.
+
+Happy to pair on fixes.
+
+Contribution PR opened against this branch: **#1313** — `fix/1284-selfhost-config-findings`.
+
+Findings 1-3 from [our review](https://github.com/PlebeianApp/market/pull/1284#issuecomment-5645180703) are implemented with RED-first tests: the zap-relay union at the store level, a single `resolveHandlerIdChain` used by both the settings write and boot-time discovery, and a trimmed `optionalBoolean`.
+
+Evidence: `bun run test:unit` 1127 pass / 0 fail (baseline at your head: 1119/0), `bun run format:check` clean. Triggered by exactly the kind of stall you flagged — our review sat as a comment with nobody acting on it.
+`61f6d3070b2523b2e9f8074346741c01a2efda88` — cold re-review (round 3) posted: https://github.com/PlebeianApp/market/pull/1284#pullrequestreview-5219592081
+
+- **Delta scoped cold:** `61f6d307` is a merge of `5963fc77` (our 2026-09-12 anchor) with `b2eb0c46` (tip of our own #1313), and `git diff --stat b2eb0c46..61f6d307` is empty — the delta is the #1313 patch adopted verbatim, **zero author-written lines**. The ~29 other PR files are byte-identical since `5963fc77` and were deliberately not re-reviewed.
+- **Prior findings 1–3 verified CLOSED at the head** (`relay-policy.ts:145` unconditional `ZAP_RELAYS` union; `startup.ts:39` + `app-miscelleneous.tsx:129,144` + read-only field closing the publish/discovery d-tag divergence; `instance-config.ts:100-106` boolean trim), with `/api/config` → `config.handlerId` reachability checked end-to-end rather than assumed.
+- **Executed evidence:** `bun run test:unit` → **1127 pass / 0 fail** (80 files); the 3 delta test files → 35 pass / 0 fail; `prettier --check` on the 8 delta files → clean. Head check-runs: e2e-grep, footprint, prettier, security-scan, unit-integration all success; `e2e-full` skipped by design.
+- **NITs (non-blocking):** `resolveZapRelays`' second parameter has no production caller while its docstring promises instance-configured zap relays that no surface can supply (`relay-policy.ts:92,145`; only tests pass it); `setup.tsx:169` keeps a duplicate hardcoded fallback (acquitted — unreachable branch, behaviour equivalent).
+- **One unverified control, disclosed:** the PR's own `e2e/tests/self-hosted-config.spec.ts` is not matched by the `e2e-grep` filter (`e2e.yml:145`) and `e2e-full` is dispatch/schedule-only (`e2e.yml:171`), so no green check at this head covers it; I could not run it locally (needs a relay on `ws://localhost:10547`; none listening, no `strfry` binary). Ask before merge: run `bun e2e/seed-relay.ts && bun dev &` then `bun run test:e2e -- e2e/tests/self-hosted-config.spec.ts` and report the result here.
+- Contribution PR: **none needed** — nothing in the delta requires a change (NIT-1's smallest-safe fix would delete the only regression guard for the additive-relay invariant, which we decline to ship).
+
+**VERDICT: APPROVE**
+
+FULL_REVIEW: /home/c03rad0r/reports/reviews/market-1284-deepseek-v4.md
+
+**Approved from our side.** @maximotodev @Franchovy — ready for merge; author is @hkarani. (Agent review-prep; our bot comment is not itself an approval.)
+## Post-merge note — the three open review items are now tracked issues
+
+`#1284` merged at **2026-09-25T12:32:41Z** with merge commit **`a3a76b6c9752f8e3cccf85ff74ce4feea4a922f4`** (base `auctions`, head `22a1cebd`). This is a bookkeeping note, not a merge-readiness assessment and not a request to re-open — the merge stands.
+
+Our review at `22a1cebd` (review id `5317551633`, submitted 2026-09-25T12:23:35Z) and `maxime-tt`'s round on the same head (id `5316857279`, submitted 2026-09-25T10:59:48Z) each carried three `Required` items that were still open when the PR landed. Each is now filed as its own tracked issue, re-verified by reading the source at the merged tip `a3a76b6c` rather than at the review head:
+
+- **R-A** — the "owner-authorized" half of the branding-upload gate is client-side and self-referential: `src/routes/setup.tsx:197-214` (`ensureOwnerSigner`) compares the signer's pubkey against the owner npub typed into the same form, which the caller also supplies (`:216-229`). → **#1392**. The prescription is cheap because the value is already on the wire — `config.ownerPk` reaches the browser via `src/server/http/config.ts:35` — so the gate can bind to that server-side.
+- **R-B** — no test covers the new branding-upload surface and no per-PR gate lane can host `/setup`. → **#1394**.
+- **R-C** — branding uploads can silently land on a third-party public host: `nostrcheck.me` is the resolved server when the instance has no `BLOSSOM_SERVER` (`src/components/ui/image-uploader/ImageUploader.tsx:69` → `:125`), and the compact branch `/setup` uses has no server selector. Filed as the highest-rated of the three — it is privacy / third-party-egress adjacent. → **#1393**.
+
+Separately, the two load-induced unit-suite timing flakes measured during this review work are filed as **#1395**:
+
+- `fetchTestLabels chunk scheduling > fetches label and deletion chunks concurrently` — `src/queries/__tests__/testLabels.test.ts:407`;
+- `computeValidatedBids — rebid collateral-chain authority > trusted collateral chain allows exactly 256 credited legs and rejects 257` — `src/lib/__tests__/computeValidatedBids.test.ts:632`, failing with `^ this test timed out after 5000ms` (measured 5177 ms / 7173 ms).
+
+These are repository-side test hygiene, not a consequence of this PR: the same single failure appeared on both the merged tree (**1342 pass / 1 fail**) and the base tree (**1330 pass / 1 fail**) in the same runs, on a 4-core box at load average ≈ 20.
+
+Deliberately **not** filed, and listed only so the record is complete: the PR-description §G staleness items, the NITs (`setup.tsx:139-141` comment, `resolveZapRelays`' unused parameter, and the rest), and the `🧑‍⚖️ HUMAN SIGN-OFF REQUIRED` block. That last block **stays with maintainers** — the ADR-018 boundary decisions (what an instance may brand in published events, the shipped tier-3 defaults, the `${namespace}-cart` `d`-tag plan, and the real scope of the ADR's completion criterion) are maintainer calls, and a bot review is not maintainer authority.
+
+---
+
+Filed by **`felixfelix-bot`** (agent account; read-only on this repository — no labels, assignees, approvals or merges were or can be applied here). Model `deepseek-flash`, family **DeepSeek**. Every `file:line` in the four issues is read at the merged tip `a3a76b6c`, not carried from the review head. A bot report is input to judgement, not maintainer authority.
+

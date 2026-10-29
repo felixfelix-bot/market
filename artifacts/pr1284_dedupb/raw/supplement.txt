@@ -1,0 +1,134 @@
+$ gh pr view 1313 --repo PlebeianApp/market --json number,url,headRefName,headRepositoryOwner,baseRefName,state,title,mergedAt,createdAt,author
+--- exit: 0 ---
+{"author":{"id":"U_kgDOEfb55Q","is_bot":false,"login":"felixfelix-bot","name":"Felix"},"baseRefName":"feat/924-auction-self-hosted-context","createdAt":"2026-09-13T13:23:34Z","headRefName":"fix/1284-selfhost-config-findings","headRepositoryOwner":{"id":"U_kgDOEfb55Q","name":"Felix","login":"felixfelix-bot"},"mergedAt":"2026-09-14T06:14:51Z","number":1313,"state":"MERGED","title":"fix(#1284): union zap relays, derive the handler-id chain, trim booleans (review findings 1-3)","url":"https://github.com/PlebeianApp/market/pull/1313"}
+
+$ gh api repos/PlebeianApp/market/pulls/1313 --jq '{head_repo: .head.repo.full_name, head_ref: .head.ref, base_ref: .base.ref, state: .state, merged: .merged, merged_at: .merged_at, created_at: .created_at, user: .user.login}'
+--- exit: 0 ---
+{"base_ref":"feat/924-auction-self-hosted-context","created_at":"2026-09-13T13:23:34Z","head_ref":"fix/1284-selfhost-config-findings","head_repo":"felixfelix-bot/market","merged":true,"merged_at":"2026-09-14T06:14:51Z","state":"closed","user":"felixfelix-bot"}
+
+$ gh api repos/hkarani/market --jq '{full_name: .full_name, fork: .fork, parent: .parent.full_name, open_issues_count: .open_issues_count, pushed_at: .pushed_at}'
+--- exit: 0 ---
+{"fork":true,"full_name":"hkarani/market","open_issues_count":0,"parent":"PlebeianApp/market","pushed_at":"2026-08-01T15:56:28Z"}
+
+$ gh api "repos/hkarani/market/branches?per_page=100" --paginate --jq '.[].name' | grep -c ""
+--- exit: 0 ---
+393
+
+$ gh api "repos/hkarani/market/branches?per_page=100" --paginate --jq '.[].name' | grep -i -E "1284|contrib"
+--- exit: 1 ---
+
+$ gh pr list --repo hkarani/market --state all --limit 100 --json number --jq 'length'
+--- exit: 0 ---
+0
+
+$ gh pr list --repo PlebeianApp/market --state all --limit 200 --json number --jq '[.[].number]|{count:length,min:min,max:max}'
+--- exit: 0 ---
+{"count":200,"max":1425,"min":1182}
+
+$ gh pr list --repo PlebeianApp/market --state all --limit 200 --json number,headRefName | grep -i contrib
+--- exit: 0 ---
+[{"headRefName":"ci/pr-1412-unblock","number":1425},{"headRefName":"codex/bitkarrot-product-families","number":1424},{"headRefName":"feat/cms-theme-studio","number":1423},{"headRefName":"fix/spam-001-master","number":1422},{"headRefName":"hotfix/hardcoded-product-spam-filter","number":1421},{"headRefName":"feat/sdk-architecture","number":1420},{"headRefName":"1412","number":1419},{"headRefName":"core/validation-contribution","number":1418},{"headRefName":"core/repoint","number":1417},{"headRefName":"core/relay-layer","number":1416},{"headRefName":"core/migration","number":1415},{"headRefName":"feat/cms-spike","number":1413},{"headRefName":"feat/architecutre","number":1412},{"headRefName":"docs/adr0017-leader-only-soft-close","number":1411},{"headRefName":"fix/deploy-include-dependency-patches","number":1410},{"headRefName":"docs/adr0017-accepted-status","number":1409},{"headRefName":"adr/auction-bft-consensus","number":1407},{"headRefName":"fix/profile-products-loading","number":1406},{"headRefName":"ci/typecheck-baseline-gate","number":1403},{"headRefName":"fix/auctions-production-hardening","number":1402},{"headRefName":"feat/v4v-zap-payout","number":1401},{"headRefName":"fix/product-type-variable","number":1396},{"headRefName":"pr/1363-isolation-fix","number":1391},{"headRefName":"fix/validator-bid-leg-ancestor-scope","number":1390},{"headRefName":"fix/1280-post-merge-cleanups","number":1389},{"headRefName":"pr/1353-review-fixes","number":1388},{"headRefName":"feat/coco-v2-wallet-auction-lifecycle","number":1387},{"headRefName":"feat/browse-packages","number":1385},{"headRefName":"spec/auction-multiparty-consolidated","number":1384},{"headRefName":"fix/1329-auctions-component-migration","number":1383},{"headRefName":"pr/validator-admission-policy-parity","number":1382},{"headRefName":"fix/nip46-identity-separation-coverage","number":1381},{"headRefName":"fix/publish-verdict-quorum-gate-2","number":1380},{"headRefName":"pr/preview-lane-login-timeout","number":1378},{"headRefName":"pr/preview-lane-ci","number":1377},{"headRefName":"pr/preview-settings-seeder-test","number":1376},{"headRefName":"pr/1363-nip46-fallback","number":1373},{"headRefName":"pr/1363-preview-content-seed","number":1372},{"headRefName":"pr/1363-patches-packaging","number":1371},{"headRefName":"fix/live-activity-a-tag-budget","number":1369},{"headRefName":"fix/auction-spec-validity-gate","number":1368},{"headRefName":"fix/preview-nip46-qr-config","number":1367},{"headRefName":"fix/preview-nip46-relay","number":1366},{"headRefName":"fix/preview-appsettings-relay","number":1365},{"headRefName":"fix/preview-relay-trailing-slash","number":1364},{"headRefName":"demo/preview-deploy-20260918-170527","number":1363},{"headRefName":"feat/1226-auction-order-details","number":1361},{"headRefName":"cleanup/1226-auctions-only","number":1360},{"headRefName":"fix/1358-teardown-checkout","number":1359},{"headRefName":"pr/preview-seed-relay","number":1356},{"headRefName":"fix/1285-admission-hardening","number":1355},{"headRefName":"pr/preview-green-docs","number":1354},{"headRefName":"feat/1255-auction-shipping-address-submit-form","number":1353},{"headRefName":"pr/preview-prove-commit","number":1352},{"headRefName":"pr/preview-role-hygiene","number":1351},{"headRefName":"pr/preview-check-relay","number":1350},{"headRefName":"test/unit-suite-coverage","number":1348},{"headRefName":"ci/e2e-gate-coverage","number":1347},{"headRefName":"pr/preview-compose-ansible","number":1346},{"headRefName":"pr/preview-ci-build","number":1345},{"headRefName":"pr/preview-prebuild-image","number":1344},{"headRefName":"pr/auctions-bar-a","number":1343},{"headRefName":"pr/preview-wake-fix","number":1342},{"headRefName":"pr/auctions-applesauce-scoped","number":1340},{"headRefName":"chore/auctions-merge-master-20260917","number":1339},{"headRefName":"adr0012-chunk1-phase1","number":1338},{"headRefName":"pr/coco-rename-2.0.0","number":1337},{"headRefName":"pr/authority-reads-operator-relay-set","number":1335},{"headRefName":"pr/e2e-alternation-author-relay","number":1334},{"headRefName":"pr/adr-0002-wave1-read-topology-proposed","number":1333},{"headRefName":"pr/adr-0002-wave1-clarifications","number":1332},{"headRefName":"pr/ci-pr-trigger-all-bases","number":1331},{"headRefName":"pr/bounded-author-relay-reads","number":1330},{"headRefName":"pr/1317-review-findings","number":1329},{"headRefName":"pr/1285-release-replay-and-bounds","number":1324},{"headRefName":"pr/1317-review-findings","number":1323},{"headRefName":"pr/adr-0002-ndk-docs","number":1322},{"headRefName":"pr/adr-0011-dleq-docs","number":1321},{"headRefName":"fix/wallet-destructive-confirm","number":1320},{"headRefName":"docs/nip46-identity-invariants","number":1319},{"headRefName":"validated-ui-migration-b","number":1318},{"headRefName":"feat/1050-auction-winning-modal","number":1317},{"headRefName":"docs/adr-0002-signer-migration-amendment","number":1316},{"headRefName":"docs/adr-0012-bid-validity-selection","number":1314},{"headRefName":"fix/1284-selfhost-config-findings","number":1313},{"headRefName":"fix-1285-validator-subscriber-bounds","number":1312},{"headRefName":"fix/preview-starting-page","number":1311},{"headRefName":"docs/agents-review-mutation-exemption","number":1310},{"headRefName":"fix/preview-app-serves-real-html","number":1309},{"headRefName":"fix/preview-gateway-tolerate-leading-crlf","number":1308},{"headRefName":"fix/preview-nak-build-from-source","number":1307},{"headRefName":"fix/preview-deploy-workflow-expr","number":1306},{"headRefName":"fix/preview-deploy-pinned-openssh","number":1305},{"headRefName":"docs/coco-wallet-host-review-2026-09-11","number":1304},{"headRefName":"fix/preview-deploy-key-materialisation","number":1303},{"headRefName":"fix/preview-deploy-prettier","number":1302},{"headRefName":"feat/preview-deployments-ssh-port","number":1301},{"headRefName":"ci/ngit-act-workflows","number":1300},{"headRefName":"feature/preview-deploy-secret-guard","number":1299},{"headRefName":"codex/staging-relay-safety","number":1298},{"headRefName":"fix/1226-order-detail-test-route","number":1295},{"headRefName":"fix-pr-1226-review","number":1294},{"headRefName":"fix/wallet-destructive-confirm","number":1292},{"headRefName":"fix/ndk-events-coordinate-dedup","number":1291},{"headRefName":"fix/remote-signer-login-tsc","number":1290},{"headRefName":"fix/settlement-flake-network-free","number":1289},{"headRefName":"spec/au-004-mute-list-auctions","number":1288},{"headRefName":"feat/nip05-CMS-vanity-url-intergration","number":1286},{"headRefName":"security/1112-add-relay-bid-spam-dos-protection","number":1285},{"headRefName":"feat/924-auction-self-hosted-context","number":1284},{"headRefName":"auctions-ndk-consolidated","number":1283},{"headRefName":"auctions-p2a-claim-reads","number":1282},{"headRefName":"feat/auctions-applesauce-p0p1","number":1281},{"headRefName":"feat/adr-0011-dleq-impl","number":1280},{"headRefName":"feat/nip05-CMS-vanity-url-intergration","number":1275},{"headRefName":"feat/924-auction-self-hosted-context","number":1274},{"headRefName":"security/1112-add-relay-bid-spam-dos-protection","number":1273},{"headRefName":"wip/auction-multiparty-demo-2026-08-21","number":1272},{"headRefName":"feat/preview-deployments","number":1271},{"headRefName":"fix/publish-verdict-quorum-gate","number":1270},{"headRefName":"docs/adr-0011-bid-collateral-dleq","number":1269},{"headRefName":"fix/livechatpanel-dom-shim","number":1268},{"headRefName":"feat/test-listing-labels-auctions","number":1267},{"headRefName":"feat/test-listing-labels","number":1266},{"headRefName":"docs/adr-0009-test-listing-labels","number":1265},{"headRefName":"pr1235-port-full-ux","number":1263},{"headRefName":"chore/wave1-queries","number":1262},{"headRefName":"docs/reviewer-guide-from-review-audit","number":1261},{"headRefName":"docs/adr-0009-test-labels-supersedes-1243","number":1260},{"headRefName":"security/1111-fix-fake-bids-inflating-bid-price","number":1259},{"headRefName":"security/1113-add-strict-bid-amount-parsing","number":1258},{"headRefName":"feat/preview-deployments","number":1257},{"headRefName":"docs/agents-e2e-gate","number":1256},{"headRefName":"adr/cashu-wallet","number":1255},{"headRefName":"feat/cvm-wallet-tools","number":1254},{"headRefName":"chore/applesauce-6-2","number":1253},{"headRefName":"adr/022-signer-migration","number":1252},{"headRefName":"adr/020-auctions-e2e","number":1251},{"headRefName":"adr/019-cvm-sync","number":1250},{"headRefName":"adr/018-recovery","number":1249},{"headRefName":"adr/017-dependency-stack","number":1248},{"headRefName":"feat/auction-home-grids","number":1247},{"headRefName":"fix/auction-video-rendering","number":1245},{"headRefName":"fix/auction-reserve-checkbox","number":1244},{"headRefName":"docs/adr-0009-auction-beta-exclusivity","number":1243},{"headRefName":"fix/settlement-nut7-double-spend-masking","number":1242},{"headRefName":"feat/test-mint-infra","number":1241},{"headRefName":"feat/auction-e2e-and-specs","number":1240},{"headRefName":"feat/e2e-auction-beta-tag","number":1239},{"headRefName":"docs/adr-auction-features","number":1238},{"headRefName":"feat/e2e-auction-whitelist","number":1237},{"headRefName":"feat/1202-direct-lightning-bid-funding","number":1235},{"headRefName":"review-fixes-1191","number":1234},{"headRefName":"adr/cms-page-building","number":1233},{"headRefName":"community/459-og-meta-tags","number":1232},{"headRefName":"community/399-sats-price-display","number":1231},{"headRefName":"feat/direct-lightning-bid-funding","number":1230},{"headRefName":"feat/preview-deploy-nsite","number":1229},{"headRefName":"fix/nip53-signature-verification","number":1228},{"headRefName":"fix/auctions-bootstrap-authority","number":1227},{"headRefName":"feat/auction-order-details-v2","number":1226},{"headRefName":"chore/auctions-merge-master-20260806","number":1223},{"headRefName":"feat/pr-trust-pipeline-preview","number":1222},{"headRefName":"feat/preview-deploy-nsite","number":1221},{"headRefName":"feat/pr-trust-pipeline-clean","number":1220},{"headRefName":"spec/931-auction-multiparty-wire-v1","number":1219},{"headRefName":"feat/pr-trust-pipeline","number":1218},{"headRefName":"docs/adr-e2e-parallelization","number":1217},{"headRefName":"chore/auctions-merge-master-2025","number":1216},{"headRefName":"docs/adr-016-product-orthogonal-dimensions","number":1215},{"headRefName":"fix/e2e-cdn-image-intercept","number":1214},{"headRefName":"adr/cms-page-building","number":1213},{"headRefName":"adr/ui-migration-foundation","number":1212},{"headRefName":"fix/zap-ndk-dev-isolation","number":1211},{"headRefName":"feat/test-isolation-adr","number":1209},{"headRefName":"feat/nip17-order-chat-read-orchestration","number":1208},{"headRefName":"fix/ai-guardrails-profile-unload","number":1207},{"headRefName":"fix/products-empty-pubkey-guard","number":1206},{"headRefName":"feat/1202-direct-lightning-bid-funding","number":1205},{"headRefName":"fix/auction-default-sort-ending-soon","number":1204},{"headRefName":"fix/e2e-local-image","number":1203},{"headRefName":"fix/digital-product-detection","number":1201},{"headRefName":"ci/staging-relay-readiness-gate","number":1200},{"headRefName":"fix/remote-signer-login","number":1199},{"headRefName":"adr/cms-page-building","number":1198},{"headRefName":"audit/v4v-ui-agnostic","number":1196},{"headRefName":"pr1/foundation-styles","number":1195},{"headRefName":"feat/settlement-steps-no-validation","number":1194},{"headRefName":"adr/ui-components-migration","number":1193},{"headRefName":"fix/relay-ci-deploy-safety","number":1192},{"headRefName":"fix/e2e-reliability-focused","number":1191},{"headRefName":"c03rad0r/1142-lifecycle-interval","number":1190},{"headRefName":"c03rad0r/1142-product-scope","number":1189},{"headRefName":"c03rad0r/1142-scope-notification-counts","number":1188},{"headRefName":"scoped-notification-fixes","number":1187},{"headRefName":"visibility-reconciliation-fix","number":1186},{"headRefName":"feat/nip53-cvm-commentator","number":1185},{"headRefName":"feat/nip53-reactions","number":1184},{"headRefName":"docs/adr-error-boundary-observability","number":1183},{"headRefName":"docs/adr-relay-data-validation","number":1182}]
+
+$ gh api "search/issues?q=repo:PlebeianApp/market+type:pr+1284+in:title,body&per_page=50" --jq '.total_count, (.items[] | {number: .number, state: .state, title: .title})'
+--- exit: 0 ---
+1
+{"number":1313,"state":"closed","title":"fix(#1284): union zap relays, derive the handler-id chain, trim booleans (review findings 1-3)"}
+
+$ gh pr list 1313 --repo hkarani/market
+--- exit: 1 ---
+unknown argument "1313"; please quote all values that have spaces
+
+List pull requests in a GitHub repository. By default, this only lists open PRs.
+
+The search query syntax is documented here:
+<https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests>
+
+On supported GitHub hosts, advanced issue search syntax can be used in the
+`--search` query. For more information about advanced issue search, see:
+<https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/filtering-and-searching-issues-and-pull-requests#building-advanced-filters-for-issues>
+
+For more information about output formatting flags, see `gh help formatting`.
+
+USAGE
+  gh pr list [flags]
+
+ALIASES
+  gh pr ls
+
+FLAGS
+      --app string        Filter by GitHub App author
+  -a, --assignee string   Filter by assignee
+  -A, --author string     Filter by author (use --app to filter by a GitHub App)
+  -B, --base string       Filter by base branch
+  -d, --draft             Filter by draft state
+  -H, --head string       Filter by head branch ("<owner>:<branch>" syntax not supported)
+  -q, --jq expression     Filter JSON output using a jq expression
+      --json fields       Output JSON with the specified fields
+  -l, --label strings     Filter by label
+  -L, --limit int         Maximum number of items to fetch (default 30)
+  -S, --search query      Search pull requests with query
+  -s, --state string      Filter by state: {open|closed|merged|all} (default "open")
+  -t, --template string   Format JSON output using a Go template; see "gh help formatting"
+  -w, --web               List pull requests in the web browser
+
+INHERITED FLAGS
+      --help                     Show help for command
+  -R, --repo [HOST/]OWNER/REPO   Select another repository using the [HOST/]OWNER/REPO format
+
+JSON FIELDS
+  additions, assignees, author, autoMergeRequest, baseRefName, baseRefOid, body,
+  changedFiles, closed, closedAt, closingIssuesReferences, comments, commits,
+  createdAt, deletions, files, fullDatabaseId, headRefName, headRefOid,
+  headRepository, headRepositoryOwner, id, isCrossRepository, isDraft, labels,
+  latestReviews, maintainerCanModify, mergeCommit, mergeStateStatus, mergeable,
+  mergedAt, mergedBy, milestone, number, potentialMergeCommit, projectCards,
+  projectItems, reactionGroups, reviewDecision, reviewRequests, reviews, state,
+  statusCheckRollup, title, updatedAt, url
+
+EXAMPLES
+  # List PRs authored by you
+  $ gh pr list --author "@me"
+  
+  # List PRs opened by a GitHub App such as Dependabot
+  $ gh pr list --app dependabot
+  
+  # List PRs with a specific head branch name
+  $ gh pr list --head "typo"
+  
+  # List only PRs with all of the given labels
+  $ gh pr list --label bug --label "priority 1"
+  
+  # Filter PRs using search syntax
+  $ gh pr list --search "status:success review:required"
+  
+  # Find a PR that introduced a given commit
+  $ gh pr list --search "<SHA>" --state merged
+
+LEARN MORE
+  Use `gh <command> <subcommand> --help` for more information about a command.
+  Read the manual at https://cli.github.com/manual
+  Learn about exit codes using `gh help exit-codes`
+  Learn about accessibility experiences using `gh help accessibility`
+
+
+$ gh api "repos/felixfelix-bot/market/branches?per_page=100" --paginate --jq '.[].name' | grep -i contrib
+--- exit: 0 ---
+contrib-1286-sig
+
+$ gh pr list --repo felixfelix-bot/market --state all --limit 100 --json number,headRefName | grep -i contrib
+--- exit: 0 ---
+[{"headRefName":"contrib-1286-sig","number":454},{"headRefName":"worker-heavy/t_1af2045b","number":453},{"headRefName":"worker-heavy/pr1298-review","number":452},{"headRefName":"worker-heavy/PR1226-VERIFY","number":451},{"headRefName":"worker-heavy/AV-DELIVERY-1226-reconcile","number":450},{"headRefName":"worker-heavy/AV-1138-DRAFT-SALVAGE","number":449},{"headRefName":"worker-base/pr1138-auction","number":448},{"headRefName":"review/pr1387-ds","number":447},{"headRefName":"preflight/pr1138-20261023","number":446},{"headRefName":"pr-1226-review","number":445},{"headRefName":"ws/plebeian-market","number":444},{"headRefName":"worker-plebeian/pr1257-review-fix","number":443},{"headRefName":"worker-heavy/1286-dedupe-spam-f7","number":442},{"headRefName":"wave-0/io-seam-and-ci-guard","number":441},{"headRefName":"wave-0-pr","number":440},{"headRefName":"wave-0-io-seam","number":439},{"headRefName":"visibility-reconciliation-fix","number":438},{"headRefName":"test-e2e-benchmark-tooling","number":437},{"headRefName":"test/955-order-privacy-edge-cases-clean","number":436},{"headRefName":"test/951-auction-draft-meaningful-check","number":435},{"headRefName":"test/e2e-collections","number":434},{"headRefName":"temp/cp-test","number":433},{"headRefName":"styling-general","number":432},{"headRefName":"style/product-tags-scroll","number":431},{"headRefName":"style/auctions-countdown","number":430},{"headRefName":"shipping-ui","number":429},{"headRefName":"security-pr-1-core-validation","number":428},{"headRefName":"security/zap-sig-verification","number":427},{"headRefName":"security/wallet-encryption","number":426},{"headRefName":"security/vault-module","number":425},{"headRefName":"security/ssh-hardening","number":424},{"headRefName":"security/sha-pin-remaining-workflows","number":423},{"headRefName":"security/relay-origin-validation","number":422},{"headRefName":"security/high-severity-remediation","number":421},{"headRefName":"security/critical-remediation","number":420},{"headRefName":"security/ci-supply-chain","number":419},{"headRefName":"scoped-notification-fixes","number":418},{"headRefName":"research/test-flakiness-root-causes","number":417},{"headRefName":"relocate-pr-1068","number":416},{"headRefName":"rebase-1068","number":415},{"headRefName":"prettier-fix/pr1272","number":414},{"headRefName":"pr-1104","number":413},{"headRefName":"pr-1019","number":412},{"headRefName":"pr/1383-refresh-base","number":411},{"headRefName":"pr/1363-preview-content-seed","number":410},{"headRefName":"pr/1363-patches-packaging","number":409},{"headRefName":"pr/1363-nip46-fallback","number":408},{"headRefName":"pr/1363-isolation-fix","number":407},{"headRefName":"pr/1353-review-fixes","number":406},{"headRefName":"pr/1317-review-findings","number":405},{"headRefName":"pr/1285-release-replay-and-bounds","number":404},{"headRefName":"pr/745-review-fixes","number":403},{"headRefName":"pr/validator-admission-policy-parity","number":402},{"headRefName":"pr/preview-wake-fix","number":401},{"headRefName":"pr/preview-settings-seeder-test","number":400},{"headRefName":"pr/preview-seed-relay","number":399},{"headRefName":"pr/preview-role-hygiene","number":398},{"headRefName":"pr/preview-prove-commit","number":397},{"headRefName":"pr/preview-prebuild-image","number":396},{"headRefName":"pr/preview-lane-login-timeout","number":395},{"headRefName":"pr/preview-lane-ci","number":394},{"headRefName":"pr/preview-green-docs","number":393},{"headRefName":"pr/preview-content-seed","number":392},{"headRefName":"pr/preview-compose-ansible","number":391},{"headRefName":"pr/preview-ci-build","number":390},{"headRefName":"pr/preview-check-relay","number":389},{"headRefName":"pr/prettier-1272-handover-format","number":388},{"headRefName":"pr/e2e-alternation-author-relay","number":387},{"headRefName":"pr/coco-rename-2.0.0","number":386},{"headRefName":"pr/ci-pr-trigger-all-bases","number":385},{"headRefName":"pr/bounded-author-relay-reads","number":384},{"headRefName":"pr/authority-reads-operator-relay-set","number":383},{"headRefName":"pr/auctions-bar-a","number":382},{"headRefName":"pr/auctions-applesauce-scoped","number":381},{"headRefName":"pr/adr-0011-dleq-docs","number":380},{"headRefName":"pr/adr-0002-wave1-read-topology-proposed","number":379},{"headRefName":"pr/adr-0002-wave1-clarifications","number":378},{"headRefName":"pr/adr-0002-ndk-docs","number":377},{"headRefName":"payments-design","number":376},{"headRefName":"order-details-ux","number":375},{"headRefName":"master-backup","number":374},{"headRefName":"manualtesting","number":373},{"headRefName":"khatru-final","number":372},{"headRefName":"get-currency-context-vm","number":371},{"headRefName":"fix-seed","number":370},{"headRefName":"fix-products-not-showing-in-new-tabs","number":369},{"headRefName":"fix-pr-1226-review","number":368},{"headRefName":"fix-pr-1080-1019-upstream","number":367},{"headRefName":"fix-1285-validator-subscriber-bounds","number":366},{"headRefName":"fix-1104-franchovy-feedback","number":365},{"headRefName":"fix-1046-auction-query-parallelize","number":364},{"headRefName":"fix/1401-prettier-routetree","number":363},{"headRefName":"fix/1284-selfhost-config-findings","number":362},{"headRefName":"fix/1146-bid-input-fixes","number":361},{"headRefName":"fix/862-bidding-with-any-mint-local","number":360},{"headRefName":"fix/862-bidding-with-any-mint","number":359},{"headRefName":"fix/744-review-fixes","number":358},{"headRefName":"fix/404-error-adding-first-product-in-profile","number":357},{"headRefName":"fix/workflow-floating-tags-stacked","number":356},{"headRefName":"fix/winner-token-proof","number":355}]
+
+$ gh api repos/PlebeianApp/market/issues/1284/comments --jq '.[] | {user: .user.login, created_at: .created_at, url: .html_url}'
+--- exit: 0 ---
+{"created_at":"2026-09-10T09:08:26Z","url":"https://github.com/PlebeianApp/market/pull/1284#issuecomment-5616073589","user":"felixfelix-bot"}
+{"created_at":"2026-09-12T09:56:38Z","url":"https://github.com/PlebeianApp/market/pull/1284#issuecomment-5645180703","user":"felixfelix-bot"}
+{"created_at":"2026-09-13T13:23:46Z","url":"https://github.com/PlebeianApp/market/pull/1284#issuecomment-5653548949","user":"felixfelix-bot"}
+{"created_at":"2026-09-16T07:13:38Z","url":"https://github.com/PlebeianApp/market/pull/1284#issuecomment-5693516461","user":"felixfelix-bot"}
+{"created_at":"2026-09-17T17:04:18Z","url":"https://github.com/PlebeianApp/market/pull/1284#issuecomment-5718264457","user":"felixfelix-bot"}
+{"created_at":"2026-09-25T15:54:31Z","url":"https://github.com/PlebeianApp/market/pull/1284#issuecomment-5835344809","user":"felixfelix-bot"}
+
+$ gh api repos/PlebeianApp/market/pulls/1284 --jq '{state: .state, merged: .merged, merged_at: .merged_at, head_ref: .head.ref, head_sha: .head.sha, base_ref: .base.ref, user: .user.login}'
+--- exit: 0 ---
+{"base_ref":"auctions","head_ref":"feat/924-auction-self-hosted-context","head_sha":"22a1cebd647c6b59d929725f5d288a8c4326a4ce","merged":true,"merged_at":"2026-09-25T12:32:41Z","state":"closed","user":"hkarani"}
+

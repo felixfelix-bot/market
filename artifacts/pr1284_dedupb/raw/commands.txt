@@ -1,0 +1,41 @@
+=== CMD1 ===
+$ gh pr list --repo hkarani/market --head "felixfelix-bot/contrib-1284-*" --state all --json number,url,headRefName,state
+--- stdout ---
+[]
+--- stderr ---
+--- exit: 0 ---
+
+=== CMD1a ===
+$ gh api "repos/hkarani/market/branches?per_page=100" --paginate --jq '.[].name' | grep "felixfelix-bot/contrib-1284"
+--- stdout ---
+--- stderr ---
+--- exit: 1 ---
+
+=== CMD1b ===
+$ gh pr list --repo hkarani/market --state all --limit 100 --json number,url,headRefName,state | grep -i "1284"
+--- stdout ---
+--- stderr ---
+--- exit: 1 ---
+
+=== CMD2 ===
+$ gh pr view 1284 --repo PlebeianApp/market --json comments --jq '.comments[].body' | grep -i "contrib"
+--- stdout ---
+Contribution PR opened against this branch: **#1313** — `fix/1284-selfhost-config-findings`.
+- Contribution PR: **none needed** — nothing in the delta requires a change (NIT-1's smallest-safe fix would delete the only regression guard for the additive-relay invariant, which we decline to ship).
+--- stderr ---
+--- exit: 0 ---
+
+=== CMD2a ===
+$ gh api repos/PlebeianApp/market/issues/1284/comments --jq '.[].body' | grep -i "contrib"
+--- stdout ---
+Contribution PR opened against this branch: **#1313** — `fix/1284-selfhost-config-findings`.
+- Contribution PR: **none needed** — nothing in the delta requires a change (NIT-1's smallest-safe fix would delete the only regression guard for the additive-relay invariant, which we decline to ship).
+--- stderr ---
+--- exit: 0 ---
+
+=== CMD3 ===
+$ gh pr list --repo PlebeianApp/market --state all --limit 200 --json number,url,headRefName,state | grep -i "contrib-1284"
+--- stdout ---
+--- stderr ---
+--- exit: 1 ---
+
