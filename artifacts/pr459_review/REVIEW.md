@@ -6,10 +6,10 @@ Two correctness bugs block this. One of them the head commit claims to fix and d
 
 `useDocumentMeta(...)` at :390 is called *after* three conditional `return`s (:258 loading spinner, :267 error, :289 not-found). Every hook above it runs on every render; this one runs only when `product` is truthy. Direct-link a product page — the exact scenario this feature targets — and you get:
 
-- render 1: no product yet → early return at :258 → 14 hooks consumed
-- render 2: product resolves → early return skipped → `useDocumentMeta` is the 15th hook
+- render 1: no product yet → early return at :258 → 18 hooks consumed (useCart :153, useStore :154/:156, useNavigate :155, useQueryClient :157, useEffect :160, useQuery :164/:200, useBreakpoint :206, useState :209-:212, useConfigQuery :215, useEntityPermissions :219, useBlacklistSettings :222, useFeaturedProducts :223, useHeroBackground :255)
+- render 2: product resolves → early return skipped → `useDocumentMeta` is the 19th hook
 
-That's React's "Rendered more hooks than during the previous render" invariant violation, and depending on the transition it can also run the meta effect's `document.title` write into the loading state. The fix isn't subtle: move the hook call above the early returns, exactly as the merged re-implementation of this same feature (#1232) already does — master's `products.$productId.tsx:504-521` computes the config before the gates with the comment "Must be computed before useHeroBackground/useDocumentMeta ... for React hook-order stability". This PR is 590 commits behind and predates that, so it re-introduces a bug that is already fixed on master.
+That's React's "Rendered more hooks than during the previous render" invariant violation, and depending on the transition it can also run the meta effect's `document.title` write into the loading state. The fix isn't subtle: move the hook call above the early returns, exactly as the merged re-implementation of this same feature (#1232) already does — master's `products.$productId.tsx:504-521` computes the config before the gates with the comment "Must be computed before useHeroBackground/useDocumentMeta ... for React hook-order stability". This PR predates that fix and re-introduces the bug on top of a master that already has it solved.
 
 ## [BLOCK] `src/routes/products.$productId.tsx:231,396` — head commit's fix is dead code
 
@@ -39,6 +39,10 @@ Review #4745940450 flagged "duplicate meta description" risk — not real at thi
 ## [NIT] `src/routes/products.$productId.tsx:99,108-109` — bogus OG types
 
 `og:type` "product" is not a valid Open Graph type (the OG spec has no such value); `product:price:amount`/`product:price:currency` are from Facebook's retired commerce namespace. Harmless — consumers ignore them — but they're decoration, not protocol.
+
+## [NIT] `src/routes/products.$productId.tsx:387` — truncation can split an emoji in half
+
+`description.substring(0, 157) + '...'` counts UTF-16 code units. `description` is raw event content (`getProductDescription = (event) => event?.content || ''`, `src/queries/products.tsx:495`), arbitrary relay text; if unit 157 lands inside a surrogate pair (emoji), the emitted og:description/twitter:description ends with a lone half-character. The merged superseder handles this with `truncateForMeta` (master `src/lib/ogTags.ts:226-230`, "Code-point-safe so emoji and other astral characters are never split into invalid halves"). `Array.from(description).slice(0,157).join('')` is the minimal fix.
 
 ## Verdict
 
