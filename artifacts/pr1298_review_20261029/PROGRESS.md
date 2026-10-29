@@ -51,3 +51,10 @@ tree); this lane's deliverables live at artifacts/pr1298_review_20261029/.
   (13 lines, 3116 chars, verified by re-read of the posted body). No approval,
   no merge, no request-changes — comment only (PR already merged).
 - M7 Contribution card — see REPORT.md.
+- M7 Contribution card — DONE. `t_71b080a0` on board `plebeian`, assignee
+  worker-pr-fixer, status ready, idempotency key
+  contrib-1298-store-integrity-20261029. Dedup clear: no 1298 fix card on
+  plebeian/default/admin; no contrib-1298-* branch on felixfelix-bot/market;
+  no such PR on PlebeianApp/market; origin/master d4757b40 lacks the IsOlder
+  fix. (plebomoto/market API → 404; noted as a caveat.)
+- M8 REPORT.md written — DONE. Full report: REPORT.md (this directory).
