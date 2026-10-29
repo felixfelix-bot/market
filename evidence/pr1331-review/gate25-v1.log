@@ -1,0 +1,13 @@
+Audit complete. Full per-check evidence is at /tmp/pr1331-gate25-kimi-draft.md; per-check verdicts:
+
+(a) REAL — PASS. Every load-bearing claim reproduced first-hand: head/base/state and 5-file +227/−4 via live API; the five PR blobs byte-identical between ec9f3e32 and 5dfe8215 (ls-tree both heads, blobs match the draft's IDs exactly); the 19-file head-to-head delta is all inherited master work; the four `pull_request:` line anchors exact (18/12/9/9); push/dispatch/schedule/jobs compare equal to base; no `pull_request_target` trigger at head (comment text only). I read both harness scripts (faithful: exact-head git archive, RED injection restores the verbatim removed e2e filter line) and re-ran them myself: verify.mjs exit 0 — GREEN 50 pass/0 fail/131 expect, RED 11 pass/2 fail with both failures naming e2e.yml in the per-workflow and sweep tests; format check clean on Prettier 3.8.3; diff --check clean; all 4 workflows parse as YAML. CI claim matches all 8 paginated check-runs (6 success, 2 skipped by their own job conditions). Provenance lines (5374232612 at ec9f3e32; 5646697681 as explicit non-verdict) accurate against the live review list.
+
+(b) DEDUP — PASS. References the already-filed parser limitations and the worker verification instead of reposting them; extends 5374232612 with the payload-unchanged fact and fresh head numbers; no text duplicates any existing body.
+
+(c) SPAM/AACR — PASS. ~2.1 KB, comment-only, closes the lane's gap at the live head; explicitly disclaims maintainer approval and merge-readiness; leaves the human CI-cost/policy question untouched as stated.
+
+(d) MISSED — PASS, no new blockers. My own sweep of the guard and all workflows found no exercised defect. One non-exercised edge not previously filed (a future `pull_request_target: { branches: … }` would evade the sweep; none exists today, the docstring already discloses the limitation class, and new event kinds require maintainer sign-off) — nonblocking, suitable for a follow-up, not this comment.
+
+(e) PUBLISHABILITY — PASS. Fit to post as `gh pr review --comment` apart from the "(pending)" gate25 marker. Three nonblocking calibrations (attribution of the "previously filed" limitations to plebibot's review 5562785745; minor disambiguation around "the live-head review"; the pull_request_target note could be folded into the guard's disclosure later).
+
+VERDICT: APPROVED

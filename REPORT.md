@@ -1,6 +1,6 @@
 # PR #1331 review report — live-head delta
 
-Status: independent review complete; Gate 2.5 cold audit dispatched, not yet published.
+Status: COMPLETE — cold cross-family audit APPROVED; review published; gate state and detector coverage verified.
 
 ## Scope and identities
 
@@ -71,13 +71,22 @@ Two preliminary scratch-harness attempts were invalid and are not used as verdic
 - Concrete configured model id: `glm-5.3` (tier/review-glm fallback in `model_tiers.yaml`).
 - Round 1 prompt: `evidence/pr1331-review/gate25-prompt-v1.md`.
 - Read-only nested runner: `evidence/pr1331-review/run-gate25-v1.sh`.
-- Verdict: pending at time of this checkpoint. No approval from Gate 2.5 is claimed yet.
+- Nested process exited 0; raw output: `evidence/pr1331-review/gate25-v1.log`.
+- Verdict: **APPROVED**. REAL, DEDUP, SPAM/AACR, MISSED, and PUBLISHABILITY all PASS. The auditor independently re-ran the exact-head GREEN/RED harness and format check.
+- Auditor verdict copied to `evidence/pr1331-review/gate25-verdict-v1.md`. One typographical extra `0` in the auditor's head-SHA prose was corrected; all technical claims match the raw log and independently verified head.
+- MISSED returned no blocker. It noted a hypothetical future `pull_request_target` base-filter sweep gap; no such trigger exists at this head, so it is not a new review request.
+- Two optional calibrations were applied: identify review 5646697681 as worker verification and attribute the parser limitations to plebibot review 5562785745. The gate's pending marker became the truthful APPROVED line.
 
-## Remaining publication steps
+## Publication and gate closure
 
-1. Read and independently assess the Gate 2.5 verdict; revise/re-dispatch if needed.
-2. Re-check the PR head immediately before posting.
-3. Publish the audited text via `gh pr review 1331 --repo PlebeianApp/market --comment --body-file ...`.
-4. Read back the review and record its id/URL.
-5. Update manager `prs.1331.last_reviewed_sha` using backup + fresh JSON load + atomic `os.replace`, preserving concurrent writers.
-6. Verify state and detector coverage; update this report and `PROGRESS.md`; commit and push the final artifacts.
+- Immediately before posting, live PR state was re-read: `OPEN`, head `5dfe8215940af671da280924b166205662562c4f`.
+- Executed `gh pr review 1331 --repo PlebeianApp/market --comment --body-file evidence/pr1331-review/draft-review.md`.
+- Published review id: **5692111632**.
+- URL: https://github.com/PlebeianApp/market/pull/1331#pullrequestreview-5692111632
+- API read-back: state `COMMENTED`, `commit_id` = the reviewed live head, body includes `APPROVED` and no change requests. Submitted at `2026-10-29T02:21:43Z`.
+- Published body matches `draft-review.md` modulo GitHub's trailing-newline normalization; read-back saved as `evidence/pr1331-review/published-review.md`.
+- Manager state backup: `/home/c03rad0r/.hermes/profiles/manager/state/plebeian-pr-review-state.json.bak-pr1331-5692111632`.
+- Atomic fresh-load/`os.replace` update via `evidence/pr1331-review/update-gate-state.py`: `prs.1331.last_reviewed_sha` changed from `ec9f3e32…` to the live head; `review_id` = 5692111632 and `review_url` updated. Sibling PR #1332 state was verified preserved.
+- Detector verification via its own read-only functions (`evidence/pr1331-review/verify-detector.py`): `reviews_by_us_at_live_head=true`, stored SHA/review id match, and `needs_review=false`.
+
+No remaining steps except committing and pushing this final evidence checkpoint.
