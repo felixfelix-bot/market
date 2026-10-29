@@ -11,3 +11,4 @@ finding -> status -> files touched
 - dedup (c) fix commit 67a76087 IS ancestor of merged tip 22a1cebd, NOT of 5963fc77 -> fix already landed pre-merge -> none
 - VERDICT: DUPLICATE EXISTS — do not publish, no new contribution PR -> done -> REPORT.md
 - no gh writes performed (no comment/approve/request-changes/merge) -> done -> none
+- kanban t_84b7c185: comment recorded (2889 chars) + status=done w/ result tags read-only,docs -> done -> none
