@@ -23,6 +23,7 @@
 `worker-reviewer-ds` profile is not provisioned on this node (`~/.hermes/profiles/` holds glm/kimi/qwen reviewers only), so per fleet precedent (pr1200, pr1410, pr1422) the gate was discharged as an independent fresh-context delegate cold audit of the draft (same family as the drafting lane — disclosed, no cross-family token claimed).
 
 **AUDIT_VERDICT: APPROVE_DRAFT_W_AMENDMENTS** — all 10 claims CONFIRMED, 0 refuted. Amendments applied to the posted review before publishing:
+
 1. Full file paths spelled out (draft abbreviated `publish/products.tsx`; actual `src/publish/products.tsx`).
 2. Sticky-"0" aggravation folded into the [RISK] (gate is `!price`, so a stored "0" is never repaired).
 3. Two optional NITs found by the auditor (updateValues→isDirty/autosave side effect on mere load; unguarded display effect showing "0.00") were judged accepted trade-offs by the audit (master's successor does the same; PR body references known draft/auto-save follow-ups) and were not added.
@@ -40,6 +41,7 @@ Audit evidence: audit-verdict.md in this directory (verbatim copy of /tmp/pr399_
 ## Gate state
 
 `~/.hermes/profiles/manager/state/plebeian-pr-review-state.json` prs["399"]:
+
 - disposition: open-changes-requested-blocked-findings
 - last_reviewed_sha: f0bf563f80fa126da83226b6181716f0c68a1b32
 - review_id: 5696417699, review_url: https://github.com/PlebeianApp/market/pull/399#pullrequestreview-5696417699
@@ -54,15 +56,16 @@ Audit evidence: audit-verdict.md in this directory (verbatim copy of /tmp/pr399_
 - artifacts/pr399_review/audit-verdict.md — cold-audit verdict (167 lines)
 - artifacts/pr399_review/PROGRESS.md — finding->status->files
 - artifacts/pr399_review/raw/{pr399_meta.json,issue379.json} + rebase_comment.txt + prior_bot_reviews.txt — dedup evidence
-- artifacts/pr399_review/update_gate_state.py + fix_gate_state.py — gate-state writes (idempotent, with backup)
+- artifacts/pr399_review/update_gate_state.py — gate-state write (idempotent, backs up first)
 - Branch review/pr399-glm-20261029 on fork felixfelix-bot/market (evidence trail)
 
 ## Reproduction of the BLOCK (for the record)
 
 At head, with a fiat currency selected and rates unavailable (or rates map missing that currency):
+
 1. User types sats in the bitcoin field → `handleBitcoinPriceChange` (tabs.tsx:90).
 2. `convertSatsToCurrency(satsValue, currency)` → 0 (tabs.tsx:48 or :51-52).
 3. `(0).toFixed(2)` → "0.00" → `updateValues({ price: sats, fiatPrice: "0.00" })` (tabs.tsx:102).
 4. Publish → `continuePublishing` → currencyMode 'fiat' → `finalPrice = state.fiatPrice || state.price` → "0.00" (product.ts:391).
 5. Validation passes ("0.00" is non-empty, numeric) → event tags `['price', '0.00', <fiat>]` (src/publish/products.tsx:86).
-Product is listed at 0.00 fiat — free.
+   Product is listed at 0.00 fiat — free.

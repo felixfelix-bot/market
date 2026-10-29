@@ -5,15 +5,14 @@ b = p + ".bak-pr399-20261029"
 shutil.copyfile(p, b)
 d = json.load(open(p))
 
-review_id_num = None
 d["prs"]["399"] = {
     "disposition": "open-changes-requested-blocked-findings",
     "last_checked": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     "last_reviewed_at": "2026-10-29",
     "last_reviewed_sha": "f0bf563f80fa126da83226b6181716f0c68a1b32",
     "review_card": None,
-    "review_id": "PRR_kwDOOFRvT88AAAABU4hvow",
-    "review_url": "https://github.com/PlebeianApp/market/pull/399#pullrequestreview-" + "PRR_kwDOOFRvT88AAAABU4hvow".replace("PRR_kwDOOFRvT88", ""),
+    "review_id": "5696417699",
+    "review_url": "https://github.com/PlebeianApp/market/pull/399#pullrequestreview-5696417699",
     "reviewer": "felixfelix-bot (review-glm, glm-5.3); gate-2.5 fresh-context delegate audit (disclosed same-family)",
     "reviewer_model": "glm-5.3",
     "issues_raised": [
