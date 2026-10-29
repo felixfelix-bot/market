@@ -1,0 +1,370 @@
+../../repos/market/node_modules/@cashu/cashu-ts/lib/types/WSConnection.d.ts(1,34): error TS2307: Cannot find module './model/types.js' or its corresponding type declarations.
+../../repos/market/node_modules/@cashu/cashu-ts/lib/types/index.d.ts(8,90): error TS2307: Cannot find module './auth.js' or its corresponding type declarations.
+../../repos/market/node_modules/@cashu/cashu-ts/lib/types/model/MintInfo.d.ts(1,74): error TS2307: Cannot find module './types.js' or its corresponding type declarations.
+../../repos/market/node_modules/@cashu/cashu-ts/lib/types/model/OutputData.d.ts(1,87): error TS2307: Cannot find module './types.js' or its corresponding type declarations.
+../../repos/market/node_modules/@cashu/cashu-ts/lib/types/model/PaymentRequest.d.ts(1,102): error TS2307: Cannot find module './types.js' or its corresponding type declarations.
+../../repos/market/node_modules/@cashu/cashu-ts/lib/types/utils.d.ts(2,73): error TS2307: Cannot find module './model/types.js' or its corresponding type declarations.
+../../repos/market/node_modules/@getalby/lightning-tools/dist/types/index.d.ts(1,38): error TS2307: Cannot find module '@webbtc/webln-types' or its corresponding type declarations.
+../../repos/market/node_modules/@getalby/lightning-tools/dist/types/index.d.ts(2,52): error TS2307: Cannot find module '@webbtc/webln-types' or its corresponding type declarations.
+../../repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(8,1): error TS1046: Top-level declarations in .d.ts files must start with either a 'declare' or 'export' modifier.
+../../repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(8,27): error TS7006: Parameter 'n' implicitly has an 'any' type.
+../../repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(8,30): error TS7006: Parameter 'm' implicitly has an 'any' type.
+../../repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(8,33): error TS1183: An implementation cannot be declared in ambient contexts.
+../../repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(9,25): error TS7006: Parameter 'e' implicitly has an 'any' type.
+../../repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(9,28): error TS1183: An implementation cannot be declared in ambient contexts.
+../../repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(10,96): error TS1183: An implementation cannot be declared in ambient contexts.
+../../repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(12,25): error TS1039: Initializers are not allowed in ambient contexts.
+../../repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(13,17): error TS1036: Statements are not allowed in ambient contexts.
+../../repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(13,45): error TS18048: 'd' is possibly 'undefined'.
+../../repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(13,45): error TS2345: Argument of type 'PropertyDescriptor | undefined' is not assignable to parameter of type 'PropertyDescriptor & ThisType<any>'.
+  Type 'undefined' is not assignable to type 'PropertyDescriptor & ThisType<any>'.
+    Type 'undefined' is not assignable to type 'PropertyDescriptor'.
+../../repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(15,38): error TS1183: An implementation cannot be declared in ambient contexts.
+../../repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(6615,28): error TS1039: Initializers are not allowed in ambient contexts.
+../../repos/market/node_modules/@nostr-dev-kit/ndk/dist/index.d.mts(6624,26): error TS1039: Initializers are not allowed in ambient contexts.
+../../repos/market/node_modules/@nostr-dev-kit/wallet/dist/index.d.ts(6,31): error TS2307: Cannot find module '@webbtc/webln-types' or its corresponding type declarations.
+../../repos/market/node_modules/@tanstack/devtools-event-client/dist/esm/plugin.d.ts(13,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(335,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(692,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(709,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(794,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(1118,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(1182,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(1213,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(1259,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(1290,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(1428,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(1934,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../repos/market/node_modules/@tanstack/query-core/build/modern/_tsup-dts-rollup.d.ts(2132,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(19,115): error TS2344: Type 'FileRoutesByPath[TFilePath]["parentRoute"]' does not satisfy the constraint 'Route<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(19,115): error TS2536: Type '"parentRoute"' cannot be used to index type 'FileRoutesByPath[TFilePath]'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(19,197): error TS2344: Type 'FileRoutesByPath[TFilePath]["id"]' does not satisfy the constraint 'string'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(19,197): error TS2536: Type '"id"' cannot be used to index type 'FileRoutesByPath[TFilePath]'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(19,274): error TS2344: Type 'FileRoutesByPath[TFilePath]["path"]' does not satisfy the constraint 'string'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(19,274): error TS2536: Type '"path"' cannot be used to index type 'FileRoutesByPath[TFilePath]'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(19,361): error TS2344: Type 'FileRoutesByPath[TFilePath]["fullPath"]' does not satisfy the constraint 'string'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(19,361): error TS2536: Type '"fullPath"' cannot be used to index type 'FileRoutesByPath[TFilePath]'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(24,106): error TS2344: Type 'FileRoutesByPath[TFilePath]["parentRoute"]' does not satisfy the constraint 'Route<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(24,106): error TS2536: Type '"parentRoute"' cannot be used to index type 'FileRoutesByPath[TFilePath]'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(24,188): error TS2344: Type 'FileRoutesByPath[TFilePath]["id"]' does not satisfy the constraint 'string'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(24,188): error TS2536: Type '"id"' cannot be used to index type 'FileRoutesByPath[TFilePath]'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(24,265): error TS2344: Type 'FileRoutesByPath[TFilePath]["path"]' does not satisfy the constraint 'string'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(24,265): error TS2536: Type '"path"' cannot be used to index type 'FileRoutesByPath[TFilePath]'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(24,352): error TS2344: Type 'FileRoutesByPath[TFilePath]["fullPath"]' does not satisfy the constraint 'string'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(24,352): error TS2536: Type '"fullPath"' cannot be used to index type 'FileRoutesByPath[TFilePath]'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,98): error TS2536: Type '"preLoaderRoute"' cannot be used to index type 'FileRoutesByPath[TFilePath]'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,234): error TS2344: Type 'TRoute["parentRoute"]' does not satisfy the constraint 'AnyRoute'.
+  Type 'FileRoutesByPath[TFilePath]["preLoaderRoute"]["parentRoute"]' is not assignable to type 'Route<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,234): error TS2536: Type '"parentRoute"' cannot be used to index type 'TRoute'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,257): error TS2536: Type '"types"' cannot be used to index type 'TRoute'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,257): error TS2536: Type '"id"' cannot be used to index type 'TRoute["types"]'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,280): error TS2536: Type '"types"' cannot be used to index type 'TRoute'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,280): error TS2536: Type '"params"' cannot be used to index type 'TRoute["types"]'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,307): error TS2536: Type '"types"' cannot be used to index type 'TRoute'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,307): error TS2536: Type '"loaderDeps"' cannot be used to index type 'TRoute["types"]'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,338): error TS2536: Type '"types"' cannot be used to index type 'TRoute'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,338): error TS2536: Type '"routerContext"' cannot be used to index type 'TRoute["types"]'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,372): error TS2536: Type '"types"' cannot be used to index type 'TRoute'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,372): error TS2536: Type '"routeContextFn"' cannot be used to index type 'TRoute["types"]'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,407): error TS2536: Type '"types"' cannot be used to index type 'TRoute'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(36,407): error TS2536: Type '"beforeLoadFn"' cannot be used to index type 'TRoute["types"]'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(87,102): error TS2536: Type '"preLoaderRoute"' cannot be used to index type 'FileRoutesByPath[TFilePath]'.
+../../repos/market/node_modules/@tanstack/react-router/dist/esm/fileRoute.d.ts(87,203): error TS2344: Type 'TRoute' does not satisfy the constraint 'AnyRoute'.
+  Type 'FileRoutesByPath[TFilePath]["preLoaderRoute"]' is not assignable to type 'Route<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>'.
+../../repos/market/node_modules/applesauce-relay/dist/management.d.ts(79,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../repos/market/node_modules/barcode-detector/dist/es/core.d.ts(17,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+../../repos/market/node_modules/bun-types/globals.d.ts(232,74): error TS2694: Namespace '"node:util"' has no exported member 'TextEncoderEncodeIntoResult'.
+../../repos/market/node_modules/bun-types/overrides.d.ts(322,47): error TS2552: Cannot find name 'ConnectionOptions'. Did you mean 'BunConnectionOptions'?
+../../repos/market/node_modules/bun-types/overrides.d.ts(362,67): error TS2552: Cannot find name 'KeyObject'. Did you mean 'Object'?
+../../repos/market/node_modules/bun-types/overrides.d.ts(366,88): error TS2304: Cannot find name 'TLSSocket'.
+../../repos/market/node_modules/coco-cashu-indexeddb/dist/index.d.ts(8,15): error TS2589: Type instantiation is excessively deep and possibly infinite.
+../../repos/market/node_modules/react-use/lib/factory/createReducerContext.d.ts(2,243): error TS2694: Namespace 'React' has no exported member 'ReducerAction'.
+../../repos/market/node_modules/react-use/lib/factory/createReducerContext.d.ts(5,153): error TS2694: Namespace 'React' has no exported member 'ReducerAction'.
+../../repos/market/node_modules/react-use/lib/factory/createReducerContext.d.ts(5,286): error TS2694: Namespace 'React' has no exported member 'ReducerAction'.
+../../repos/market/node_modules/react-use/lib/useEnsuredForwardedRef.d.ts(1,87): error TS2305: Module '"react"' has no exported member 'RefForwardingComponent'.
+../../repos/market/node_modules/react-use/lib/usePermission.d.ts(10,11): error TS2430: Interface 'IDevicePermissionDescriptor' incorrectly extends interface 'PermissionDescriptor'.
+  Types of property 'name' are incompatible.
+    Type '"camera" | "microphone" | "speaker"' is not assignable to type 'PermissionName'.
+      Type '"speaker"' is not assignable to type 'PermissionName'.
+build.ts(132,2): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+build.ts(138,25): error TS2802: Type 'IterableIterator<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+build.ts(144,16): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+build.ts(198,2): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+contextvm/__tests__/currency-server.test.ts(28,60): error TS2345: Argument of type '() => Response' is not assignable to parameter of type 'typeof fetch'.
+  Property 'preconnect' is missing in type '() => Response' but required in type 'typeof fetch'.
+contextvm/__tests__/currency-server.test.ts(66,5): error TS2322: Type '{ refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'refresh' is incompatible with index signature.
+      Type 'ZodDefault<ZodOptional<ZodBoolean>>' is not assignable to type 'AnySchema'.
+        Type 'ZodDefault<ZodOptional<ZodBoolean>>' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/__tests__/currency-server.test.ts(67,5): error TS2322: Type '{ rates: z.ZodRecord<z.ZodString, z.ZodNumber>; sourcesSucceeded: z.ZodArray<z.ZodString>; sourcesFailed: z.ZodArray<z.ZodString>; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ rates: z.ZodRecord<z.ZodString, z.ZodNumber>; sourcesSucceeded: z.ZodArray<z.ZodString>; sourcesFailed: z.ZodArray<z.ZodString>; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'rates' is incompatible with index signature.
+      Type 'ZodRecord<ZodString, ZodNumber>' is not assignable to type 'AnySchema'.
+        Type 'ZodRecord<ZodString, ZodNumber>' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/__tests__/currency-server.test.ts(69,13): error TS7031: Binding element 'refresh' implicitly has an 'any' type.
+contextvm/__tests__/currency-server.test.ts(97,5): error TS2322: Type '{ currency: z.ZodString; refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ currency: z.ZodString; refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'currency' is incompatible with index signature.
+      Type 'ZodString' is not assignable to type 'AnySchema'.
+        Type 'ZodString' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/__tests__/currency-server.test.ts(98,5): error TS2322: Type '{ currency: z.ZodString; rate: z.ZodNumber; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ currency: z.ZodString; rate: z.ZodNumber; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'currency' is incompatible with index signature.
+      Type 'ZodString' is not assignable to type 'AnySchema'.
+        Type 'ZodString' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/__tests__/currency-server.test.ts(100,13): error TS7031: Binding element 'currency' implicitly has an 'any' type.
+contextvm/__tests__/currency-server.test.ts(100,23): error TS7031: Binding element 'refresh' implicitly has an 'any' type.
+contextvm/__tests__/currency-server.test.ts(275,4): error TS2322: Type '{ refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'refresh' is incompatible with index signature.
+      Type 'ZodDefault<ZodOptional<ZodBoolean>>' is not assignable to type 'AnySchema'.
+        Type 'ZodDefault<ZodOptional<ZodBoolean>>' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/__tests__/currency-server.test.ts(276,4): error TS2322: Type '{ rates: z.ZodRecord<z.ZodString, z.ZodNumber>; sourcesSucceeded: z.ZodArray<z.ZodString>; sourcesFailed: z.ZodArray<z.ZodString>; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ rates: z.ZodRecord<z.ZodString, z.ZodNumber>; sourcesSucceeded: z.ZodArray<z.ZodString>; sourcesFailed: z.ZodArray<z.ZodString>; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'rates' is incompatible with index signature.
+      Type 'ZodRecord<ZodString, ZodNumber>' is not assignable to type 'AnySchema'.
+        Type 'ZodRecord<ZodString, ZodNumber>' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/__tests__/currency-server.test.ts(319,4): error TS2322: Type '{ currency: z.ZodString; refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ currency: z.ZodString; refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'currency' is incompatible with index signature.
+      Type 'ZodString' is not assignable to type 'AnySchema'.
+        Type 'ZodString' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/__tests__/currency-server.test.ts(320,4): error TS2322: Type '{ currency: z.ZodString; rate: z.ZodNumber; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ currency: z.ZodString; rate: z.ZodNumber; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'currency' is incompatible with index signature.
+      Type 'ZodString' is not assignable to type 'AnySchema'.
+        Type 'ZodString' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/__tests__/currency-server.test.ts(322,12): error TS7031: Binding element 'currency' implicitly has an 'any' type.
+contextvm/server.ts(87,4): error TS2322: Type '{ refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'refresh' is incompatible with index signature.
+      Type 'ZodDefault<ZodOptional<ZodBoolean>>' is not assignable to type 'AnySchema'.
+        Type 'ZodDefault<ZodOptional<ZodBoolean>>' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/server.ts(88,4): error TS2322: Type '{ rates: z.ZodRecord<z.ZodString, z.ZodNumber>; sourcesSucceeded: z.ZodArray<z.ZodString>; sourcesFailed: z.ZodArray<z.ZodString>; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ rates: z.ZodRecord<z.ZodString, z.ZodNumber>; sourcesSucceeded: z.ZodArray<z.ZodString>; sourcesFailed: z.ZodArray<z.ZodString>; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'rates' is incompatible with index signature.
+      Type 'ZodRecord<ZodString, ZodNumber>' is not assignable to type 'AnySchema'.
+        Type 'ZodRecord<ZodString, ZodNumber>' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/server.ts(90,12): error TS7031: Binding element 'refresh' implicitly has an 'any' type.
+contextvm/server.ts(118,4): error TS2322: Type '{ currency: z.ZodString; refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ currency: z.ZodString; refresh: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'currency' is incompatible with index signature.
+      Type 'ZodString' is not assignable to type 'AnySchema'.
+        Type 'ZodString' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/server.ts(119,4): error TS2322: Type '{ currency: z.ZodString; rate: z.ZodNumber; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'AnySchema | ZodRawShapeCompat | undefined'.
+  Type '{ currency: z.ZodString; rate: z.ZodNumber; fetchedAt: z.ZodNumber; cached: z.ZodBoolean; }' is not assignable to type 'ZodRawShapeCompat'.
+    Property 'currency' is incompatible with index signature.
+      Type 'ZodString' is not assignable to type 'AnySchema'.
+        Type 'ZodString' is missing the following properties from type 'ZodType<any, any, any>': _type, _parse, _getType, _getOrReturnCtx, and 7 more.
+contextvm/server.ts(121,12): error TS7031: Binding element 'currency' implicitly has an 'any' type.
+contextvm/server.ts(121,22): error TS7031: Binding element 'refresh' implicitly has an 'any' type.
+deploy-simple/scripts/app-settings/inspect.ts(37,46): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/app-settings/inspect.ts(44,52): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/app-settings/publish.ts(97,43): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/app-settings/publish.ts(107,33): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/app-settings/publish.ts(119,5): error TS2353: Object literal may only specify known properties, and 'pubkey' does not exist in type 'EventTemplate'.
+deploy-simple/scripts/app-settings/publish.ts(128,34): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/app-settings/publish.ts(137,5): error TS2353: Object literal may only specify known properties, and 'pubkey' does not exist in type 'EventTemplate'.
+deploy-simple/scripts/app-settings/publish.ts(176,3): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/backup.ts(56,17): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/backup.ts(64,19): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/backup.ts(74,19): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/backup.ts(81,2): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/backup.ts(94,1): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/backup.ts(108,1): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/restore.ts(45,17): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/restore.ts(53,18): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/restore.ts(54,20): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/restore.ts(56,22): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+deploy-simple/scripts/market-events/restore.ts(81,16): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+e2e/fixtures/relay-monitor.ts(170,32): error TS2802: Type 'Map<number, number>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+scripts/fetch-btc-price.ts(35,1): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+scripts/fetch-btc-price.ts(39,16): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+scripts/fetch-btc-price.ts(59,1): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+scripts/gen_payment_details.ts(92,41): error TS2339: Property 'ON_CHAIN' does not exist on type '{ readonly LIGHTNING_NETWORK: "ln"; }'.
+scripts/gen_payment_details.ts(100,38): error TS2339: Property 'ON_CHAIN' does not exist on type '{ readonly LIGHTNING_NETWORK: "ln"; }'.
+scripts/migrate-relay.ts(24,1): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+scripts/migrate-relay.ts(49,3): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+src/components/checkout/WalletSelector.tsx(22,31): error TS2339: Property 'ON_CHAIN' does not exist on type '{ readonly LIGHTNING_NETWORK: "ln"; }'.
+src/components/lightning/LightningPaymentProcessor.tsx(183,6): error TS2322: Type '(payment: NDKZapDetails<LnPaymentInfo>) => Promise<{ pr: string; }>' is not assignable to type 'LnPayCb'.
+  Type 'Promise<{ pr: string; }>' is not assignable to type 'Promise<NDKPaymentConfirmationLN | undefined>'.
+    Property 'preimage' is missing in type '{ pr: string; }' but required in type 'NDKPaymentConfirmationLN'.
+src/components/lightning/LightningPaymentProcessor.tsx(200,23): error TS2345: Argument of type '{ success: false; error: string; }' is not assignable to parameter of type 'PaymentResult'.
+  Property 'invoiceId' is missing in type '{ success: false; error: string; }' but required in type 'PaymentResult'.
+src/components/migration/MigrationForm.tsx(318,54): error TS2345: Argument of type '{ name: string; summary: string; description: string; price: string; quantity: string; currency: string; status: "hidden" | "on-sale" | "pre-order"; productType: "variable" | "single"; mainCategory: string; ... 6 more ...; dimensions: { ...; } | null; }' is not assignable to parameter of type 'ProductFormData'.
+  Property 'isNSFW' is missing in type '{ name: string; summary: string; description: string; price: string; quantity: string; currency: string; status: "hidden" | "on-sale" | "pre-order"; productType: "variable" | "single"; mainCategory: string; ... 6 more ...; dimensions: { ...; } | null; }' but required in type 'ProductFormData'.
+src/components/sheet-contents/products/ProductFormContent.tsx(472,13): error TS2322: Type '{ children: string; type: "button"; variant: "secondary"; className: string; tooltip: string; onClick: () => void; "data-testid": string; }' is not assignable to type 'IntrinsicAttributes & ClassAttributes<HTMLButtonElement> & ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<...> & { ...; }'.
+  Property 'tooltip' does not exist on type 'IntrinsicAttributes & ClassAttributes<HTMLButtonElement> & ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<...> & { ...; }'.
+src/components/ui/relay-manager/RelayManager.tsx(43,21): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/lib/__tests__/e2e-workflow-gate-membership.test.ts(43,13): error TS2802: Type 'RegExpStringIterator<RegExpExecArray>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/lib/__tests__/image-compression.test.ts(30,13): error TS2790: The operand of a 'delete' operator must be optional.
+src/lib/__tests__/image-compression.test.ts(120,27): error TS2345: Argument of type 'number | ImageBitmapOptions | undefined' is not assignable to parameter of type 'ImageBitmapOptions | undefined'.
+  Type 'number' has no properties in common with type 'ImageBitmapOptions'.
+src/lib/__tests__/image-compression.test.ts(143,13): error TS2790: The operand of a 'delete' operator must be optional.
+src/lib/__tests__/io.test.ts(211,36): error TS2345: Argument of type '(filter: any, opts: any) => { stop: Mock<() => void>; }' is not assignable to parameter of type '() => { stop: Mock<() => void>; }'.
+  Target signature provides too few arguments. Expected 2 or more, but got 0.
+src/lib/__tests__/io.test.ts(211,37): error TS7006: Parameter 'filter' implicitly has an 'any' type.
+src/lib/__tests__/io.test.ts(211,45): error TS7006: Parameter 'opts' implicitly has an 'any' type.
+src/lib/__tests__/io.test.ts(232,11): error TS2493: Tuple type '[]' of length '0' has no element at index '0'.
+src/lib/__tests__/io.test.ts(232,19): error TS2493: Tuple type '[]' of length '0' has no element at index '1'.
+src/lib/__tests__/io.test.ts(233,26): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(expected: undefined): void', gave the following error.
+    Argument of type '{ kinds: number[]; }' is not assignable to parameter of type 'undefined'.
+  Overload 2 of 2, '(expected: undefined): void', gave the following error.
+    Argument of type '{ kinds: number[]; }' is not assignable to parameter of type 'undefined'.
+src/lib/__tests__/io.test.ts(234,11): error TS2352: Conversion of type 'undefined' to type '{ timeoutMs: number; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/lib/__tests__/io.test.ts(235,24): error TS2352: Conversion of type 'undefined' to type '{ relaySet: unknown; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/lib/__tests__/io.test.ts(244,11): error TS2493: Tuple type '[]' of length '0' has no element at index '0'.
+src/lib/__tests__/io.test.ts(244,19): error TS2493: Tuple type '[]' of length '0' has no element at index '1'.
+src/lib/__tests__/io.test.ts(244,25): error TS2493: Tuple type '[]' of length '0' has no element at index '2'.
+src/lib/__tests__/io.test.ts(245,26): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(expected: undefined): void', gave the following error.
+    Argument of type '{ kinds: number[]; }' is not assignable to parameter of type 'undefined'.
+  Overload 2 of 2, '(expected: undefined): void', gave the following error.
+    Argument of type '{ kinds: number[]; }' is not assignable to parameter of type 'undefined'.
+src/lib/__tests__/io.test.ts(246,11): error TS2352: Conversion of type 'undefined' to type '{ closeOnEose: boolean; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/lib/__tests__/io.test.ts(261,11): error TS2493: Tuple type '[]' of length '0' has no element at index '0'.
+src/lib/__tests__/io.test.ts(261,18): error TS2493: Tuple type '[]' of length '0' has no element at index '1'.
+src/lib/__tests__/io.test.ts(262,11): error TS2352: Conversion of type 'undefined' to type '{ rawEvent(): unknown; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/lib/__tests__/io.test.ts(270,11): error TS2493: Tuple type '[]' of length '0' has no element at index '0'.
+src/lib/__tests__/io.test.ts(270,18): error TS2493: Tuple type '[]' of length '0' has no element at index '1'.
+src/lib/__tests__/io.test.ts(271,11): error TS2352: Conversion of type 'undefined' to type '{ rawEvent(): unknown; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/lib/__tests__/io.test.ts(299,11): error TS2493: Tuple type '[]' of length '0' has no element at index '0'.
+src/lib/__tests__/io.test.ts(299,18): error TS2493: Tuple type '[]' of length '0' has no element at index '1'.
+src/lib/__tests__/io.test.ts(300,11): error TS2352: Conversion of type 'undefined' to type '{ rawEvent(): unknown; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/lib/__tests__/nip17OrderTransport.test.ts(156,11): error TS18047: 'result.relayTargets' is possibly 'null'.
+src/lib/__tests__/nip17OrderTransport.test.ts(156,62): error TS18047: 'result.relayTargets' is possibly 'null'.
+src/lib/__tests__/nip17OrderTransport.test.ts(193,11): error TS18047: 'result.relayTargets' is possibly 'null'.
+src/lib/__tests__/nip17OrderTransport.test.ts(193,65): error TS18047: 'result.relayTargets' is possibly 'null'.
+src/lib/__tests__/nip17Relays.test.ts(74,17): error TS2339: Property 'event' does not exist on type 'Nip17DmRelayListResult'.
+  Property 'event' does not exist on type 'Nip17DmRelayListMissingResult'.
+src/lib/__tests__/nip17Relays.test.ts(94,17): error TS2339: Property 'event' does not exist on type 'Nip17DmRelayListResult'.
+  Property 'event' does not exist on type 'Nip17DmRelayListMissingResult'.
+src/lib/__tests__/preview-deploy-workflow-guard.test.ts(36,20): error TS2802: Type 'RegExpStringIterator<RegExpExecArray>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/lib/__tests__/preview-deploy-workflow-guard.test.ts(37,13): error TS2802: Type 'Set<any>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/lib/__tests__/preview-deploy-workflow-guard.test.ts(51,21): error TS2802: Type 'RegExpStringIterator<RegExpExecArray>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/lib/__tests__/preview-deploy-workflow-guard.test.ts(63,13): error TS2802: Type 'RegExpStringIterator<RegExpExecArray>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/lib/__tests__/preview-deploy-workflow-guard.test.ts(76,13): error TS2802: Type 'Set<any>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/lib/__tests__/preview-deploy-workflow-guard.test.ts(76,25): error TS2802: Type 'RegExpStringIterator<RegExpExecArray>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/lib/__tests__/preview-deploy-workflow-guard.test.ts(99,22): error TS2802: Type 'RegExpStringIterator<RegExpExecArray>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/lib/__tests__/preview-deploy-workflow-guard.test.ts(100,13): error TS2802: Type 'Set<any>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/lib/__tests__/relay-applesauce-semantics.test.ts(62,23): error TS2352: Conversion of type 'typeof import("/home/c03rad0r/repos/market/node_modules/applesauce-relay-hermetic/dist/pool")' to type '{ RelayPool: typeof RelayPool; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'RelayPool' are incompatible.
+    Types of construct signatures are incompatible.
+      Type 'new (options?: RelayOptions | undefined) => RelayPool' is not assignable to type 'new (options?: RelayOptions | undefined) => RelayPool'.
+        Construct signature return types 'RelayPool' and 'RelayPool' are incompatible.
+          The types of 'relays$.value' are incompatible between these types.
+            Type 'Map<string, import("/home/c03rad0r/repos/market/node_modules/applesauce-relay-hermetic/dist/relay").Relay>' is not comparable to type 'Map<string, import("/home/c03rad0r/repos/market/node_modules/applesauce-relay/dist/relay").Relay>'.
+              Type 'import("/home/c03rad0r/repos/market/node_modules/applesauce-relay-hermetic/dist/relay").Relay' is not comparable to type 'import("/home/c03rad0r/repos/market/node_modules/applesauce-relay/dist/relay").Relay'.
+                Property 'log' is protected but type 'Relay' is not a class derived from 'Relay'.
+src/lib/__tests__/relay-applesauce-semantics.test.ts(62,24): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+src/lib/__tests__/relay-applesauce-semantics.test.ts(65,24): error TS2352: Conversion of type 'typeof import("/home/c03rad0r/repos/market/node_modules/applesauce-relay-hermetic/dist/group")' to type '{ RelayGroup: typeof RelayGroup; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'RelayGroup' are incompatible.
+    Types of construct signatures are incompatible.
+      Type 'new (relays: IGroupRelayInput) => RelayGroup' is not assignable to type 'new (relays: IGroupRelayInput) => RelayGroup'.
+        Type 'import("/home/c03rad0r/repos/market/node_modules/applesauce-relay-hermetic/dist/group").RelayGroup' is not comparable to type 'import("/home/c03rad0r/repos/market/node_modules/applesauce-relay/dist/group").RelayGroup'.
+          Property 'relays$' is protected but type 'RelayGroup' is not a class derived from 'RelayGroup'.
+src/lib/__tests__/relay-applesauce-semantics.test.ts(65,25): error TS1378: Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', 'nodenext', or 'preserve', and the 'target' option is set to 'es2017' or higher.
+src/lib/__tests__/relay-applesauce-semantics.test.ts(243,35): error TS2345: Argument of type '{ resubscribe: boolean; reconnect: { count: number; delay: number; }; }' is not assignable to parameter of type 'string'.
+src/lib/__tests__/relay-applesauce-semantics.test.ts(280,50): error TS2345: Argument of type '{ resubscribe: boolean; reconnect: boolean; }' is not assignable to parameter of type 'string'.
+src/lib/__tests__/relay-applesauce-semantics.test.ts(316,56): error TS2345: Argument of type '{ resubscribe: boolean; }' is not assignable to parameter of type 'string'.
+src/lib/__tests__/relay-applesauce-semantics.test.ts(317,16): error TS2352: Conversion of type 'string | NostrEvent' to type '{ type: string; event?: { id: string; } | undefined; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Property 'type' is missing in type 'NostrEvent' but required in type '{ type: string; event?: { id: string; } | undefined; }'.
+src/lib/__tests__/relay-applesauce-semantics.test.ts(318,47): error TS2352: Conversion of type 'string | NostrEvent' to type '{ from: string; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Property 'from' is missing in type 'NostrEvent' but required in type '{ from: string; }'.
+src/lib/__tests__/relay-applesauce-semantics.test.ts(372,63): error TS2353: Object literal may only specify known properties, and 'complete' does not exist in type 'GroupRequestOptions'.
+src/lib/__tests__/relay-applesauce-semantics.test.ts(372,84): error TS2339: Property 'completeOnAllEose' does not exist on type 'typeof RelayGroup'.
+src/lib/__tests__/relay-applesauce-semantics.test.ts(414,63): error TS2353: Object literal may only specify known properties, and 'complete' does not exist in type 'GroupRequestOptions'.
+src/lib/__tests__/relay-applesauce-semantics.test.ts(414,84): error TS2339: Property 'completeOnAllEose' does not exist on type 'typeof RelayGroup'.
+src/lib/__tests__/theme-contrast.test.ts(73,38): error TS2556: A spread argument must either have a tuple type or be passed to a rest parameter.
+src/lib/__tests__/theme-contrast.test.ts(74,36): error TS2556: A spread argument must either have a tuple type or be passed to a rest parameter.
+src/lib/__tests__/theme-contrast.test.ts(84,38): error TS2556: A spread argument must either have a tuple type or be passed to a rest parameter.
+src/lib/__tests__/theme-contrast.test.ts(85,36): error TS2556: A spread argument must either have a tuple type or be passed to a rest parameter.
+src/lib/cart-persistence.ts(58,27): error TS2677: A type predicate's type must be assignable to its parameter's type.
+  Type '{ productRef: string; quantity: number; shippingRef?: string | null | undefined; }' is not assignable to type '{ shippingRef?: string | undefined; productRef: string; quantity: number; }'.
+    Types of property 'shippingRef' are incompatible.
+      Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+        Type 'null' is not assignable to type 'string | undefined'.
+src/lib/cart-persistence.ts(59,34): error TS18047: 'a' is possibly 'null'.
+src/lib/cart-persistence.ts(59,48): error TS18047: 'b' is possibly 'null'.
+src/lib/cart-persistence.ts(65,3): error TS2322: Type '({ shippingRef?: string | undefined; productRef: string; quantity: number; } | null)[]' is not assignable to type '{ productRef: string; quantity: number; shippingRef?: string | null | undefined; }[]'.
+  Type '{ shippingRef?: string | undefined; productRef: string; quantity: number; } | null' is not assignable to type '{ productRef: string; quantity: number; shippingRef?: string | null | undefined; }'.
+    Type 'null' is not assignable to type '{ productRef: string; quantity: number; shippingRef?: string | null | undefined; }'.
+src/lib/nostr/io-applesauce.ts(81,6): error TS2353: Object literal may only specify known properties, and 'complete' does not exist in type 'GroupRequestOptions'.
+src/lib/nostr/io-applesauce.ts(81,27): error TS2339: Property 'completeOnAllEose' does not exist on type 'typeof RelayGroup'.
+src/lib/nostr/io-applesauce.ts(128,24): error TS2345: Argument of type '{ resubscribe: boolean; reconnect: { readonly count: 3; readonly delay: 1000; }; }' is not assignable to parameter of type 'string'.
+src/lib/nostr/io-applesauce.ts(135,17): error TS2339: Property 'type' does not exist on type 'SubscriptionResponse'.
+  Property 'type' does not exist on type 'NostrEvent'.
+src/lib/nostr/io-applesauce.ts(136,26): error TS2339: Property 'from' does not exist on type 'SubscriptionResponse'.
+  Property 'from' does not exist on type 'NostrEvent'.
+src/lib/nostr/io-applesauce.ts(144,17): error TS2339: Property 'type' does not exist on type 'SubscriptionResponse'.
+  Property 'type' does not exist on type 'NostrEvent'.
+src/lib/nostr/io-applesauce.ts(144,46): error TS2339: Property 'type' does not exist on type 'SubscriptionResponse'.
+  Property 'type' does not exist on type 'NostrEvent'.
+src/lib/nostr/io-applesauce.ts(146,26): error TS2339: Property 'from' does not exist on type 'SubscriptionResponse'.
+  Property 'from' does not exist on type 'NostrEvent'.
+src/lib/nostr/io-applesauce.ts(150,17): error TS2339: Property 'type' does not exist on type 'SubscriptionResponse'.
+  Property 'type' does not exist on type 'NostrEvent'.
+src/lib/nostr/io-applesauce.ts(150,63): error TS2339: Property 'event' does not exist on type 'SubscriptionResponse'.
+  Property 'event' does not exist on type 'NostrEvent'.
+src/lib/nostr/ndk-events.ts(67,23): error TS2802: Type 'Set<NDKEvent>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/lib/orders/nip17OrderPublish.ts(78,3): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/lib/stores/cart.test.ts(153,41): error TS2554: Expected 1 arguments, but got 2.
+src/lib/stores/ndk.ts(373,15): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/lib/stores/ndk.ts(452,39): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/lib/stores/notifications.ts(290,30): error TS2345: Argument of type 'NotificationState' is not assignable to parameter of type '(prev: NotificationState) => NotificationState'.
+  Type 'NotificationState' provides no match for the signature '(prev: NotificationState): NotificationState'.
+src/lib/stores/product-navigation.test.ts(11,27): error TS2352: Conversion of type '(_handler: TimerHandler, _timeout?: number) => ReturnType<typeof setTimeout>' to type 'typeof setTimeout' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Property '__promisify__' is missing in type '(_handler: TimerHandler, _timeout?: number) => ReturnType<typeof setTimeout>' but required in type 'typeof setTimeout'.
+src/lib/stores/product-session.test.ts(16,16): error TS2353: Object literal may only specify known properties, and 'shipping' does not exist in type 'ProductShippingSelection'.
+src/lib/stores/product-session.test.ts(76,18): error TS2353: Object literal may only specify known properties, and 'shipping' does not exist in type 'ProductShippingSelection'.
+src/lib/utils/paymentDetails.ts(147,36): error TS2339: Property 'ON_CHAIN' does not exist on type '{ readonly LIGHTNING_NETWORK: "ln"; }'.
+src/lib/utils/paymentDetails.ts(166,26): error TS2339: Property 'ON_CHAIN' does not exist on type '{ readonly LIGHTNING_NETWORK: "ln"; }'.
+src/lib/utils/paymentDetails.ts(171,26): error TS2339: Property 'ON_CHAIN' does not exist on type '{ readonly LIGHTNING_NETWORK: "ln"; }'.
+src/lib/utils/productFormStorage.ts(53,11): error TS2339: Property 'mainTab' does not exist on type 'ProductFormState'.
+src/lib/utils/productFormStorage.ts(53,30): error TS2339: Property 'productSubTab' does not exist on type 'ProductFormState'.
+src/lib/utils/productShippingSelections.ts(103,17): error TS2339: Property 'shipping' does not exist on type 'ProductShippingSelectionInput'.
+  Property 'shipping' does not exist on type 'ProductShippingSelection'.
+src/lib/utils/productShippingSelections.ts(103,52): error TS2339: Property 'shipping' does not exist on type 'ProductShippingSelectionInput'.
+  Property 'shipping' does not exist on type 'ProductShippingSelection'.
+src/publish/orders.test.ts(500,60): error TS2345: Argument of type 'PublishedEvent' is not assignable to parameter of type 'NDKEvent'.
+  Type 'PublishedEvent' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, author, and 72 more.
+src/publish/orders.test.ts(529,60): error TS2345: Argument of type 'PublishedEvent' is not assignable to parameter of type 'NDKEvent'.
+  Type 'PublishedEvent' is missing the following properties from type 'NDKEvent': _author, relay, onRelays, author, and 72 more.
+src/publish/payment.tsx(55,88): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
+  Type 'string[]' is not assignable to type 'string'.
+src/publish/payment.tsx(106,5): error TS2322: Type '"on-chain"' is not assignable to type '"ln"'.
+src/queries/__tests__/external.test.ts(39,2): error TS2741: Property 'preconnect' is missing in type 'Mock<(url: string, init?: RequestInit | undefined) => Promise<Response>>' but required in type 'typeof fetch'.
+src/queries/__tests__/orders-seam.test.ts(77,36): error TS2493: Tuple type '[]' of length '0' has no element at index '0'.
+src/queries/__tests__/orders-seam.test.ts(77,48): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(expected: undefined): void', gave the following error.
+    Argument of type '{ kinds: number[]; '#p': string[]; limit: number; }' is not assignable to parameter of type 'undefined'.
+  Overload 2 of 2, '(expected: undefined): void', gave the following error.
+    Argument of type '{ kinds: number[]; '#p': string[]; limit: number; }' is not assignable to parameter of type 'undefined'.
+src/queries/external.tsx(35,5): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/queries/orders.tsx(1241,39): error TS2802: Type 'Map<string, number>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+src/routes/checkout.tsx(586,6): error TS2322: Type '{ orderId: string; id: string; bolt11?: string | null; amount: number; description: string; recipientName: string; status: PaymentInvoiceStatus; ... 8 more ...; updatedAt?: number; }' is not assignable to type '{ orderId: string; recipientPubkey?: string | undefined; amount: number; description?: string | undefined; id: string; bolt11?: string | undefined; }'.
+  Types of property 'bolt11' are incompatible.
+    Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+      Type 'null' is not assignable to type 'string | undefined'.
+src/routes/posts.$postId.tsx(7,24): error TS2339: Property 'queryClient' does not exist on type '{}'.
+src/routes/posts.index.tsx(7,24): error TS2339: Property 'queryClient' does not exist on type '{}'.
+src/routes/products.$productId.tsx(382,60): error TS2345: Argument of type '() => ({ id: string; name: string; cost: number; currency: string; countries: string[]; service: string; carrier: string | undefined; } | null)[]' is not assignable to parameter of type '() => RichShippingInfo[]'.
+  Type '({ id: string; name: string; cost: number; currency: string; countries: string[]; service: string; carrier: string | undefined; } | null)[]' is not assignable to type 'RichShippingInfo[]'.
+    Type '{ id: string; name: string; cost: number; currency: string; countries: string[]; service: string; carrier: string | undefined; } | null' is not assignable to type 'RichShippingInfo'.
+      Type 'null' is not assignable to type 'RichShippingInfo'.
+src/routes/products.$productId.tsx(400,32): error TS2677: A type predicate's type must be assignable to its parameter's type.
+  Type 'RichShippingInfo' is not assignable to type '{ id: string; name: string; cost: number; currency: string; countries: string[]; service: string; carrier: string | undefined; }'.
+    Types of property 'name' are incompatible.
+      Type 'string | undefined' is not assignable to type 'string'.
+        Type 'undefined' is not assignable to type 'string'.
+src/routes/search.products.tsx(46,14): error TS7006: Parameter 'term' implicitly has an 'any' type.
+src/routes/search.products.tsx(53,32): error TS7006: Parameter 'term' implicitly has an 'any' type.
+src/routes/setup.tsx(77,5): error TS1360: Type '{ name: string; displayName: string; picture: string; banner: string; ownerPk: string; contactEmail: string; allowRegister: boolean; defaultCurrency: string; }' does not satisfy the expected type '{ name: string; displayName: string; picture: string; banner: string; ownerPk: string; allowRegister: boolean; defaultCurrency: string; contactEmail: string | undefined; showNostrLink: boolean; blossom_server?: string | undefined; nip96_server?: string | undefined; }'.
+  Property 'showNostrLink' is missing in type '{ name: string; displayName: string; picture: string; banner: string; ownerPk: string; contactEmail: string; allowRegister: boolean; defaultCurrency: string; }' but required in type '{ name: string; displayName: string; picture: string; banner: string; ownerPk: string; allowRegister: boolean; defaultCurrency: string; contactEmail: string | undefined; showNostrLink: boolean; blossom_server?: string | undefined; nip96_server?: string | undefined; }'.
+src/routes/setup.tsx(82,26): error TS2339: Property 'errors' does not exist on type 'ZodError<{ name: string; displayName: string; picture: string; banner: string; ownerPk: string; allowRegister: boolean; defaultCurrency: string; contactEmail: string | undefined; showNostrLink: boolean; blossom_server?: string | undefined; nip96_server?: string | undefined; }>'.
+src/routes/setup.tsx(82,65): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+src/routes/setup.tsx(82,70): error TS7006: Parameter 'curr' implicitly has an 'any' type.

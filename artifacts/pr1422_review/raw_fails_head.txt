@@ -1,0 +1,85 @@
+(fail) NDK active-user compatibility projection > a queued NDK signer setter cannot resurrect activeUser after synchronous detach
+(fail) NDK active-user compatibility projection > app-created main and zap NDK instances leave user-relay discovery to signer services
+(fail) NDK active-user compatibility projection > different-pubkey late continuation is repaired to the current compatibility identity
+(fail) NDK active-user compatibility projection > projects distinct main and zap user views without rebinding the canonical authenticated user
+(fail) NDK active-user compatibility projection > same-pubkey late session view cannot replace signer or capability authority
+(fail) NDK active-user compatibility projection > synchronous publication failure restores prior per-NDK views after queued candidate work settles
+(fail) NIP-60 lifecycle ownership > a wallet produced by stale async construction is cleaned without installation
+(fail) NIP-60 lifecycle ownership > late A completion cannot replace initialized wallet B
+(fail) NIP-60 lifecycle ownership > reset during transaction fetch prevents stale transactions and subscriptions
+(fail) NIP-60 lifecycle ownership > reset during wallet-event fetch leaves reset state and suppresses stale errors
+(fail) NIP-60 lifecycle ownership > reset invalidates transaction callbacks already installed by initialization
+(fail) NIP-60 lifecycle ownership > reset while initialization-spawned auto-cleanup is pending cannot repopulate state
+(fail) NIP-60 lifecycle ownership > reset while wallet.start is pending prevents stale state and callback writes
+(fail) RatesCache > evictExpired removes expired entries
+(fail) RatesCache > returns null for missing key
+(fail) RatesCache > stores and retrieves a value
+(fail) RatesCache > works with in-memory database
+(fail) applesauce-relay 6.2 real-library semantics: bounded reconnect (T1) > req() with reconnect: true (pre-fix adapter state) never stops retrying a dying relay
+(fail) applesauce-relay 6.2 real-library semantics: bounded reconnect (T1) > req() with the adapter’s { count: 3, delay: 1000 } policy sends exactly 1+3 REQs to a dying relay, then surfaces ERROR
+(fail) applesauce-relay 6.2 real-library semantics: group EOSE (T2) > group REQ keeps delivering after the first relay EOSEs — no CLOSE until the consumer stops (maximotodev review premise)
+(fail) applesauce-relay 6.2 real-library semantics: request() completion (T3) > request() with completeOnAllEose() collects the slow relay’s event instead of completing at first-EOSE+5s
+(fail) applesauce-relay 6.2 real-library semantics: request() completion (T3) > request() with completeOnAllEose() does not complete while a relay never EOSEs — the adapter’s 8s backstop is the resolution path
+(fail) auxiliary authenticated NDK identity isolation > cached wallet NWC constructor owns an isolated user view and no relay discovery
+(fail) auxiliary authenticated NDK identity isolation > one-shot payment NWC constructor owns an isolated user view and no relay discovery
+(fail) external.tsx - fetchBtcExchangeRates > does not cache rates in localStorage
+(fail) fetchProductsByPubkey direct-call guard > throws on empty pubkey without touching NDK
+(fail) fetchProductsByPubkey direct-call guard > throws on malformed pubkey without touching NDK (zero relay I/O)
+(fail) fetchProductsByPubkey direct-call guard > throws on whitespace pubkey without touching NDK
+(fail) fetchProductsBySearchWithSellers — gate fidelity vs the direct half > a coordinate returned by both halves is deduplicated, then dropped once
+(fail) fetchProductsBySearchWithSellers — gate fidelity vs the direct half > a labeled item is still returned when the label is not applied (fail open)
+(fail) fetchProductsBySearchWithSellers — gate fidelity vs the direct half > a test-labeled direct NIP-50 hit is excluded as well
+(fail) fetchProductsBySearchWithSellers — the seller-name half is gated (ADR-0009) > an unlabeled search returns every merged result (no over-filtering)
+(fail) fetchProductsBySearchWithSellers — the seller-name half is gated (ADR-0009) > excludes a test-labeled product reached through the seller match
+(fail) fetchProductsBySearchWithSellers — the seller-name half is gated (ADR-0009) > keeps the seller’s unlabeled products and the direct NIP-50 hit
+(fail) fetchProductsBySearchWithSellers — the seller-name half is gated (ADR-0009) > the by-author read itself stays ungated — the profile path still sees labeled items
+(fail) fetchProductsBySearchWithSellers — the seller-name half is gated (ADR-0009) > the limit applies after gating, so gated items never consume slots
+(fail) fetchProductsBySearchWithSellers — the seller-name half is gated (ADR-0009) > the show-test-listings toggle still reveals the labeled seller product
+(fail) legacy migrate-on-unlock over the REAL rehydrate seam (P1 regression) > migrating the legacy plaintext pair restores identity and keeps the vault, not the plaintext
+(fail) nostr-connect session rehydration (real seam, ADR-0002 B-3) > injected transport: rehydrateNostrConnectSession resolves and getPublicKey returns the user pubkey
+(fail) nostr-connect session rehydration (real seam, ADR-0002 B-3) > no injected transport: rehydrate defaults to the shared io-seam pool (P1 regression)
+(fail) nostr-connect signer session teardown (B-2fix item 1) > login-logout-login closes the REQ subscription so it does not stack (B-2fix item 1)
+(fail) signer registry > a non-logout removeSigner path clears the attached capability too
+(fail) signer registry > set/get round-trips the attached capability and clears on undefined
+(fail) signer-service session ownership > A balance selection cannot replace B active NWC state
+(fail) signer-service session ownership > A wallet initialization completion cannot clear B loading ownership
+(fail) signer-service session ownership > a stale relay fetch cannot add A relays after logout and login B
+(fail) signer-service session ownership > a stale remote-wallet fetch cannot merge or persist A wallets after logout
+(fail) transactional signer authority attachment > NIP-07 authority commit synchronously projects the authenticated user to every NDK surface
+(fail) transactional signer authority attachment > NIP-07 readiness failure leaves every authority surface detached
+(fail) transactional signer authority attachment > a cancelled attempt's finally cannot clear a newer attempt's lifecycle flag
+(fail) transactional signer authority attachment > a concurrent NIP-46 login is rejected before constructing its candidate and a later attempt may start
+(fail) transactional signer authority attachment > a second login is rejected without altering the attached account
+(fail) transactional signer authority attachment > authenticated state-only authority remains fail-closed
+(fail) transactional signer authority attachment > authority publication is linearized before deferred signer services begin
+(fail) transactional signer authority attachment > commit-time revalidation preserves an unexpected winner and cleans the stale NIP-46 candidate
+(fail) transactional signer authority attachment > commit-time revalidation preserves store-only authority and cleans the stale NIP-46 candidate
+(fail) transactional signer authority attachment > commit-time revalidation preserves zap-only authority and cleans the stale NIP-46 candidate
+(fail) transactional signer authority attachment > discard during legacy migration wrapping prevents every stale storage mutation
+(fail) transactional signer authority attachment > fresh NIP-46 persistence failure never publishes authority and cleans the local signer once
+(fail) transactional signer authority attachment > logout cancels NIP-07 preparation before persistence
+(fail) transactional signer authority attachment > logout cancels fresh NIP-46 preparation and cleans its local transport once
+(fail) transactional signer authority attachment > logout cancels nsec private preparation without resurrection
+(fail) transactional signer authority attachment > logout cancels restored NIP-46 preparation and cleans its local transport once
+(fail) transactional signer authority attachment > logout during deferred signer services cannot resurrect authority
+(fail) transactional signer authority attachment > logout during fresh vault wrapping prevents stale vault persistence
+(fail) transactional signer authority attachment > logout owns rejecting global teardown exactly once through the NDK detach chokepoint
+(fail) transactional signer authority attachment > logout synchronously clears main and zap active-user compatibility identity
+(fail) transactional signer authority attachment > main signer-only authority remains fail-closed
+(fail) transactional signer authority attachment > nsec readiness failure leaves every authority surface detached
+(fail) transactional signer authority attachment > post-commit NIP-46 service failure retains authority and transport ownership
+(fail) transactional signer authority attachment > post-commit signer-service failure does not roll back a valid login
+(fail) transactional signer authority attachment > signer capability-only authority remains fail-closed
+(fail) transactional signer authority attachment > signer teardown-only authority remains fail-closed
+(fail) transactional signer authority attachment > store-only authority rejects NIP-07 before candidate construction
+(fail) transactional signer authority attachment > store-only authority rejects fresh NIP-46 before candidate construction
+(fail) transactional signer authority attachment > store-only authority rejects nsec before candidate construction
+(fail) transactional signer authority attachment > store-only authority rejects restored NIP-46 before candidate construction
+(fail) transactional signer authority attachment > synchronous publication failure restores detached state and cleans NIP-46 exactly once
+(fail) transactional signer authority attachment > synchronous publication failure restores previous main and zap compatibility identities
+(fail) transactional signer authority attachment > vaulted NIP-46 readiness failure cleans the local signer and stays detached
+(fail) transactional signer authority attachment > zap-only authority rejects NIP-07 before candidate construction
+(fail) transactional signer authority attachment > zap-only authority rejects fresh NIP-46 before candidate construction
+(fail) transactional signer authority attachment > zap-only authority rejects nsec before candidate construction
+(fail) transactional signer authority attachment > zap-only authority rejects restored NIP-46 before candidate construction
+(fail) unlockVaultedSession over the REAL rehydrate seam (P1 regression) > vaulted session unlock restores identity through the real NostrConnectSigner
