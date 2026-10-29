@@ -15,7 +15,7 @@ Task: Review PlebeianApp/market PR #1200 `ci(relay): add bounded staging readine
 | Gate 2.5 cold audit (assigned worker-reviewer-ds absent on node -> fresh-context delegate audit, same-family, disclosed) | DONE — AUDIT_VERDICT: CONFIRMED_W_AMENDMENTS; 3 amendments applied (mis-attribution of 8-item list to review body vs comment 5354414353; false novelty claim on exit-75 dropped — it is the review-of-record's own RISK #1; evidence hygiene) | audit-1200.md, draft-verdict.md |
 | Gate state `prs["1200"].last_reviewed_sha` write | DONE — backup .bak-pr1200-noop-20261029, atomic write, verified 46 keys with 1200 present | update_gate_state.py |
 | REPORT.md + commit + push to fork | DONE | REPORT.md |
-| Card complete with tier declaration | PENDING | - |
+| Card complete with tier declaration | DONE — `hermes kanban complete` succeeded; post-flight engine tier=docs verdict=pass passed=[pushed_or_consolidated] missing=[]; card status=done | preflight_sim.py |
 
 ## Notes
 
