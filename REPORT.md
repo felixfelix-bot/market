@@ -1,173 +1,215 @@
-# REPORT — PR #1286 citation inventory (faithful transcription)
+# REPORT — PR #1226 review tree retirement (operator action, card t_68bf065d)
 
 Worker: fleet offload (worker-heavy) · Date: 2026-10-29 · Repo: PlebeianApp/market
-Card: t_6a82b4dc (board plebeian-pr-reviews) · Mode: READ-ONLY, zero GitHub writes
-Task parent: t_ad93f86e ("Rebuild ground truth: diff, PR metadata, head-SHA citations for #1286")
+Board: `plebeian-pr-reviews` · Card under decision: **t_68bf065d**
+**GitHub writes performed by this task: ZERO.** All GitHub access was read-only `gh api` GET.
+**Board mutations: 16 cards archived** (reversible status flip; nothing purged).
 
-## 1. Artifact read (source of truth)
+---
 
-| field  | value                                                              |
-| ------ | ------------------------------------------------------------------ |
-| path   | `/home/c03rad0r/worktrees/pr1286-review/DRAFT-REVIEW.md`           |
-| bytes  | 3291                                                               |
-| sha256 | `8de0eb0d2ef9573cc2d8be0922867ba96106b147021fe4a14658b6b86f451e01` |
-| md5    | `2fa622c901779b8b9be904a100752469`                                 |
-| lines  | 13                                                                 |
-| mtime  | 2026-10-29 00:42:05 +0100                                          |
+## 0. Bottom line
 
-A byte-identical copy is archived at `artifacts/pr1286_citations/DRAFT-REVIEW.source.md`.
+**Decision: (A) Retire the tree.** Executed.
 
-### How the artifact was located (STEP 0 audit trail)
+I did not take the card's framing at face value, and it did not survive contact with
+the evidence. The card presented a genuine trade-off: retire the stale review tree,
+or spend two review dispatches plus a public post to put the findings on record.
+That trade-off **no longer exists**, because the review was already published — three
+weeks before this card was promoted, and again three days before this run. Retiring
+therefore carries none of the "findings are lost" cost the card attributed to it,
+which was option (A)'s only real downside.
 
-Searched in the prescribed order, all read-only:
+Two premises in the card are also simply wrong, and they change what the safe move is:
 
-1. **Kanban task record / artifacts for the parent task id** — `~/.hermes/kanban/boards/plebeian-pr-reviews/kanban.db`:
-   `task_attachments` holds only 2 rows, both for `t_0f6a0798` (unrelated). `task_comments` for
-   `t_ad93f86e` has 2 rows, neither containing review text ("fleet-done rc=1…", "UNBLOCK: price window open").
-   `task_events` has zero rows matching `1286`. `task_links` has no row touching `t_ad93f86e`.
-   Board workspaces `t_ad93f86e` and `t_30a3a336` are **empty directories**;
-   `t_31cab538` and `t_6a82b4dc` workspaces do not exist.
-2. **Board run-output directory** — `boards/plebeian-pr-reviews/{logs,attachments,workspaces}`: no `*1286*` file
-   (only `kanban.db.bak-*` snapshots). `task_runs` for `t_ad93f86e` are 2x `scheduled` + 2x `crashed`
-   (crashed at 1790463118 / 1790463318, ~05:11-05:16 local) — the parent never wrote a run summary.
-3. **Common scratch locations** — `/tmp`: `pr1286.diff` (36438 B, diff only, no review prose) and directory
-   `/tmp/pr1286/` (10 loose source excerpts). Both near-misses, not the draft.
+1. The deliverable it cites as completed (`pr1226-reviewer-brief.md`, 29,395 B) **does
+   not exist**. Option (A) was described as safe *because* findings were preserved in
+   that attachment. That safety net was illusory; I had to verify retention through
+   other channels before retiring anything.
+2. The tree is **19 cards, not 5**. Archiving the 5 named cards would have left 11
+   live #1226 cards to keep re-arming the dispatcher — the exact bleed the card
+   wanted to stop.
 
-**Candidate found and selected:** `/home/c03rad0r/worktrees/pr1286-review/DRAFT-REVIEW.md`.
+## 1. Live state (re-verified 2026-10-29, not inherited)
 
-Provenance evidence that this is the parent task's draft (not a near-miss):
+`gh api repos/PlebeianApp/market/pulls/1226` → `artifacts/pr1226_retire/raw/raw_pr1226_meta.json`
 
-- The filename and location are the exact artifact the parent task wrote into its own review worktree
-  (`/home/c03rad0r/worktrees/pr1286-review`, whose `HEAD` is `dc88681f` on top of `2ae85b6f`).
-- Its first line cites head `2ae85b6f`, the same head the parent task was briefed on.
-- Its five findings match, one-for-one and in order, the parent's own `PROGRESS.md` lines 10-11 in the same
-  worktree: "Draft = 5 NEW findings (2 RISK, 3 NIT), 14 lines" and the cited `storefront.tsx:56-58`,
-  `StorefrontRenderer.tsx:74`, `ADR-019:163-166`, `liveChat.tsx:93-99` list.
-- `GLM-VERDICT-2.md` in the same directory is the GATE 2.5 re-review of _this_ file by path
-  ("You previously reviewed the draft at /home/c03rad0r/worktrees/pr1286-review/DRAFT-REVIEW.md").
+| field | value |
+|---|---|
+| state | `closed` |
+| merged / merged_at | `false` / `null` — **never merged** |
+| closed_at | `2026-09-19T20:43:54Z` by `Franchovy` ("Superceded by #1361") |
+| draft | `true` |
+| head | `247f9a25156832b66559d30648789d80efb9da00` (`feat/auction-order-details-v2` → base `auctions`) |
+| reviewDecision | `APPROVED` — see caveat below |
+| reviewRequests | `[]` |
 
-**Near-misses rejected as candidates** (different PRs, would have been fabrication to use):
+All four fields the card asserted match live. Two card readings are nonetheless
+**misleading and should not be reused as evidence**:
 
-- `/tmp/REVIEW_DRAFT.md` (2980 B) — review of head `017e38ff` (NIP-46/auth signer work), not PR #1286.
-- `/tmp/draft-draft.txt` (58 B) — "Reviewed tip cfef7525 — no new issues found. Approving."
+- **`reviewDecision=APPROVED`** is literally true but inverts the real picture.
+  `felixfelix-bot` has `author_association: CONTRIBUTOR`, and GitHub does not count a
+  contributor's `CHANGES_REQUESTED` toward `reviewDecision`. The newest review at head
+  is `5635730808` = **CHANGES_REQUESTED**. Reading `APPROVED` as "review-clean" is wrong.
+- **`mergeStateStatus=CLEAN`** on a closed draft means nothing about mergeability.
 
-## 2. Deliverable — `/tmp/pr1286_citations.json`
+Also note `reviewRequests=[]` on a **closed** PR — the card's claim that the review
+request was "still technically outstanding" does not reproduce. GitHub clears
+requested reviewers on close; the timeline (`raw_pr1226_comments.json` context) shows
+the request from `Franchovy` at `2026-09-10T17:33:50Z` and no removal event, so the
+original observation was right when made and is stale now.
 
-**24 citation rows** covering **23 distinct claims** (C1..C23).
+## 2. The decisive finding: the public action already happened
 
-Convention chosen for uncited claims: **they are included in the main array with
-`file_path: null, cited_line: null, cited_line_end: null`**, so the array is a superset of the draft's
-claims (11 such rows). The same 11 are also listed separately in section 5 below.
+The card treated `t_219a189a` ("reconcile + POST consolidated verdict") as the one
+card that would take the maintainer-trust cost, and made avoiding-or-accepting that
+cost the crux of (A) vs (B). `gh api .../pulls/1226/reviews` shows that cost was paid
+before this card was ever promoted:
 
-Archived copy: `artifacts/pr1286_citations/pr1286_citations.json`.
+| review id | state | author | submitted | commit |
+|---|---|---|---|---|
+| 5591466473 | COMMENTED | felixfelix-bot | 2026-10-20T20:42:50Z | 247f9a25 |
+| 5591468909 | COMMENTED | felixfelix-bot | 2026-10-20T20:43:00Z | 247f9a25 |
+| **5635730808** | **CHANGES_REQUESTED** | felixfelix-bot | **2026-10-24T00:09:49Z** | 247f9a25 |
 
-Row schema as specified: `claim_id`, `claim_text`, `file_path`, `cited_line`, `cited_line_end`,
-`raw_quote_from_draft`.
+`5635730808` opens "Consolidated verdict for head `247f9a25` … This merges the
+correctness/behavioural review and the security/data-integrity review of this PR into
+one list" — i.e. `t_219a189a`'s deliverable was produced and published by other work.
+The two duplicates on 2026-10-20 are a separate (minor) hygiene problem: the same body
+was posted twice, 10 seconds apart.
 
-## 3. CITATION_INVENTORY
+A provenance comment `6484324481` (2026-10-29T00:22:48Z) then records that the #1226
+review leg was re-posted on the **live successor #1361** as review `5691384997`.
+Verified: `5691384997`, `CHANGES_REQUESTED`, `2026-10-29T00:22:26Z`, commit
+`d1a4a647`, body identical to the in-repo `artifacts/pr1226_review/verdict_1361.md`.
 
-| claim_id | file_path:line                                                           | short claim summary                                                                                                                                                                           |
-| -------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| C1       | NO CITATION                                                              | The PR's overall shape (one name driving NIP-05 + vanity URL + a signed page) is the right shape, and its schema-first block model reads cleanly.                                             |
-| C2       | NO CITATION                                                              | The new findings are stated at head 2ae85b6f; the ten previously-raised review items still stand and are not repeated in this draft.                                                          |
-| C3       | src/lib/schemas/storefront.ts:28                                         | `heroBlock.image` reuses `safeLink`, which only requires an `https:` scheme on any host.                                                                                                      |
-| C4       | NO CITATION                                                              | A signed page event can therefore make every visitor's browser fetch an arbitrary third-party URL.                                                                                            |
-| C5       | NO CITATION                                                              | `parseStorefrontPage` accepts a hero block whose `image` is an arbitrary attacker host, as demonstrated with `{"type":"hero","title":"Hi","image":"https://attacker.example/pixel.png?u=1"}`. |
-| C6       | StorefrontRenderer.tsx:26                                                | `StorefrontRenderer` puts that image value straight into `<img src>`.                                                                                                                         |
-| C7       | NO CITATION                                                              | A seller, or anyone holding a 30024 they can get rendered, obtains a per-visitor tracking pixel and every visitor's IP/timestamp on a page served as the project's own.                       |
-| C8       | ADR-019:146-147                                                          | ADR-019 states that images resolve through the existing Blossom/NIP-96 host allowlist.                                                                                                        |
-| C9       | src/lib/blossom.ts                                                       | No such allowlist exists in this diff, and `src/lib/blossom.ts` only lists servers with no predicate.                                                                                         |
-| C10      | src/queries/storefront.tsx:40                                            | `fetchStorefrontPage` never Schnorr-verifies the 30024 event at the parse boundary.                                                                                                           |
-| C11      | NO CITATION                                                              | It filters on `kind`, `pubkey` and the `d` tag only, then hands `event.content` to `parseStorefrontPage`.                                                                                     |
-| C12      | NO CITATION                                                              | Without a signature check, a forged event with the right pubkey/kind/`d` and a bad signature renders on a public `/{name}` page.                                                              |
-| C13      | NO CITATION                                                              | The repo already states the rule for this case: NDK's sampling verification may skip forged events, so events are verified explicitly.                                                        |
-| C14      | src/queries/liveChat.tsx:93-99                                           | `src/queries/liveChat.tsx` calls `verifyNostrEventSignature` before parsing, as the existing precedent.                                                                                       |
-| C15      | src/queries/AGENTS.md                                                    | `src/queries/AGENTS.md` requires validating signature assumptions before treating an event as application state.                                                                              |
-| C16      | src/routes/\_dashboard-layout/dashboard/account/storefront.tsx:56-58     | The dashboard storefront editor textarea is unconditionally overwritten whenever `publishedPage` changes, with no dirty guard.                                                                |
-| C17      | src/queries/storefront.tsx:59-63                                         | `useStorefrontPage`'s subscription invalidates on any incoming 30024 from this pubkey, so a draft being typed is silently replaced by the relay copy.                                         |
-| C18      | NO CITATION                                                              | The overwrite triggers in practice when publishing from a second device/tab while the first is mid-edit.                                                                                      |
-| C19      | src/components/storefront/StorefrontRenderer.tsx:74                      | `StorefrontRenderer` renders a `<main>` inside the `<main>` at the root route, giving a storefront document two main landmarks, contrary to the a11y rule of exactly one per document.        |
-| C19      | src/routes/\_\_root.tsx:102                                              | `StorefrontRenderer` renders a `<main>` inside the `<main>` at the root route, giving a storefront document two main landmarks, contrary to the a11y rule of exactly one per document.        |
-| C20      | NO CITATION                                                              | `ProfilePage` returns a `<div>` rather than a `<main>` for the same nested-landmark reason.                                                                                                   |
-| C21      | docs/adr/ADR-019-unified-storefront-identity-and-page-builder.md:163-166 | ADR-019 promises two guards for R5: a renderer unit test asserting a hostile page renders inert, and an e2e path purchase → publish → `/{name}` → NIP-05.                                     |
-| C22      | src/lib/schemas/storefront.test.ts                                       | This PR ships only a parser-level test at `src/lib/schemas/storefront.test.ts`.                                                                                                               |
-| C23      | NO CITATION                                                              | No e2e scenario references storefront or 30024, so the render layer is unverified for the exact threats the ADR enumerates.                                                                   |
+**Consequence:** option (B) — "run for the record, accept that a verdict is or isn't
+posted" — would have spent two review dispatches re-deriving a verdict that is already
+public, twice, on two PRs. Its stated cost is sunk. Its only remaining product is
+duplicate noise.
 
-### Full uncited-claims list (11 claims, no path:line in the draft)
+## 3. Retention check (done before retiring, because the claimed safety net was absent)
 
-- C1 — The PR's overall shape (one name driving NIP-05 + vanity URL + a signed page) is the right shape, and its schema-first block model reads cleanly.
-- C2 — The new findings are stated at head 2ae85b6f; the ten previously-raised review items still stand and are not repeated in this draft.
-- C4 — A signed page event can therefore make every visitor's browser fetch an arbitrary third-party URL.
-- C5 — `parseStorefrontPage` accepts a hero block whose `image` is an arbitrary attacker host, as demonstrated with `{"type":"hero","title":"Hi","image":"https://attacker.example/pixel.png?u=1"}`.
-- C7 — A seller, or anyone holding a 30024 they can get rendered, obtains a per-visitor tracking pixel and every visitor's IP/timestamp on a page served as the project's own.
-- C11 — It filters on `kind`, `pubkey` and the `d` tag only, then hands `event.content` to `parseStorefrontPage`.
-- C12 — Without a signature check, a forged event with the right pubkey/kind/`d` and a bad signature renders on a public `/{name}` page.
-- C13 — The repo already states the rule for this case: NDK's sampling verification may skip forged events, so events are verified explicitly.
-- C18 — The overwrite triggers in practice when publishing from a second device/tab while the first is mid-edit.
-- C20 — `ProfilePage` returns a `<div>` rather than a `<main>` for the same nested-landmark reason.
-- C23 — No e2e scenario references storefront or 30024, so the render layer is unverified for the exact threats the ADR enumerates.
+The card justified (A) with "the correctness/security findings are preserved in the
+brief attachment regardless." That attachment does not exist:
 
-## 4. Verification performed on the extraction
+- `task_attachments` has **0 rows** for `t_719e6be2`. Board-wide the table holds 2 rows;
+  neither filename matches `%1226%` or `%brief%`. → `raw/t_719e6be2_attachments.txt`
+- No file named `*1226*brief*` / `pr1226-reviewer-brief.md` in the board's
+  `attachments/`, its `workspaces/`, the repo (`attachments/` is absent entirely), or
+  any of the 22,206 directories under `~/worktrees` (0 filenames contain `1226`).
+  → `raw/brief_search.txt`
+- `t_719e6be2`'s own writeback says `fleet-done rc=0 verified=False`, and its status is
+  `blocked` — the card's "DONE … gate verdict=pass (tier=recon)" is not supported.
 
-Mechanical, not judgemental — these prove completeness and fidelity only:
+So I established retention independently. Findings survive through four channels:
 
-| gate                                                                         | result                                                    |
-| ---------------------------------------------------------------------------- | --------------------------------------------------------- |
-| every `raw_quote_from_draft` is an exact substring of the draft              | 24 / 24 PASS                                              |
-| every distinct path token in the draft appears in the inventory              | 11 / 11 PASS                                              |
-| every `:line` / `:line-line` reference in the draft appears in the inventory | 10 / 10 PASS                                              |
-| claim ids monotonic by first appearance in the draft                         | PASS (C1..C23 in order)                                   |
-| no claim merged or split contrary to sentence boundaries                     | reviewed manually against the 5 numbered items + preamble |
+1. **#1226, public** — review `5635730808` (B1/B2/B3 block list).
+2. **#1361, public and live** — review `5691384997` (`CHANGES_REQUESTED`, `d1a4a647`).
+   This is the copy that still matters: #1361 is `open`, not draft, and is the standing
+   successor to #1226.
+3. **In-repo, tracked** — `artifacts/pr1226_review/verdict_1361.md` (7,360 B), the full
+   delta verdict including the surviving B2 blocker.
+4. **On disk** — `~/reports/reviews/plebeian-pr-reviews-t_bb035076-post-1226-aborted.md`
+   and `…-t_8452b87b-verify-1226-consolidated.md`, which record the two prior aborted
+   post legs (both correctly refused to post on a closed target).
 
-Path tokens found in the draft and covered: `src/lib/schemas/storefront.ts`,
-`StorefrontRenderer.tsx` (bare, as written), `ADR-019` (bare, as written), `src/lib/blossom.ts`,
-`src/queries/storefront.tsx`, `src/queries/liveChat.tsx`, `src/queries/AGENTS.md`,
-`src/routes/_dashboard-layout/dashboard/account/storefront.tsx`,
-`src/components/storefront/StorefrontRenderer.tsx`, `src/routes/__root.tsx`,
-`docs/adr/ADR-019-unified-storefront-identity-and-page-builder.md`, `src/lib/schemas/storefront.test.ts`.
+Nothing depended on the missing brief. Retirement is safe *on the evidence*, though
+not for the reason the card gave.
 
-Line references found: `:28`, `:26`, `:146-147`, `:40`, `:93-99`, `:56-58`, `:59-63`, `:74`, `:102`, `:163-166`.
+## 4. Executed change
 
-Transcription fidelity notes (deliberately NOT corrected):
+Archived **16** cards on `plebeian-pr-reviews`:
 
-- `StorefrontRenderer.tsx:26` is written as a **bare filename**, not a repo-relative path. Transcribed as written.
-- `ADR-019:146-147` is written as a **bare ADR id**, not a file path. Transcribed as written.
-- C19 emits **two rows** because the draft attaches two citations to the one nested-`<main>` assertion
-  (`StorefrontRenderer.tsx:74` and `src/routes/__root.tsx:102`), per the "one row per citation" rule.
-- The draft's preamble also names head SHA `2ae85b6f`; it is not a file path so it is not a citation row,
-  but it is preserved inside C2's verbatim quote.
+```
+t_0fb86800  t_173c0c00  t_219a189a  t_2aefcf2f  t_39a83ab3  t_4d410c55  t_508d64b1
+t_54658dfb  t_54b4f69d  t_70ba64ac  t_719e6be2  t_8452b87b  t_a32200ac  t_bb035076
+t_bc593435  t_fe2daa8b
+```
 
-## 5. Uncited claims (input for the later verification task)
+Pre-state snapshot (all 19 #1226 cards, with status/assignee/result):
+`artifacts/pr1226_retire/pre_state_1226_cards.json`.
 
-Same 11 claims as listed in section 3, repeated here as the standalone list:
+`hermes kanban archive` was confirmed non-destructive **before** use: it flips `status`
+to `archived` and clears claim fields, keeping comments, results and run history
+(`kanban_db.archive_task`, `hermes_cli/kanban_db.py:7352`). `archive --rm` is the only
+purging path and was **not** used.
 
-- C1 — The PR's overall shape (one name driving NIP-05 + vanity URL + a signed page) is the right shape, and its schema-first block model reads cleanly.
-- C2 — The new findings are stated at head 2ae85b6f; the ten previously-raised review items still stand and are not repeated in this draft.
-- C4 — A signed page event can therefore make every visitor's browser fetch an arbitrary third-party URL.
-- C5 — `parseStorefrontPage` accepts a hero block whose `image` is an arbitrary attacker host, as demonstrated with `{"type":"hero","title":"Hi","image":"https://attacker.example/pixel.png?u=1"}`.
-- C7 — A seller, or anyone holding a 30024 they can get rendered, obtains a per-visitor tracking pixel and every visitor's IP/timestamp on a page served as the project's own.
-- C11 — It filters on `kind`, `pubkey` and the `d` tag only, then hands `event.content` to `parseStorefrontPage`.
-- C12 — Without a signature check, a forged event with the right pubkey/kind/`d` and a bad signature renders on a public `/{name}` page.
-- C13 — The repo already states the rule for this case: NDK's sampling verification may skip forged events, so events are verified explicitly.
-- C18 — The overwrite triggers in practice when publishing from a second device/tab while the first is mid-edit.
-- C20 — `ProfilePage` returns a `<div>` rather than a `<main>` for the same nested-landmark reason.
-- C23 — No e2e scenario references storefront or 30024, so the render layer is unverified for the exact threats the ADR enumerates.
+**Promotion check.** `archive_task` calls `recompute_ready` at the end, and archived
+parents unblock children — so retiring a tree can silently re-arm dependents. Verified
+post-archive: board went `archived 311, done 132, blocked 69, ready 48, todo 19,
+triage 5`, and the 48 `ready` cards are all unrelated PR reviews that were already
+`ready` (none are #1226). Zero cards were newly promoted.
 
-Note: C4, C5, C7, C11, C12, C13, C18, C23 are **not** orphan claims — they are continuations of a numbered
-draft item whose sibling claim carries the citation. They carry no citation _of their own_, which is what
-this list records. C1, C2, C20 carry none anywhere.
+Deliberately untouched:
 
-## 6. Scope discipline
+- `t_62f36501`, `t_d18bf9c5` — already `done` with honest `NO-OP` results; correct
+  terminal state, archiving them would only lose that record.
+- `t_68bf065d` — this decision card, completed separately.
+- `market t_c9b109fb` — **`ready`**, "Fix PR#1226 auction order-details v2". This is the
+  *fix* leg, on a *different board*, so outside this card's stated scope. Flagged in
+  §6 rather than archived unilaterally.
+- All #1361 cards — unaffected.
 
-- No claim was evaluated, ranked, confirmed, or refuted. `claim_text` is a paraphrase of what the draft
-  asserts, with no judgement words added.
-- Paths and line numbers were never normalised, reflowed, or corrected.
-- **Zero GitHub write operations were performed.** No `gh` command of any kind was invoked in this run —
-  not `gh pr view`, not `gh pr diff`, not `gh api`, and certainly no comment, review, approve,
-  request-changes, label, or merge. All source material was already on local disk.
-- No kanban write operations were performed either; the board DB was opened read-only.
+## 5. Reversal
 
-## 7. Steps completed
+Archive is reversible and destroyed nothing:
 
-STEP 0 locate — DONE · STEP 1 read in full — DONE · STEP 2 enumerate claims — DONE (23)
-STEP 3 extract citations verbatim — DONE (24 rows) · STEP 4 write JSON — DONE · STEP 5 unverified list — DONE (11)
+```
+hermes kanban --board plebeian-pr-reviews unblock --reason "<why>" <id>
+hermes kanban --board plebeian-pr-reviews promote <id> "<why>"
+```
+
+`promote` only accepts `todo`/`blocked`, so for an archived card reset the status
+first, then promote. Do **not** use `archive --rm` on these ids.
+
+## 6. Residual items
+
+1. **`market t_c9b109fb`** (fix leg) is `ready` and targets a superseded PR. Needs an
+   operator call: retarget to #1361 or retire. Out of scope here only because it is a
+   different board and a different leg.
+2. **Automated unblocks re-armed dead cards.** `t_54658dfb` and `t_2aefcf2f` carried
+   `UNBLOCK: price window open: urgency=now tier=expensive` — machine-written by
+   `urgency_gate.tick` (`urgency_source='escalation'`), not an operator. The same
+   pattern is documented in both aborted-leg reports. The gate has no closed-PR check;
+   that is why this tree kept resurrecting. Worth fixing generally.
+3. **Duplicate reviews on #1226.** `5591466473` and `5591468909` are the same body
+   10 seconds apart. Cosmetic now (PR is closed) but indicates a retry bug.
+4. **Worker-harness crash pattern.** `t_54b4f69d` / `t_719e6be2` / `t_219a189a` carry
+   `Agent crash x2 … worker exited cleanly (rc=0) without calling kanban_complete or
+   kanban_block`. Archived now, but that is a harness defect, not a #1226 one.
+5. **This card's own body should not be reused as fact.** The 29,395 B attachment, the
+   5-card tree size, and "`t_219a189a` is todo / posting is still pending" are all
+   contradicted by live state (details in `DECISION.md` §3).
+
+## 7. Honesty contract
+
+- Commit `7a3ab206` created and observed.
+- Push observed: `f429debb..7a3ab206` → `fork/review/pr1272-noop-20261029`; confirmed by
+  `git ls-remote` returning `7a3ab2068268b6044b6d4168f159cd24e7f8ca35` == local `HEAD`.
+- Zero GitHub writes: no review, comment, PR, branch or issue created/edited/closed/
+  merged. No push to `origin` (PlebeianApp) or any contribution branch.
+- Board mutation is exactly the 16 archives listed in §4, plus completing `t_68bf065d`.
+  No card was purged.
+- No test/build run: this task changed no application code. The only repo writes are
+  documents under `artifacts/` and `PROGRESS.md`.
+- **Erratum:** commit `7a3ab206`'s message transposes one character of the #1361 head
+  SHA, printing `d1a4c647` where the correct value is `d1a4a647`. The SHA is correct
+  everywhere in this report and in `DECISION.md`; the commit message was not amended
+  because the commit was already pushed and rewriting published history was not
+  authorised.
+
+## 8. Files
+
+```
+artifacts/pr1226_retire/DECISION.md                     decision record + reversal
+artifacts/pr1226_retire/pre_state_1226_cards.json       19 cards, pre-archive state
+artifacts/pr1226_retire/raw/raw_pr1226_meta.json        live #1226 metadata
+artifacts/pr1226_retire/raw/raw_pr1226_reviews.json     all 12 reviews, incl. 5635730808
+artifacts/pr1226_retire/raw/raw_pr1226_comments.json    all 13 comments, incl. 6484324481
+artifacts/pr1226_retire/raw/raw_pr1361_meta.json        successor #1361, open/non-draft
+artifacts/pr1226_retire/raw/raw_pr1361_reviews.json     incl. 5691384997 CHANGES_REQUESTED
+artifacts/pr1226_retire/raw/t_719e6be2_attachments.txt  proves 0 attachments
+artifacts/pr1226_retire/raw/brief_search.txt            proves the brief never existed
+artifacts/pr1286_citations/REPORT.md                    preserved prior root REPORT.md (sha256 37f8891e)
+PROGRESS.md                                             appended this task's section
+```
