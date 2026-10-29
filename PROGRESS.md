@@ -26,3 +26,23 @@ Brief state was STALE — live state re-established below.
 - [verified] Prior "grief in kind-1024 status" note is MORE than provenance: `isSettlementStructurallyValid`
   returns 'valid' for griefed_no_fallback on structural checks alone (settlementDescriptor.ts:186-189),
   i.e. a seller-authored claim needs no path-release/bid-chain evidence at all.
+- [verified] COST OF B2 IS NOW CONCRETE: griefed_no_fallback classifies 'valid' AND is exempt from the
+  B3 reserve-meting-bid guard, so classifyPhase returns 'griefed-no-fallback' UNCONDITIONALLY on a
+  seller-signed kind-1024. Sellers can close a completed auction as "Griefed (No Fallback)" and it is
+  displayed as validated to buyer + eligible fallback bidder.
+- [verified] B2 test encodes the violation: settlementDescriptor.test.ts:683 seeds grief purely via
+  makeSettlement({status:'griefed_no_fallback'}) with NO verdicts (makeInput default verdicts: []).
+- [verified] NEW B4: verdicts queried by current replaceable-version id, not auction root.
+  OrderDetailComponent.tsx:465 passes auctionData?.id; sibling consumers pass
+  root||id (auctions.$auctionId.tsx:459, dashboard/...:282, AuctionBidder.tsx:150). Verdicts carry BOTH
+  tags (validatorEvents.ts:112 '#a' = coordinate) and fetchAuctionVerdicts:610-611 ANDs '#e' with '#a'.
+  For a republished auction (auction_root_event_id tag, auctionEvent.ts:154), #e:currentVersion matches
+  nothing even though #a matches -> verdicts empty -> topBid null -> settled returns 'invalid' (:192)
+  -> 'Awaiting Settlement'. Also *reintroduces* the grief class via the reserved #e.
+- [verified] B3 fix confirmed: claimOrderAuthorizesFulfillment binds authority.claimOrderId === orderEventId (:634-641).
+- [verified] CI at head d1a4a647 (2026-09-25T14:03): e2e-grep FAIL (6/7 other checks pass).
+  Two e2e failures: (a) auction-settlement.spec.ts:869 kind-1024 never arrives (pre-existing),
+  (b) THIS PR's own new test order-detail.spec.ts:147 'process order' button not visible.
+  -> B4 gives a plausible shared root cause for (b): no verdicts -> fulfillmentReady false.
+- [verified] push BLOCKED: felixfelix-bot 403 pull-only on PlebeianApp/market. Commits are LOCAL ONLY.
+- NEXT: write REPORT.md, post verdict to #1361 (review is the only writable channel).
