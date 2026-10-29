@@ -13,12 +13,12 @@ That's React's "Rendered more hooks than during the previous render" invariant v
 
 ## [BLOCK] `src/routes/products.$productId.tsx:231,396` — head commit's fix is dead code
 
-Head commit `db60d4d7` is titled "fix: handle undefined price/currency in Twitter description" and adds the guard `price !== undefined && currency ? ... : description` (:106-107). But the guard can never be false:
+Head commit `db60d4d7` is titled "fix: handle undefined price/currency in Twitter description" and adds the guard `price !== undefined && currency ? ... : description` (:117). But the guard can never be false:
 
 - `:231` — `const price = priceTag ? parseFloat(priceTag[1]) : 0` — price is `number`, never `undefined`
 - `:396` — `currency: priceTag?.[2] || 'SATS'` — currency is always a non-empty string
 
-So an unpriced product still emits `product:price:amount` = "0" (via `:104-105`, which has the same never-false guard), `product:price:currency` = "SATS", and a twitter:description reading "... - 0 SATS". A product with no price tag advertises itself as costing 0 sats. If the intent was "unpriced products get no price tags and no price in the description", the call site must actually pass `undefined` — `price: priceTag ? parseFloat(priceTag[1]) : undefined`, and drop the `|| 'SATS'` fallback (or gate the whole price branch on `priceTag` existing).
+So an unpriced product still emits `product:price:amount` = "0" (via `:108-109`, guarded by the same never-false `price !== undefined && currency` at :107), `product:price:currency` = "SATS", and a twitter:description reading "... - 0 SATS". A product with no price tag advertises itself as costing 0 sats. If the intent was "unpriced products get no price tags and no price in the description", the call site must actually pass `undefined` — `price: priceTag ? parseFloat(priceTag[1]) : undefined`, and drop the `|| 'SATS'` fallback (or gate the whole price branch on `priceTag` existing).
 
 ## [RISK] `src/routes/products.$productId.tsx:393` — og:image passes relay data through unvalidated
 
@@ -36,7 +36,7 @@ Twitter, Facebook, Slack, Discord, Telegram, iMessage do not execute JavaScript 
 
 Review #4745940450 flagged "duplicate meta description" risk — not real at this head: `src/index.html:4-10` contains no description meta and no other code under `src/` injects one.
 
-## [NIT] `src/routes/products.$productId.tsx:101,104-105` — bogus OG types
+## [NIT] `src/routes/products.$productId.tsx:99,108-109` — bogus OG types
 
 `og:type` "product" is not a valid Open Graph type (the OG spec has no such value); `product:price:amount`/`product:price:currency` are from Facebook's retired commerce namespace. Harmless — consumers ignore them — but they're decoration, not protocol.
 
