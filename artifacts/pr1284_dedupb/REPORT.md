@@ -59,6 +59,23 @@ Read-back verification from `hermes kanban --board plebeian-pr-reviews show t_d2
 
 Comment text source of truth: `artifacts/pr1284_dedupb/dedup_b_comment.md`.
 
+### Addendum posted (scope correction)
+
+The main comment's scope paragraph said "no branch was pushed". That was written before the
+death-proof record commit was pushed and is therefore over-broad. A short `DEDUP B — addendum`
+comment was posted to the same card at `[2026-10-29 05:55]` (2154 chars stored vs 2155 submitted)
+disclosing the two pushes to the pre-existing review branch, confirming no PR/issue/contribution
+branch was created, and restating the unchanged verdict. Source:
+`artifacts/pr1284_dedupb/dedup_b_addendum.md`.
+
+Final comment state on t_d2852d00 (from `show`):
+
+```
+  [2026-09-25 23:18] worker-heavy: DEDUP B          <- prior sweep, untouched
+  [2026-10-29 05:48] worker-heavy: DEDUP B          <- this run, 11720 chars
+  [2026-10-29 05:55] worker-heavy: DEDUP B — addendum: scope correction  <- this run, 2154 chars
+```
+
 ## Evidence files
 
 - `artifacts/pr1284_dedupb/raw/commands.txt` — the six prescribed commands with stdout, stderr, exit codes

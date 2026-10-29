@@ -54,3 +54,5 @@ finding -> status -> files touched
 - Pre-existing `[2026-09-25 23:18] worker-heavy` DEDUP B comment (9511) disclosed + re-derived live; no claim falsified; window rolled #1160–1396 -> #1182–1425 -> done
 - Zero GitHub writes: no PR/branch/issue/comment created, edited, closed, or merged; no push -> done -> none
 - Root REPORT.md left intact (owned by card t_6a82b4dc / PR #1286 worker, commit 226ecc13) — authoritative copy at artifacts/pr1284_dedupb/REPORT.md -> done
+- Corrected over-broad "no branch was pushed" line: posted `DEDUP B — addendum` (2155 submitted / 2154 stored) disclosing the 2 pushes to the PRE-EXISTING `fork/review/pr1272-noop-20261029` evidence branch; no PR/issue/contribution branch created -> done -> artifacts/pr1284_dedupb/dedup_b_addendum.md
+- Push observed: `138c7ae5..88468157` then `88468157..9fe17105` -> `fork/review/pr1272-noop-20261029`; `git ls-remote` == `git rev-parse HEAD` == 9fe17105 -> done
