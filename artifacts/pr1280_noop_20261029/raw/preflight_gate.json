@@ -1,0 +1,47 @@
+{
+ "tier": "code",
+ "verdict": "block",
+ "passed": [
+  "tests_green",
+  "pushed_or_consolidated",
+  "cold_cross_family_review",
+  "review_published",
+  "consolidated",
+  "review_benchmark_floor",
+  "secrets_clean"
+ ],
+ "missing": [
+  "ci_evidence",
+  "review_artifact",
+  "pr_branch_naming",
+  "no_live_drift"
+ ],
+ "cross_family": true,
+ "author_family": "zhipu",
+ "ci": {
+  "verdict": "no_results",
+  "exit": 4,
+  "workflows": [],
+  "error": ""
+ },
+ "secrets_clean": true,
+ "secrets_hits": [],
+ "board": "plebeian-pr-reviews",
+ "id": "t_a84ac8e9",
+ "title": "Review PR #1280: feat(auctions): bid-time collateral verification via NUT-12 DLEQ (ADR-",
+ "assignee": "worker-reviewer-glm",
+ "ci_evidence": {
+  "repo": "PlebeianApp/market",
+  "head": "2386aed3b75ad7db785e9dfcda65422a8642cef6",
+  "ref": "feat/adr-0011-dleq-impl"
+ },
+ "ci_required": true,
+ "review_artifact": false,
+ "review_published": true,
+ "consolidated": true,
+ "review_benchmark_floor": true,
+ "pr_branch_naming": false,
+ "completed_at": 1790300760,
+ "created_at": 1790293109,
+ "enforce_since_ts": 0
+}
