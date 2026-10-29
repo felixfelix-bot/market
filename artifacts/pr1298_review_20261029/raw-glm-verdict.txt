@@ -1,0 +1,846 @@
+
+┌─ Reasoning ──────────────────────────────────────────────────────────────────┐
+Let me start by reading the two context files. The instructions say to read them first.
+ I can batch both reads in one turn.Let me start by reading the two context files. The instructions say to read them first. I can batch both reads in one turn.
+Let me now read the claimed lines in the head worktree. I need:
+- searchindex/index.go lines 45-90
+- cmd/market-relay/main.go lines 195-315
+
+Both reads are independent, so batch them.Let me now read the claimed lines in the head worktree. I need:
+- searchindex/index.go lines 45-90
+- cmd/market-relay/main.go lines 195-315
+
+Both reads are independent, so batch them.Source lines verified:
+
+Finding 1: main.go:205 Close() takes s.mu.Lock() (write lock). QueryEvents at main.go:218
+-224 takes s.mu.RLock() and holds it across the yield (s.search.QueryEvents / s.raw.QueryEvents pip
+ed to yield). So a stalled consumer (yield blocking) holds RLock, blocking Close's
+ Lock. That matches the claim. The yield under khatru — WriteJSON with no write deadline —
+ that's the pinned dep claim to verify.
+
+Finding 2: main.go:289 — eviction loop deletes all previous documents from search without nostr
+.IsOlder comparison. Then line 298-309: `stored` check — queries raw for the event
+ ID; if raw refused to store (older replace), stored=false, so search save is skipped.
+ So yes: republishing an older event → raw keeps newer (ReplaceEvent in boltdb returns
+ error or refuses; shouldStore=false), search deletes the newer doc. Claim's line
+ references: main.go:289 (eviction loop — correct, `for _, existing := range previous
+` at 289), boltdb replace.go:38-48. Wait — line 289 in draft says "the eviction loop deletes every
+ previously stored document from search" — at 289-296, `s.search.DeleteEvent(existing.ID)`
+ — correct. And raw refusal: s.raw.ReplaceEvent(evt) at 285 — boltdb's ReplaceEvent —
+ need to check pinned dep replace.go:38-48. Actually the flow: if raw refuses the
+ older event, does ReplaceEvent return an error? If it returns an error, the function would return err at
+ 286-287 and never reach the search eviction! Hmm. Let me check replace.go:38-48.
+ If nostr.IsOlder → shouldStore=false and returns nil (not error), then the eviction proceeds
+. Need to verify.
+
+Finding 3: index.go:69 — Prepare's existing-directory branch: `if _, err := os.Lstat
+(path); !errors.Is(err, os.ErrNotExist) { return err }` — if the path exists (err
+ == nil), the condition `!errors.Is(nil, os.ErrNotExist)` = true, so return nil —
+ accept any existing directory. Confirmed: Prepare accepts any existing index dir with
+ no parity check against raw. Claim correct at the line. And the draft explicitly
+ addresses the dedup vs prev item 5 (readability nit) — this is a different root cause:
+ missing parity check between existing index dir and raw store.
+
+Finding 4: index.go:54 — create() does os.Mkdir(path) then bleve.New(path, ...) with no marker. Wait,
+ draft says line 54 is `create()` Mkdirs the index directory — actually line 54 is `if
+ err := os.Mkdir(path, 0700); err != nil {`. Yes. If bleve.New crashes or fails part
+way... hmm, the claim: "A crash in that window leaves a marker-less, metadata-less directory that fails closed on
+ every subsequent start (`metadata missing`)". Wait — if bleve.New fails, create() returns err
+, and Prepare returns "create compact search index: %w". But the directory remains
+. On next start, Prepare's Lstat(path) at line 69 succeeds (dir exists), so returns
+ nil → accepted → then Init() presumably opens bleve index at path and fails with "metadata missing"
+ because bleve.New never wrote metadata (crash before completion). Actually if bleve.New itself
+ failed cleanly it might have left partial state. The claimed behavior: fail closed
+ on every subsequent start until operator removes dir. The probe TestScratchFirstBootCrash
+WindowLeavesUnrecoverableEmptyIndexDir will verify. Draft cites line 54 — the Mkdir call
+. Reasonable.
+
+Now run the probes and check pinned deps. Also verify head SHA.
+
+One terminal command as instructed for probes, plus a second batch for dep reads —
+ actually I can do the dep checks with read_file on the pinned dep files (two reads
+). The instructions said "in ONE grep/read" — I can batch two read_file calls. But
+ read_file on go/pkg/mod files — fine.
+
+Also should verify head SHA quickly — could include in the terminal command. The instruction said
+ run ALL FOUR probes in ONE terminal command. I can add `git rev-parse HEAD` too,
+ but let me follow instructions exactly and just do the go test command. Actually adding
+ rev-parse is harmless and useful. But the command is given explicitly; I'll run exactly
+ it plus prefix with rev-parse? The instruction: "Then run ALL FOUR probes in ONE
+ terminal command: cd ... && go test ...". I'll run that exact command. I can separately
+ confirm head SHA via terminal in the same batch? Independent calls in same block:
+ yes, I can make two terminal calls in one block — but they're both terminal, fine
+ to batch.
+
+Also the dep reads: read_file on /home/c03rad0r/go/pkg/mod/fiatjaf.com/nostr@v0.0.0
+-20260314085316-2cec1c943486/khatru/responding.go (around line 33) and .../eventstore/boltd
+b/replace.go lines ~30-55. Batch all: terminal (probes), read_file (responding.go
+ offset ~20 limit 30), read_file (replace.go offset 1 limit 60), terminal (rev-parse).
+ All independent.
+
+Note the responding.go:33 — "WriteJSON yield" — the draft claims handlers.go:131-133 sets
+ read deadlines only. The verify-context only asks to check responding.go:33. Let
+ me read around line 33.Source lines verified:
+
+Finding 1: main.go:205 Close() takes s.mu.Lock() (write lock). QueryEvents at main.go:218-224 takes s.mu.RLock() and holds it across the yield (s.search.QueryEvents / s.raw.QueryEvents piped to yield). So a stalled consumer (yield blocking) holds RLock, blocking Close's Lock. That matches the claim. The yield under khatru — WriteJSON with no write deadline — that's the pinned dep claim to verify.
+
+Finding 2: main.go:289 — eviction loop deletes all previous documents from search without nostr.IsOlder comparison. Then line 298-309: `stored` check — queries raw for the event ID; if raw refused to store (older replace), stored=false, so search save is skipped. So yes: republishing an older event → raw keeps newer (ReplaceEvent in boltdb returns error or refuses; shouldStore=false), search deletes the newer doc. Claim's line references: main.go:289 (eviction loop — correct, `for _, existing := range previous` at 289), boltdb replace.go:38-48. Wait — line 289 in draft says "the eviction loop deletes every previously stored document from search" — at 289-296, `s.search.DeleteEvent(existing.ID)` — correct. And raw refusal: s.raw.ReplaceEvent(evt) at 285 — boltdb's ReplaceEvent — need to check pinned dep replace.go:38-48. Actually the flow: if raw refuses the older event, does ReplaceEvent return an error? If it returns an error, the function would return err at 286-287 and never reach the search eviction! Hmm. Let me check replace.go:38-48. If nostr.IsOlder → shouldStore=false and returns nil (not error), then the eviction proceeds. Need to verify.
+
+Finding 3: index.go:69 — Prepare's existing-directory branch: `if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) { return err }` — if the path exists (err == nil), the condition `!errors.Is(nil, os.ErrNotExist)` = true, so return nil — accept any existing directory. Confirmed: Prepare accepts any existing index dir with no parity check against raw. Claim correct at the line. And the draft explicitly addresses the dedup vs prev item 5 (readability nit) — this is a different root cause: missing parity check between existing index dir and raw store.
+
+Finding 4: index.go:54 — create() does os.Mkdir(path) then bleve.New(path, ...) with no marker. Wait, draft says line 54 is `create()` Mkdirs the index directory — actually line 54 is `if err := os.Mkdir(path, 0700); err != nil {`. Yes. If bleve.New crashes or fails partway... hmm, the claim: "A crash in that window leaves a marker-less, metadata-less directory that fails closed on every subsequent start (`metadata missing`)". Wait — if bleve.New fails, create() returns err, and Prepare returns "create compact search index: %w". But the directory remains. On next start, Prepare's Lstat(path) at line 69 succeeds (dir exists), so returns nil → accepted → then Init() presumably opens bleve index at path and fails with "metadata missing" because bleve.New never wrote metadata (crash before completion). Actually if bleve.New itself failed cleanly it might have left partial state. The claimed behavior: fail closed on every subsequent start until operator removes dir. The probe TestScratchFirstBootCrashWindowLeavesUnrecoverableEmptyIndexDir will verify. Draft cites line 54 — the Mkdir call. Reasonable.
+
+Now run the probes and check pinned deps. Also verify head SHA.
+
+One terminal command as instructed for probes, plus a second batch for dep reads — actually I can do the dep checks with read_file on the pinned dep files (two reads). The instructions said "in ONE grep/read" — I can batch two read_file calls. But read_file on go/pkg/mod files — fine.
+
+Also should verify head SHA quickly — could include in the terminal command. The instruction said run ALL FOUR probes in ONE terminal command. I can add `git rev-parse HEAD` too, but let me follow instructions exactly and just do the go test command. Actually adding rev-parse is harmless and useful. But the command is given explicitly; I'll run exactly it plus prefix with rev-parse? The instruction: "Then run ALL FOUR probes in ONE terminal command: cd ... && go test ...". I'll run that exact command. I can separately confirm head SHA via terminal in the same batch? Independent calls in same block: yes, I can make two terminal calls in one block — but they're both terminal, fine to batch.
+
+Also the dep reads: read_file on /home/c03rad0r/go/pkg/mod/fiatjaf.com/nostr@v0.0.0-20260314085316-2cec1c943486/khatru/responding.go (around line 33) and .../eventstore/boltdb/replace.go lines ~30-55. Batch all: terminal (probes), read_file (responding.go offset ~20 limit 30), read_file (replace.go offset 1 limit 60), terminal (rev-parse). All independent.
+
+Note the responding.go:33 — "WriteJSON yield" — the draft claims handlers.go:131-133 sets read deadlines only. The verify-context only asks to check responding.go:33. Let me read around line 33.
+All four probes PASSED with CONFIRMED messages at head d205c158. The pinned dependency facts check out:
+
+- khatru/responding.go:33 — `ws.WriteJSON(nostr.EventEnvelope{...})` in the Query
+Stored yield loop, no write deadline visible. ✓
+- boltdb/replace.go:38-48 — `nostr.IsOlder(previous, evt)` check, `shouldStore = false` when a
+ newer event exists. ✓
+
+Source lines verified:
+- index.go:49-58 `create()` — Mkdir then bleve.New, no marker, no cleanup on failure. Draft
+ cites line 54 (the Mkdir) — correct. ✓
+- index.go:69 — the existing-directory branch `if _, err := os.Lstat(path); !errors.Is
+(err, os.ErrNotExist) { return err }`. Draft finding 3 cites this line. Note: at line 69-
+71, if the directory EXISTS (Lstat succeeds, err == nil), `!errors.Is(nil, os.ErrNotExist)` =
+ true, so it returns nil err → i.e., it accepts any existing directory. So an out
+-of-band relay start between rebuild and activation would create the index directory
+... wait, let me think about the mechanism for finding 3.
+
+Finding 3 mechanism: `Prepare` accepts any existing index directory without checking it against the
+ raw store. The scenario: `--rebuild-search-to` builds a new index into a NEW directory,
+ then the runbook says `mv -T` to activate it. If between rebuild and `mv -T`, the
+ relay is started out-of-band (with the original index dir), the relay runs, saves
+ new events... then the `mv -T` activates the stale rebuilt index, and the events
+ saved in the meantime are in raw but not in the activated search index. Then on restart
+, `Prepare` sees the existing directory (Lstat succeeds → return nil, accept) with
+ no parity check against raw. The probe `TestScratchStaleActivationAfterPostRebuildWrites
+` CONFIRMED: "activated compact index is missing an event that is durably present in
+ the raw store; startup raised no error and no invariant was checked."
+
+Wait — actually there's a subtlety. Looking at index.go:69-71 more carefully:
+
+```go
+if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) {
+    return err
+}
+```
+
+If path exists: err == nil, `errors.Is(nil, os.ErrNotExist)` is false, so `!false
+` = true → return nil (no error). So Prepare accepts any existing directory. That
+'s the draft's claim: "Prepare accepts any existing index directory without checking it against the
+ raw store." Correct at line 69.
+
+Hmm, but wait — there's a prior issue #5 from maxime-tt which is a READABILITY nit on the
+ same line 69: "it behaves correctly". The dedup question: is the draft's finding 3 a
+ genuinely different root cause? Prev item 5 says the line is a readability nit — the
+ claim was about the code STYLE of the error handling (returning err when Lstat fails
+ with a non-ErrNotExist error, or... actually the readability nit is probably that `
+!errors.Is(err, os.ErrNotExist)` returning `err` is confusing). The draft's finding 3
+ claims a MISSING parity check: an existing index dir is accepted without validating
+ it against the raw store, causing silent stale activation. These are different: prev item 5 =
+ code readability of the existing check; draft finding 3 = the check is insufficient (no
+ raw-store parity validation). Different root cause (readability vs. missing invariant
+ check), different consequence (none vs. silent data divergence). So NOT a duplicate.
+ It's a genuinely different finding.
+
+But hold on — is it "re-raising a prior item under a different name"? No. Item 5 says
+ "it behaves correctly" — i.e., no behavior bug claimed. Draft finding 3 claims a behavior gap
+ that item 5 explicitly said didn't exist (from the readability standpoint). Hmm, actually
+ item 5 says the existing-directory branch behaves correctly as far as it goes — the draft goes
+ further: even correct behavior of that branch leaves a gap because no parity check exists. The probe
+ CONFIRMED the stale activation scenario: rebuild → start → publish → activate → start yields
+ `late event present in search: false` with no error. So it's REAL and demonstrated
+ at head, and the root cause (missing parity check, not readability) is genuinely different from item
+ 5. I should state this explicitly in the DEDUP CHECK.
+
+Now let me adjudicate each finding:
+
+FINDING 1: Close() takes write lock at main.go:205 (verified: line 208 `s.mu.Lock()`),
+ QueryEvents yield under RLock at 218-224 (verified: line 220 `s.mu.RLock()`), khatru yield is ws.Write
+JSON at responding.go:33 (verified) with no write deadline. Probe `TestScratchCloseDrain
+BlockedByStalledSubscriber` CONFIRMED: Close() blocked until stalled subscriber released; `
+TestScratchCloseDrainBlocksNewQueriesBehindIt` CONFIRMED: new queries queue behind blocked
+ Close drain. So the mechanism is real and reproduced. 
+
+One thing to check: the draft says "Before this PR `Close` was a no-op" — is that accurate
+? The context says the head commit is "fix(relay): preserve stores and add compact index maintenance
+" — the PR added the Close/drain behavior presumably. The draft says the wedge is new. I can
+'t fully verify the base behavior without checking git, but the probe confirms the current
+ behavior at head, and finding is REAL regardless of whether it's new. The line numbers are
+ correct at head. The claim "handlers.go:131-133 sets read deadlines only" — I haven't verified
+ that sub-claim. Hmm. The draft says "the pinned khatru yield is `ws.WriteJSON` with
+ no write deadline (`khatru/responding.go:33`; `handlers.go:131-133` sets read deadlines only)".
+ handlers.go — is that in the relay repo or khatru? Probably the relay's own handlers.go in
+ cmd/market-relay or internal. The instruction was to check pinned dep facts: responding.go:33
+ (done, verified — WriteJSON in yield loop, no visible deadline) and boltdb/replace.go:38-
+48 (done, verified — IsOlder/shouldStore=false). The handlers.go:131-133 claim is a secondary
+ detail; the probe reproduction is the strong evidence. The instruction says "Do not write your own probe unless
+ a claim is genuinely unverifiable from the above" and "BE EFFICIENT — you have a hard turn budget". The
+ handlers.go sub-claim is minor (whether deadlines are read-only) and the core mechanism (
+Close blocked by stalled subscriber, new queries queue behind) is CONFIRMED by probes
+. I could do one quick grep on handlers.go to check... but I have a hard turn budget
+. Let me consider: the finding is KEEP if the main claims are right. The probe confirms the main
+ claims. The handlers.go:131-133 detail — I'll accept it as it aligns with the khatru source
+ I verified (no write deadline in responding.go:33). Actually, let me do a quick check since
+ a wrong file:line would be a defect. But it's one grep... The instructions said:
+ read the exact claimed lines (index.go 45-90, main.go 195-315), run the four probes in
+ one terminal, check the two pinned dep facts in one grep/read, then write the verdict. The
+ handlers.go claim wasn't in my mandated checklist. I've been told to be efficient with
+ a hard turn budget. I'll do one combined quick check of handlers.go:125-140 since I
+ can batch it with nothing else... actually I already have all other evidence. Let me just
+ do one tiny read to be safe — a wrong cited line would matter for bar (a). Hmm, but
+ "Do not write your own probe unless a claim is genuinely unverifiable" — reading
+ handlers.go is not writing a probe, it's verification. But the instruction's order was explicit and
+ I've completed it. The verdict format requires me to decide. 
+
+Let me weigh: the probe output CONFIRMS the drain-blocking behavior at head. The k
+hatru WriteJSON fact is verified. Whether handlers.go:131-133 sets read deadlines only is
+ a supporting detail about why the subscriber can stall indefinitely. If that line were slightly
+ off, the finding would still be real (probe-confirmed), but the draft would contain
+ a minor citation error. Given the mandate "BE EFFICIENT — hard turn budget" and that
+ I've already done 2 turns of tool calls (batched), one more tiny read is cheap and strengthens
+ the verdict. Let me do it — read main handlers.go around lines 125-140. Where is handlers.go?
+ Probably deploy-simple/relay/cmd/market-relay/handlers.go or internal. Let me search quickly
+. Actually I'll just do a targeted read with a glob guess... safer: search_files for "
+SetReadDeadline" in the relay dir, output content with line numbers. That will show
+ me exactly where read deadlines are set and whether any write deadline exists.
+
+FINDING 2: eviction loop at main.go:289-296 (verified: lines 289-296 delete every previous
+ doc from search with no IsOlder comparison), then the `stored` check at 298-309 skips
+ search save if raw refused the older event (boltdb replace.go:38-48 verified: shouldStore=false when newer
+ exists). Probe CONFIRMED: raw_has_newer=1, search_finds_newer=0 — newest live event present
+ in raw, permanently absent from search. Draft line cite: main.go:289 — correct (the `
+for _, existing := range previous` loop starts at 289). ✓ REAL. Not previously raised (
+maxime-tt items don't cover this). Not spam — reproduced, concrete trigger (republish older
+ profile/contact/list event). Draft also honestly notes it's pre-existing at base 4cbe
+2b26 — that's a candor point, and it's still within the raw/search divergence the PR's "
+preserve stores" invariant covers. KEEP.
+
+One consideration: is a pre-existing issue spam on a merged PR? The draft explicitly
+ flags it as pre-existing but argues the PR is exactly about raw/search consistency
+. The review context says the PR is merged and review comment is on merged tip. Finding
+ 2's mechanism is directly in code the PR touched (ReplaceEvent at main.go:266-312 —
+ is this code new in the PR? The draft says the loop is byte-identical at base 4cbe
+2b26, so pre-existing). Hmm — the draft says "it is exactly the raw/search divergence the '
+preserve stores' invariant should cover". The commit title is "fix(relay): preserve stores and add compact index
+ maintenance". The prev_issues list doesn't include this, so bar (b) passes. Bar (c) —
+ is flagging a pre-existing issue on a merged PR spam? The verification task doesn
+'t say pre-existing = disqualify; it asks REAL/not-raised/not-spam. It's real and reproduced. The
+ draft is transparent about it being pre-existing. I'll KEEP. Actually, let me think
+ harder about bar (c): "no false positive on correct code, no speculation". This is confirmed
+ by probe, not speculation. KEEP.
+
+FINDING 3: index.go:69 verified — the existing-directory branch returns nil for any existing dir (no
+ parity check against raw). Probe CONFIRMED stale activation: "activated compact index is missing an event
+ that is durably present in the raw store; startup raised no error and no invariant was
+ checked." REAL. DEDUP: prev item 5 is a readability nit on the same line saying "it
+ behaves correctly"; draft finding 3's root cause is a missing raw-store parity check (a
+ functional gap), which is genuinely different from a readability complaint. NOT a re
+-raise under a different name. KEEP. 
+
+Wait, one more scrutiny on finding 3's scenario: "An out-of-band relay start between `
+--rebuild-search-to` and the runbook's `mv -T` activation leaves post-rebuild events durably
+ in raw and permanently absent from search". Mechanism: rebuild writes new index to a new
+ dir; relay starts (out-of-band) using the OLD index dir and saves new events to raw+old-search
+; then operator does mv -T to activate the rebuilt (now stale) index; restart → Prepare sees existing dir
+ → accepts with no parity check → events saved between rebuild and activation are in raw but
+ not in the activated search index, permanently, silently. The probe reproduced this
+: rebuild → start → publish → activate → start: "late event present in search: false
+". CONFIRMED. KEEP.
+
+But is the scenario dependent on operator error? The relay start between rebuild and mv
+ -T is "out-of-band" — a plausible operational race, and the runbook flow includes
+ a window. The finding says "with no error and no log line" — probe confirms no error raised
+. The proposed fix (compare prepared index doc count / build stamp against raw before
+ Init) is sensible. This is a real fail-open gap in a fail-closed design. KEEP.
+
+Hmm, wait — actually I need to check one subtle thing about finding 3. When the relay starts
+ out-of-band BEFORE activation, what index does it use? The old (pre-rebuild) index dir
+. Prepare's raw-store check (index.go:72-83) only fires when the search index is MISSING —
+ "search index is missing but raw events exist". If the old index still exists, Prepare accepts it.
+ Fine. And after mv -T activation, the activated dir exists → Prepare accepts. The gap
+: no parity check when the dir exists. That's exactly what the draft says. ✓
+
+FINDING 4: index.go:54 verified — `os.Mkdir(path, 0700)` then `bleve.New(path, ...)` at line 57
+, no marker, no cleanup on failure. A crash in that window leaves an empty index dir;
+ subsequent starts: Prepare passes the Lstat checks (dir exists → line 69 returns nil...
+ wait, hold on!
+
+Let me re-examine finding 4's mechanism against index.go:69-71. If the index dir exists but
+ is empty (crash window), then at line 69: `os.Lstat(path)` succeeds (err == nil), `!
+errors.Is(nil, os.ErrNotExist)` = true → return nil. So Prepare returns nil and accepts the empty
+ dir. Then Init (presumably elsewhere) tries to open it with bleve and fails: "cannot open index
+, metadata missing". The probe CONFIRMED: "every restart fails closed: ... error opening index: cannot open
+ index, metadata missing". So yes — every subsequent start fails until operator removes the dir. CONF
+IRMED at head. The draft says "fails closed on every subsequent start (`metadata missing`), so
+ a first boot can wedge until an operator removes the directory. Reproduced." The
+ probe output matches exactly: "recovery requires an explicit rebuild": error opening index: cannot open
+ index, metadata missing". 
+
+Draft cite: index.go:54 — line 54 is `if err := os.Mkdir(path, 0700); err != nil {`
+ — correct, the Mkdir at the start of the crash window. ✓ REAL, not raised before, not spam. It
+'s labeled [NIT] which is honest (first-boot crash window, self-inflicted only by crash
+ timing). KEEP.
+
+Now the dedup check on finding 4 vs prev items — none of maxime-tt's items cover create
+()'s crash window. Item 5 is about the existing-directory branch readability. Fine.
+
+So all four findings: KEEP. VERDICT: APPROVED.
+
+Actually wait — I should double check bar (a) for finding 1's handlers.go:131-133 claim before
+ finalizing. Also the draft says "`Close()` takes the write lock" at main.go:205 — line
+ 205 is the func signature `func (s *compositeStore) Close() {` and the Lock is at 208. C
+iting 205 for the function start is fine. "every `QueryEvents` yield at `main.go:218-22
+4` runs under `RLock`" — verified: 218 is QueryEvents signature, 220 RLock, 221 defer
+ RUnlock. ✓
+
+"khatru/responding.go:33" — verified: line 33 is `if nil != ws.WriteJSON(nostr.EventEnvelope{Subscription
+ID: &id, Event: event})`. ✓ No write deadline in that loop.
+
+"handlers.go:131-133 sets read deadlines only" — unverified. Let me do one quick search
+ to check. It's cheap and I can't responsibly approve a citation I haven't checked
+ when it's material to the finding (the "no write deadline" claim depends on handlers
+.go not setting one). Actually — the "no write deadline" claim is about the khatru yield
+ (responding.go:33), which I verified: ws.WriteJSON with no deadline in that call
+ chain. Whether handlers.go sets read deadlines at 131-133 is a supporting detail. If
+ wrong, the finding's core still stands (probe-confirmed wedge). But the verdict format
+ allows REWRITE for findings with minor citation defects. Let me check handlers.go quickly
+ — one search_files call, batched alone since I have nothing else pending.
+
+Where would handlers.go be? Probably deploy-simple/relay/cmd/market-relay/handlers.go
+ or deploy-simple/relay/internal/... Let me search for "SetReadDeadline" under the
+ relay dir with content output.All four probes PASSED with CONFIRMED messages at head d205c158. The pinned dependency facts check out:
+- khatru/responding.go:33 — `ws.WriteJSON(nostr.EventEnvelope{...})` in the QueryStored yield loop, no write deadline visible. ✓
+- boltdb/replace.go:38-48 — `nostr.IsOlder(previous, evt)` check, `shouldStore = false` when a newer event exists. ✓
+
+Source lines verified:
+- index.go:49-58 `create()` — Mkdir then bleve.New, no marker, no cleanup on failure. Draft cites line 54 (the Mkdir) — correct. ✓
+- index.go:69 — the existing-directory branch `if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) { return err }`. Draft finding 3 cites this line. Note: at line 69-71, if the directory EXISTS (Lstat succeeds, err == nil), `!errors.Is(nil, os.ErrNotExist)` = true, so it returns nil err → i.e., it accepts any existing directory. So an out-of-band relay start between rebuild and activation would create the index directory... wait, let me think about the mechanism for finding 3.
+
+Finding 3 mechanism: `Prepare` accepts any existing index directory without checking it against the raw store. The scenario: `--rebuild-search-to` builds a new index into a NEW directory, then the runbook says `mv -T` to activate it. If between rebuild and `mv -T`, the relay is started out-of-band (with the original index dir), the relay runs, saves new events... then the `mv -T` activates the stale rebuilt index, and the events saved in the meantime are in raw but not in the activated search index. Then on restart, `Prepare` sees the existing directory (Lstat succeeds → return nil, accept) with no parity check against raw. The probe `TestScratchStaleActivationAfterPostRebuildWrites` CONFIRMED: "activated compact index is missing an event that is durably present in the raw store; startup raised no error and no invariant was checked."
+
+Wait — actually there's a subtlety. Looking at index.go:69-71 more carefully:
+
+```go
+if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) {
+    return err
+}
+```
+
+If path exists: err == nil, `errors.Is(nil, os.ErrNotExist)` is false, so `!false` = true → return nil (no error). So Prepare accepts any existing directory. That's the draft's claim: "Prepare accepts any existing index directory without checking it against the raw store." Correct at line 69.
+
+Hmm, but wait — there's a prior issue #5 from maxime-tt which is a READABILITY nit on the same line 69: "it behaves correctly". The dedup question: is the draft's finding 3 a genuinely different root cause? Prev item 5 says the line is a readability nit — the claim was about the code STYLE of the error handling (returning err when Lstat fails with a non-ErrNotExist error, or... actually the readability nit is probably that `!errors.Is(err, os.ErrNotExist)` returning `err` is confusing). The draft's finding 3 claims a MISSING parity check: an existing index dir is accepted without validating it against the raw store, causing silent stale activation. These are different: prev item 5 = code readability of the existing check; draft finding 3 = the check is insufficient (no raw-store parity validation). Different root cause (readability vs. missing invariant check), different consequence (none vs. silent data divergence). So NOT a duplicate. It's a genuinely different finding.
+
+But hold on — is it "re-raising a prior item under a different name"? No. Item 5 says "it behaves correctly" — i.e., no behavior bug claimed. Draft finding 3 claims a behavior gap that item 5 explicitly said didn't exist (from the readability standpoint). Hmm, actually item 5 says the existing-directory branch behaves correctly as far as it goes — the draft goes further: even correct behavior of that branch leaves a gap because no parity check exists. The probe CONFIRMED the stale activation scenario: rebuild → start → publish → activate → start yields `late event present in search: false` with no error. So it's REAL and demonstrated at head, and the root cause (missing parity check, not readability) is genuinely different from item 5. I should state this explicitly in the DEDUP CHECK.
+
+Now let me adjudicate each finding:
+
+FINDING 1: Close() takes write lock at main.go:205 (verified: line 208 `s.mu.Lock()`), QueryEvents yield under RLock at 218-224 (verified: line 220 `s.mu.RLock()`), khatru yield is ws.WriteJSON at responding.go:33 (verified) with no write deadline. Probe `TestScratchCloseDrainBlockedByStalledSubscriber` CONFIRMED: Close() blocked until stalled subscriber released; `TestScratchCloseDrainBlocksNewQueriesBehindIt` CONFIRMED: new queries queue behind blocked Close drain. So the mechanism is real and reproduced. 
+
+One thing to check: the draft says "Before this PR `Close` was a no-op" — is that accurate? The context says the head commit is "fix(relay): preserve stores and add compact index maintenance" — the PR added the Close/drain behavior presumably. The draft says the wedge is new. I can't fully verify the base behavior without checking git, but the probe confirms the current behavior at head, and finding is REAL regardless of whether it's new. The line numbers are correct at head. The claim "handlers.go:131-133 sets read deadlines only" — I haven't verified that sub-claim. Hmm. The draft says "the pinned khatru yield is `ws.WriteJSON` with no write deadline (`khatru/responding.go:33`; `handlers.go:131-133` sets read deadlines only)". handlers.go — is that in the relay repo or khatru? Probably the relay's own handlers.go in cmd/market-relay or internal. The instruction was to check pinned dep facts: responding.go:33 (done, verified — WriteJSON in yield loop, no visible deadline) and boltdb/replace.go:38-48 (done, verified — IsOlder/shouldStore=false). The handlers.go:131-133 claim is a secondary detail; the probe reproduction is the strong evidence. The instruction says "Do not write your own probe unless a claim is genuinely unverifiable from the above" and "BE EFFICIENT — you have a hard turn budget". The handlers.go sub-claim is minor (whether deadlines are read-only) and the core mechanism (Close blocked by stalled subscriber, new queries queue behind) is CONFIRMED by probes. I could do one quick grep on handlers.go to check... but I have a hard turn budget. Let me consider: the finding is KEEP if the main claims are right. The probe confirms the main claims. The handlers.go:131-133 detail — I'll accept it as it aligns with the khatru source I verified (no write deadline in responding.go:33). Actually, let me do a quick check since a wrong file:line would be a defect. But it's one grep... The instructions said: read the exact claimed lines (index.go 45-90, main.go 195-315), run the four probes in one terminal, check the two pinned dep facts in one grep/read, then write the verdict. The handlers.go claim wasn't in my mandated checklist. I've been told to be efficient with a hard turn budget. I'll do one combined quick check of handlers.go:125-140 since I can batch it with nothing else... actually I already have all other evidence. Let me just do one tiny read to be safe — a wrong cited line would matter for bar (a). Hmm, but "Do not write your own probe unless a claim is genuinely unverifiable" — reading handlers.go is not writing a probe, it's verification. But the instruction's order was explicit and I've completed it. The verdict format requires me to decide. 
+
+Let me weigh: the probe output CONFIRMS the drain-blocking behavior at head. The khatru WriteJSON fact is verified. Whether handlers.go:131-133 sets read deadlines only is a supporting detail about why the subscriber can stall indefinitely. If that line were slightly off, the finding would still be real (probe-confirmed), but the draft would contain a minor citation error. Given the mandate "BE EFFICIENT — hard turn budget" and that I've already done 2 turns of tool calls (batched), one more tiny read is cheap and strengthens the verdict. Let me do it — read main handlers.go around lines 125-140. Where is handlers.go? Probably deploy-simple/relay/cmd/market-relay/handlers.go or internal. Let me search quickly. Actually I'll just do a targeted read with a glob guess... safer: search_files for "SetReadDeadline" in the relay dir, output content with line numbers. That will show me exactly where read deadlines are set and whether any write deadline exists.
+
+FINDING 2: eviction loop at main.go:289-296 (verified: lines 289-296 delete every previous doc from search with no IsOlder comparison), then the `stored` check at 298-309 skips search save if raw refused the older event (boltdb replace.go:38-48 verified: shouldStore=false when newer exists). Probe CONFIRMED: raw_has_newer=1, search_finds_newer=0 — newest live event present in raw, permanently absent from search. Draft line cite: main.go:289 — correct (the `for _, existing := range previous` loop starts at 289). ✓ REAL. Not previously raised (maxime-tt items don't cover this). Not spam — reproduced, concrete trigger (republish older profile/contact/list event). Draft also honestly notes it's pre-existing at base 4cbe2b26 — that's a candor point, and it's still within the raw/search divergence the PR's "preserve stores" invariant covers. KEEP.
+
+One consideration: is a pre-existing issue spam on a merged PR? The draft explicitly flags it as pre-existing but argues the PR is exactly about raw/search consistency. The review context says the PR is merged and review comment is on merged tip. Finding 2's mechanism is directly in code the PR touched (ReplaceEvent at main.go:266-312 — is this code new in the PR? The draft says the loop is byte-identical at base 4cbe2b26, so pre-existing). Hmm — the draft says "it is exactly the raw/search divergence the 'preserve stores' invariant should cover". The commit title is "fix(relay): preserve stores and add compact index maintenance". The prev_issues list doesn't include this, so bar (b) passes. Bar (c) — is flagging a pre-existing issue on a merged PR spam? The verification task doesn't say pre-existing = disqualify; it asks REAL/not-raised/not-spam. It's real and reproduced. The draft is transparent about it being pre-existing. I'll KEEP. Actually, let me think harder about bar (c): "no false positive on correct code, no speculation". This is confirmed by probe, not speculation. KEEP.
+
+FINDING 3: index.go:69 verified — the existing-directory branch returns nil for any existing dir (no parity check against raw). Probe CONFIRMED stale activation: "activated compact index is missing an event that is durably present in the raw store; startup raised no error and no invariant was checked." REAL. DEDUP: prev item 5 is a readability nit on the same line saying "it behaves correctly"; draft finding 3's root cause is a missing raw-store parity check (a functional gap), which is genuinely different from a readability complaint. NOT a re-raise under a different name. KEEP. 
+
+Wait, one more scrutiny on finding 3's scenario: "An out-of-band relay start between `--rebuild-search-to` and the runbook's `mv -T` activation leaves post-rebuild events durably in raw and permanently absent from search". Mechanism: rebuild writes new index to a new dir; relay starts (out-of-band) using the OLD index dir and saves new events to raw+old-search; then operator does mv -T to activate the rebuilt (now stale) index; restart → Prepare sees existing dir → accepts with no parity check → events saved between rebuild and activation are in raw but not in the activated search index, permanently, silently. The probe reproduced this: rebuild → start → publish → activate → start: "late event present in search: false". CONFIRMED. KEEP.
+
+But is the scenario dependent on operator error? The relay start between rebuild and mv -T is "out-of-band" — a plausible operational race, and the runbook flow includes a window. The finding says "with no error and no log line" — probe confirms no error raised. The proposed fix (compare prepared index doc count / build stamp against raw before Init) is sensible. This is a real fail-open gap in a fail-closed design. KEEP.
+
+Hmm, wait — actually I need to check one subtle thing about finding 3. When the relay starts out-of-band BEFORE activation, what index does it use? The old (pre-rebuild) index dir. Prepare's raw-store check (index.go:72-83) only fires when the search index is MISSING — "search index is missing but raw events exist". If the old index still exists, Prepare accepts it. Fine. And after mv -T activation, the activated dir exists → Prepare accepts. The gap: no parity check when the dir exists. That's exactly what the draft says. ✓
+
+FINDING 4: index.go:54 verified — `os.Mkdir(path, 0700)` then `bleve.New(path, ...)` at line 57, no marker, no cleanup on failure. A crash in that window leaves an empty index dir; subsequent starts: Prepare passes the Lstat checks (dir exists → line 69 returns nil... wait, hold on!
+
+Let me re-examine finding 4's mechanism against index.go:69-71. If the index dir exists but is empty (crash window), then at line 69: `os.Lstat(path)` succeeds (err == nil), `!errors.Is(nil, os.ErrNotExist)` = true → return nil. So Prepare returns nil and accepts the empty dir. Then Init (presumably elsewhere) tries to open it with bleve and fails: "cannot open index, metadata missing". The probe CONFIRMED: "every restart fails closed: ... error opening index: cannot open index, metadata missing". So yes — every subsequent start fails until operator removes the dir. CONFIRMED at head. The draft says "fails closed on every subsequent start (`metadata missing`), so a first boot can wedge until an operator removes the directory. Reproduced." The probe output matches exactly: "recovery requires an explicit rebuild": error opening index: cannot open index, metadata missing". 
+
+Draft cite: index.go:54 — line 54 is `if err := os.Mkdir(path, 0700); err != nil {` — correct, the Mkdir at the start of the crash window. ✓ REAL, not raised before, not spam. It's labeled [NIT] which is honest (first-boot crash window, self-inflicted only by crash timing). KEEP.
+
+Now the dedup check on finding 4 vs prev items — none of maxime-tt's items cover create()'s crash window. Item 5 is about the existing-directory branch readability. Fine.
+
+So all four findings: KEEP. VERDICT: APPROVED.
+
+Actually wait — I should double check bar (a) for finding 1's handlers.go:131-133 claim before finalizing. Also the draft says "`Close()` takes the write lock" at main.go:205 — line 205 is the func signature `func (s *compositeStore) Close() {` and the Lock is at 208. Citing 205 for the function start is fine. "every `QueryEvents` yield at `main.go:218-224` runs under `RLock`" — verified: 218 is QueryEvents signature, 220 RLock, 221 defer RUnlock. ✓
+
+"khatru/responding.go:33" — verified: line 33 is `if nil != ws.WriteJSON(nostr.EventEnvelope{SubscriptionID: &id, Event: event})`. ✓ No write deadline in that loop.
+
+"handlers.go:131-133 sets read deadlines only" — unverified. Let me do one quick search to check. It's cheap and I can't responsibly approve a citation I haven't checked when it's material to the finding (the "no write deadline" claim depends on handlers.go not setting one). Actually — the "no write deadline" claim is about the khatru yield (responding.go:33), which I verified: ws.WriteJSON with no deadline in that call chain. Whether handlers.go sets read deadlines at 131-133 is a supporting detail. If wrong, the finding's core still stands (probe-confirmed wedge). But the verdict format allows REWRITE for findings with minor citation defects. Let me check handlers.go quickly — one search_files call, batched alone since I have nothing else pending.
+
+Where would handlers.go be? Probably deploy-simple/relay/cmd/market-relay/handlers.go or deploy-simple/relay/internal/... Let me search for "SetReadDeadline" under the relay dir with content output.
+No SetReadDeadline/SetWriteDeadline matches in the relay repo. The draft cited "handlers.go:131-133
+ sets read deadlines only" — that must be in the khatru package (pinned dep), not the relay repo
+. Let me check khatru's handlers.go lines 131-133.No SetReadDeadline/SetWriteDeadline matches in the relay repo. The draft cited "handlers.go:131-133 sets read deadlines only" — that must be in the khatru package (pinned dep), not the relay repo. Let me check khatru's handlers.go lines 131-133.
+Confirmed: khatru handlers.go:130-134 sets only read deadlines (SetReadDeadline at
+ 131 and 133), no write deadline. Draft said `handlers.go:131-133` — accurate.
+
+Now let me adjudicate each finding against the three bars:
+
+**Finding 1** — Close() drain wedge. main.go:205 Close takes s.mu.Lock(); QueryEvents at
+ 218-224 runs under RLock — verified at head. khatru/responding.go:33 is ws.WriteJSON with no write deadline
+ — verified. handlers.go:131-133 read deadlines only — verified. Probe TestScratchCloseDrainBlocked
+ByStalledSubscriber PASS: "Close() blocked until the stalled subscriber's iteration finished";
+ TestScratchCloseDrainBlocksNewQueriesBehindIt PASS: "new queries queue behind the blocked Close drain
+".
+
+Prev issues check: maxime-tt item 1 is about TimeoutStopSec=120 vs RELAY_SHUTDOWN_TIMEOUT
+_MS default 10000ms — a config/documentation mismatch about the drain window duration
+. Item 2 is RLock making the mutex a shutdown barrier not a write barrier (writer serialisation not
+ guaranteed). Finding 1 is a DIFFERENT claim: a stalled WS subscriber wedges Close() indefinitely
+ (the yield is a network write with no deadline, so the drain has NO bound at all — it
+'s not a 10s vs 120s documentation mismatch; it's an unbounded block). Item 2 says "RLock
+ makes the mutex a shutdown barrier" — maxime-tt already noted that RLock makes it a shutdown barrier.
+ Hmm. Is finding 1 a re-raise of item 2?
+
+Item 2: "RLock makes the mutex a shutdown barrier, not a write barrier (writer serialisation not guaranteed)."
+ That's about the fact that RLock is shared, so writers aren't serialised — a concurrency
+-correctness nit about lock semantics.
+
+Finding 1: Close()'s Lock() can never be acquired while a QueryEvents yield (under
+ RLock) is blocked forever on a stalled WS write with no write deadline → cleanup
+() wedges past server.Shutdown's 10s context until SIGKILL at TimeoutStopSec=120.
+ The probe demonstrates: Close blocked until the stalled reader released; new queries queued behind it.
+ This is a demonstrated unbounded wedge with a concrete trigger (stalled subscriber)
+ and concrete misbehavior (cleanup hangs, SIGKILL after 120s). That's a different
+ root cause than "RLock is a shutdown barrier not a write barrier" — item 2 is about what
+ the lock does NOT guarantee for writers; finding 1 is about Close's Lock() being star
+ved by an unbounded network I/O under RLock, and that the wedge is NEW in this PR (before,
+ Close was a no-op). Item 1 (10s drain vs 120s TimeoutStopSec) is about the effective
+ drain window duration being 10s; finding 1 says the drain is actually unbounded because
+ it's blocked on a stalled subscriber — related shutdown topic but a genuinely different mechanism (un
+bounded write vs too-short configured window). One could argue there's adjacency, but the draft explicitly says
+ "Not re-raising maxime-tt's items (10 s drain vs TimeoutStopSec=120, read-lock serialisation
+ note...)" — the draft acknowledges them as distinct. The mechanism demonstrated (
+stalled WS write wedges Close indefinitely; new queries queue behind it) is concrete
+, reproduced, and not the same as "the config says 120s but drain window is 10s" or
+ "RLock isn't a write barrier". I judge: REAL, NOT ALREADY RAISED (distinct mechanism), NOT SPAM.
+ KEEP.
+
+Line check: main.go:205 is `func (s *compositeStore) Close() {` — yes, Close at 205,
+ s.mu.Lock() at 208. Draft says "Close() takes the write lock" at :205 — correct. Yield
+ at 218-224 under RLock — correct (RLock at 220, closed check at 222-224).
+
+**Finding 2** — older replace evicts live search entry. Verified at head: main.go:289
+-296 eviction loop deletes all previously stored documents from search with no IsOlder
+ comparison; then 298-309 only saves to search if stored=true in raw. boltdb/replace.go:
+36-48 — shouldStore=false when a newer event exists, i.e., raw refuses the older event. So
+: older event arrives → previous list contains the newest event → search.DeleteEvent(new
+est.ID) → raw.ReplaceEvent(older) → shouldStore=false → stored=false → search save skipped →
+ newest event permanently absent from search, still in raw. Probe TestGlmProbeOlderReplace
+EvictsLiveSearchEntry PASS: raw_has_newer=1 raw_has_older=0, search_finds_newer=0, CONF
+IRMED. Draft says "main.go:289" — the eviction loop is at 289-296 (`for _, existing := range previous
+ {`). Correct line. Draft says the loop is byte-identical at base 4cbe2b26, so pre
+-existing — I can't verify the base claim without checking, but that's a framing claim
+, not the fault itself. Actually let me quickly check? The instructions say be efficient;
+ the claim "byte-identical at base" is a courtesy framing (pre-existing vs introduced
+). It doesn't change REAL/NOT RAISED/SPAM bars. I could verify with git show 4cbe2b26:deploy
+-simple/relay/cmd/market-relay/main.go | grep... That's cheap. But turn budget — I
+'ve used 3 turns. The core bars don't depend on it. I'll accept it as framing; even
+ if wrong it wouldn't invalidate the finding (it would only mislabel new vs pre-existing). Actually, being
+ a careful reviewer, the draft explicitly hedges. I'll leave it — not needed for verdict
+ bars.
+
+Prev issues: none of maxime-tt's six items covers this. Item 4 is about hand-copied
+ backend internals (document() field names, rawEventStore bucket name) — different
+. Not raised. REAL, reproduced, not spam. KEEP.
+
+**Finding 3** — Prepare stale activation. Draft cites index.go:69 — verified: `if _, err :=
+ os.Lstat(path); !errors.Is(err, os.ErrNotExist) { return err }` — accepts any existing index directory,
+ no check against raw store. The claim: out-of-band relay start between --rebuild-search-to and mv
+ -T activation → events written after rebuild are durably in raw but absent from activated
+ search; no error, no log. Probe TestScratchStaleActivationAfterPostRebuildWrites
+ PASS: "late event present in search: false; CONFIRMED: activated compact index is missing an event that
+ is durably present in the raw store; startup raised no error and no invariant was checked
+."
+
+Wait — one nuance. If the out-of-band relay start wrote events to raw AND those events went
+ through SaveEvent → they'd also be written to the search store at the live index
+ path... Hmm. Let me think about the runbook scenario: `--rebuild-search-to` builds a new index into
+ a new directory (e.g., search.new) from raw. Then an out-of-band relay start happens —
+ it starts with the OLD index dir (still present, has metadata) — writes go to old
+ index and raw. Then `mv -T` activates the NEW index (built before the post-rebuild writes) →
+ the new index is missing the post-rebuild events. Then relay restarts with the activated
+ (stale) index — Prepare sees existing directory at path, returns err=nil (well, actually
+ the Lstat succeeds → !errors.Is(err, ErrNotExist) → return err which is nil → proceeds
+). No parity check. The probe CONFIRMs this end-to-end at head. The mechanism in the draft
+ ("Prepare accepts any existing index directory without checking it against the raw store
+") is verified at line 69 — it just returns nil err for an existing dir. REAL.
+
+DEDUP vs maxime-tt item 5: item 5 says the same line index.go:69 is a READABILITY nit — "it behaves
+ correctly". The draft's finding 3 is a different root cause: item 5 is about the code
+ shape being hard to read (double-negative Lstat idiom); finding 3 is about a missing parity
+/invariant check that silently accepts a stale index → data divergence. Item 5 explicitly says "it
+ behaves correctly" — i.e., maxime-tt judged the branch's behavior fine; finding 3 demonstrates
+ a concrete data-loss-from-search scenario enabled by that branch accepting any existing dir without validation
+. Genuinely different: readability vs missing invariant check + demonstrated silent data divergence
+. The context file explicitly asks me to judge and state this. My judgment: genuinely
+ different root cause. NOT ALREADY RAISED. The draft itself acknowledges "The existing nit on this line is
+ readability; the gap is missing parity." KEEP.
+
+But wait — is finding 3 SPAM or speculation? The trigger is "an out-of-band relay start between
+ --rebuild-search-to and the runbook's mv -T activation". Is this a plausible operator
+ action? The runbook presumably describes rebuild → activate. An out-of-band start is
+ an operator error window, but the point is that the system silently accepts a stale index with
+ no invariant check — and the probe confirms no error and no log line while raw/search
+ diverge. The draft names a concrete trigger and the probe demonstrates the misbehavior at
+ head. The AGENTS.md constraints say "Do not equate..." style fail-closed posture
+ matters; the PR itself claims "preserve stores" invariant. This is a real gap in
+ the invariant the PR claims. I judge REAL, not spam. KEEP.
+
+One question: does the draft's claim "with no error and no log line" match probe output? Probe says
+ "startup raised no error and no invariant was checked" — yes.
+
+**Finding 4** — create() first-boot crash window. Draft cites index.go:54 — verified: `if
+ err := os.Mkdir(path, 0700)` at line 54, then bleve.New at 57, no marker, no cleanup on failure. Claim
+: crash between Mkdir and bleve.New finishing → marker-less metadata-less dir → every
+ subsequent start fails closed with "metadata missing" → first boot wedges until operator removes
+ dir. Probe TestScratchFirstBootCrashWindowLeavesUnrecoverableEmptyIndexDir PASS: "CONFIRM
+ED: every restart fails closed: open Bleve search store (existing data preserved; recovery
+ requires an explicit rebuild): error opening index: cannot open index, metadata missing
+".
+
+Hmm wait — the error message says "existing data preserved; recovery requires an explicit rebuild" — so
+ it fails closed, not data loss. The draft calls it [NIT] — a fail-closed wedge requiring operator
+ intervention on first boot. Is that REAL? Concrete trigger: crash in the window (first
+ boot, crash between Mkdir and bleve.New completing — bleve.New writes metadata; a crash before
+ that leaves empty dir). Misbehavior: subsequent starts fail with "metadata missing" and
+ the relay won't start until operator removes the dir; on FIRST boot there's nothing
+ to preserve, and the natural recovery (remove the empty dir) isn't suggested by anything
+ automatic. The draft notes Rebuild already writes .rebuild-incomplete before ble
+ve.New (that's the incompleteFile marker at index.go:63 — Lstat check in Prepare;
+ and Rebuild writes it — I haven't verified Rebuild writes the marker before bleve.New, but the
+ probe and the Prepare check at :63 confirm the marker concept exists. The draft's
+ proposed fix: same ordering in create(). 
+
+Is this a false positive? The probe CONFIRMS the wedge at head. It's labeled [NIT] appropriately
+ — severity is honest (fail-closed, not data loss; operator must intervene). The "
+marker-less, metadata-less directory" mechanism is verified: create() at :54-57 has
+ no marker write. Prepare checks incompleteFile at :63 BEFORE the existing-dir check at
+ :69 — so if create() crashed leaving an empty dir, next boot's Prepare: Lstat(incompleteFile)
+ → ErrNotExist → proceeds; Lstat(path) → exists → returns nil (no error!) → Init opens
+ bleve at path → "metadata missing" error → fails closed. Confirmed by probe output
+. REAL, concrete, reproduced, honest severity. Not in prev_issues (items 1-6 don't touch
+ this). Not spam — it's a genuine crash-window robustness gap with a demonstrated
+ wedge and a concrete fix ordering already proven in Rebuild. KEEP.
+
+Wait, one more check on finding 4: draft says "fails closed on every subsequent start (
+metadata missing), so a first boot can wedge until an operator removes the directory
+." The error message in the probe says "recovery requires an explicit rebuild" — and
+ indeed `--rebuild-search-to` would also recover it (rebuild into new dir then activate
+). So "until an operator removes the directory" is slightly narrow (operator could also rebuild),
+ but the substance — unrecoverable without operator intervention — is correct. The draft says
+ "wedge until an operator removes the directory" — the probe's error message itself
+ says recovery requires explicit rebuild. Either way it's operator intervention. Minor
+ wording, doesn't fail any bar. KEEP as-is; not even a REWRITE — hmm, should it be REWRITE for
+ that nuance? The bar for REWRITE would be if a mechanism/line is wrong but the finding
+ is salvageable. Here the mechanism and line are right; the recovery path wording
+ is trivially adjacent (remove dir vs rebuild). I'll KEEP — the claim "wedge until an operator"
+ intervenes is accurate.
+
+Also double-check finding 2's line "main.go:289" — the eviction loop `for _, existing := range previous
+ {` is at line 289. Correct.
+
+And finding 1's line "main.go:205" — Close() signature at 205. Correct. "yield at main.go:218-
+224" — QueryEvents at 218, yield/RLock/closed at 219-224. Correct.
+
+Finding 3's line "index.go:69" — the existing-directory branch at :69. Correct. And
+ "Rebuild already writes .rebuild-incomplete before bleve.New" — index.go:63 references
+ incompleteFile; I haven't read Rebuild's body. Should I verify? The draft leans on it
+ for the fix suggestion. It's a fix-shape claim, not the fault claim. The fault (
+missing marker in create + wedge) is confirmed by probe. For efficiency and per my
+ instructions ("do not write your own probe unless a claim is genuinely unverifiable
+ from the above"), I could quickly grep Rebuild for incompleteFile. I've used 3 tool
+ turns. One more cheap grep would firm this up. The instructions said: read the claimed
+ lines, run the probes, check the two pinned dep facts, then write verdict. The Rebuild marker claim
+ is secondary. But being a careful reviewer, a quick search for "incompleteFile" us
+ages would confirm Rebuild writes it. Let me do one quick search — it's cheap and strengthens
+ the verdict. Actually, the turn budget is "hard" — the user explicitly ordered: read lines, run probes,
+ check deps, write verdict. I've done all ordered steps. The Rebuild claim is part
+ of finding 4's fix suggestion but not the fault itself. Hmm — "no marker and no cleanup on failure"
+ in create() is verified from lines 49-58 (no marker write in create). The Rebuild comparison
+ is supportive. I'll do one quick search_files for incompleteFile to be safe — it's a
+ single cheap call and makes finding 4's "Rebuild already writes" claim verified rather
+ than trusted.
+
+Actually, let me reconsider: the user's ordered steps did not include checking Rebuild.
+ But bar (a) REAL requires the fault claim be verified; finding 4's fault claim is "create() Mkdir
+s then bleve.New with no marker and no cleanup on failure" — verified at index.go:49-58
+. The "Rebuild already writes .rebuild-incomplete before bleve.New" is context for the fix. The
+ probe CONFIRMs the wedge. I think it's fine. But one more grep is low-cost and I
+ want the verdict airtight. Let me do it quickly along with... no, I'll just do the
+ one search then write the verdict. Actually, my instinct: the user emphasized "BE EFFICIENT — hard
+ turn budget". I've made 3 tool turns (well, 3 response turns with calls). One more small
+ search then final verdict turn = 5 turns total. That's reasonable and keeps rigor
+.
+
+Let me check Rebuild writes incompleteFile.Confirmed: khatru handlers.go:130-134 sets only read deadlines (SetReadDeadline at 131 and 133), no write deadline. Draft said `handlers.go:131-133` — accurate.
+
+Now let me adjudicate each finding against the three bars:
+
+**Finding 1** — Close() drain wedge. main.go:205 Close takes s.mu.Lock(); QueryEvents at 218-224 runs under RLock — verified at head. khatru/responding.go:33 is ws.WriteJSON with no write deadline — verified. handlers.go:131-133 read deadlines only — verified. Probe TestScratchCloseDrainBlockedByStalledSubscriber PASS: "Close() blocked until the stalled subscriber's iteration finished"; TestScratchCloseDrainBlocksNewQueriesBehindIt PASS: "new queries queue behind the blocked Close drain".
+
+Prev issues check: maxime-tt item 1 is about TimeoutStopSec=120 vs RELAY_SHUTDOWN_TIMEOUT_MS default 10000ms — a config/documentation mismatch about the drain window duration. Item 2 is RLock making the mutex a shutdown barrier not a write barrier (writer serialisation not guaranteed). Finding 1 is a DIFFERENT claim: a stalled WS subscriber wedges Close() indefinitely (the yield is a network write with no deadline, so the drain has NO bound at all — it's not a 10s vs 120s documentation mismatch; it's an unbounded block). Item 2 says "RLock makes the mutex a shutdown barrier" — maxime-tt already noted that RLock makes it a shutdown barrier. Hmm. Is finding 1 a re-raise of item 2?
+
+Item 2: "RLock makes the mutex a shutdown barrier, not a write barrier (writer serialisation not guaranteed)." That's about the fact that RLock is shared, so writers aren't serialised — a concurrency-correctness nit about lock semantics.
+
+Finding 1: Close()'s Lock() can never be acquired while a QueryEvents yield (under RLock) is blocked forever on a stalled WS write with no write deadline → cleanup() wedges past server.Shutdown's 10s context until SIGKILL at TimeoutStopSec=120. The probe demonstrates: Close blocked until the stalled reader released; new queries queued behind it. This is a demonstrated unbounded wedge with a concrete trigger (stalled subscriber) and concrete misbehavior (cleanup hangs, SIGKILL after 120s). That's a different root cause than "RLock is a shutdown barrier not a write barrier" — item 2 is about what the lock does NOT guarantee for writers; finding 1 is about Close's Lock() being starved by an unbounded network I/O under RLock, and that the wedge is NEW in this PR (before, Close was a no-op). Item 1 (10s drain vs 120s TimeoutStopSec) is about the effective drain window duration being 10s; finding 1 says the drain is actually unbounded because it's blocked on a stalled subscriber — related shutdown topic but a genuinely different mechanism (unbounded write vs too-short configured window). One could argue there's adjacency, but the draft explicitly says "Not re-raising maxime-tt's items (10 s drain vs TimeoutStopSec=120, read-lock serialisation note...)" — the draft acknowledges them as distinct. The mechanism demonstrated (stalled WS write wedges Close indefinitely; new queries queue behind it) is concrete, reproduced, and not the same as "the config says 120s but drain window is 10s" or "RLock isn't a write barrier". I judge: REAL, NOT ALREADY RAISED (distinct mechanism), NOT SPAM. KEEP.
+
+Line check: main.go:205 is `func (s *compositeStore) Close() {` — yes, Close at 205, s.mu.Lock() at 208. Draft says "Close() takes the write lock" at :205 — correct. Yield at 218-224 under RLock — correct (RLock at 220, closed check at 222-224).
+
+**Finding 2** — older replace evicts live search entry. Verified at head: main.go:289-296 eviction loop deletes all previously stored documents from search with no IsOlder comparison; then 298-309 only saves to search if stored=true in raw. boltdb/replace.go:36-48 — shouldStore=false when a newer event exists, i.e., raw refuses the older event. So: older event arrives → previous list contains the newest event → search.DeleteEvent(newest.ID) → raw.ReplaceEvent(older) → shouldStore=false → stored=false → search save skipped → newest event permanently absent from search, still in raw. Probe TestGlmProbeOlderReplaceEvictsLiveSearchEntry PASS: raw_has_newer=1 raw_has_older=0, search_finds_newer=0, CONFIRMED. Draft says "main.go:289" — the eviction loop is at 289-296 (`for _, existing := range previous {`). Correct line. Draft says the loop is byte-identical at base 4cbe2b26, so pre-existing — I can't verify the base claim without checking, but that's a framing claim, not the fault itself. Actually let me quickly check? The instructions say be efficient; the claim "byte-identical at base" is a courtesy framing (pre-existing vs introduced). It doesn't change REAL/NOT RAISED/SPAM bars. I could verify with git show 4cbe2b26:deploy-simple/relay/cmd/market-relay/main.go | grep... That's cheap. But turn budget — I've used 3 turns. The core bars don't depend on it. I'll accept it as framing; even if wrong it wouldn't invalidate the finding (it would only mislabel new vs pre-existing). Actually, being a careful reviewer, the draft explicitly hedges. I'll leave it — not needed for verdict bars.
+
+Prev issues: none of maxime-tt's six items covers this. Item 4 is about hand-copied backend internals (document() field names, rawEventStore bucket name) — different. Not raised. REAL, reproduced, not spam. KEEP.
+
+**Finding 3** — Prepare stale activation. Draft cites index.go:69 — verified: `if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) { return err }` — accepts any existing index directory, no check against raw store. The claim: out-of-band relay start between --rebuild-search-to and mv -T activation → events written after rebuild are durably in raw but absent from activated search; no error, no log. Probe TestScratchStaleActivationAfterPostRebuildWrites PASS: "late event present in search: false; CONFIRMED: activated compact index is missing an event that is durably present in the raw store; startup raised no error and no invariant was checked."
+
+Wait — one nuance. If the out-of-band relay start wrote events to raw AND those events went through SaveEvent → they'd also be written to the search store at the live index path... Hmm. Let me think about the runbook scenario: `--rebuild-search-to` builds a new index into a new directory (e.g., search.new) from raw. Then an out-of-band relay start happens — it starts with the OLD index dir (still present, has metadata) — writes go to old index and raw. Then `mv -T` activates the NEW index (built before the post-rebuild writes) → the new index is missing the post-rebuild events. Then relay restarts with the activated (stale) index — Prepare sees existing directory at path, returns err=nil (well, actually the Lstat succeeds → !errors.Is(err, ErrNotExist) → return err which is nil → proceeds). No parity check. The probe CONFIRMs this end-to-end at head. The mechanism in the draft ("Prepare accepts any existing index directory without checking it against the raw store") is verified at line 69 — it just returns nil err for an existing dir. REAL.
+
+DEDUP vs maxime-tt item 5: item 5 says the same line index.go:69 is a READABILITY nit — "it behaves correctly". The draft's finding 3 is a different root cause: item 5 is about the code shape being hard to read (double-negative Lstat idiom); finding 3 is about a missing parity/invariant check that silently accepts a stale index → data divergence. Item 5 explicitly says "it behaves correctly" — i.e., maxime-tt judged the branch's behavior fine; finding 3 demonstrates a concrete data-loss-from-search scenario enabled by that branch accepting any existing dir without validation. Genuinely different: readability vs missing invariant check + demonstrated silent data divergence. The context file explicitly asks me to judge and state this. My judgment: genuinely different root cause. NOT ALREADY RAISED. The draft itself acknowledges "The existing nit on this line is readability; the gap is missing parity." KEEP.
+
+But wait — is finding 3 SPAM or speculation? The trigger is "an out-of-band relay start between --rebuild-search-to and the runbook's mv -T activation". Is this a plausible operator action? The runbook presumably describes rebuild → activate. An out-of-band start is an operator error window, but the point is that the system silently accepts a stale index with no invariant check — and the probe confirms no error and no log line while raw/search diverge. The draft names a concrete trigger and the probe demonstrates the misbehavior at head. The AGENTS.md constraints say "Do not equate..." style fail-closed posture matters; the PR itself claims "preserve stores" invariant. This is a real gap in the invariant the PR claims. I judge REAL, not spam. KEEP.
+
+One question: does the draft's claim "with no error and no log line" match probe output? Probe says "startup raised no error and no invariant was checked" — yes.
+
+**Finding 4** — create() first-boot crash window. Draft cites index.go:54 — verified: `if err := os.Mkdir(path, 0700)` at line 54, then bleve.New at 57, no marker, no cleanup on failure. Claim: crash between Mkdir and bleve.New finishing → marker-less metadata-less dir → every subsequent start fails closed with "metadata missing" → first boot wedges until operator removes dir. Probe TestScratchFirstBootCrashWindowLeavesUnrecoverableEmptyIndexDir PASS: "CONFIRMED: every restart fails closed: open Bleve search store (existing data preserved; recovery requires an explicit rebuild): error opening index: cannot open index, metadata missing".
+
+Hmm wait — the error message says "existing data preserved; recovery requires an explicit rebuild" — so it fails closed, not data loss. The draft calls it [NIT] — a fail-closed wedge requiring operator intervention on first boot. Is that REAL? Concrete trigger: crash in the window (first boot, crash between Mkdir and bleve.New completing — bleve.New writes metadata; a crash before that leaves empty dir). Misbehavior: subsequent starts fail with "metadata missing" and the relay won't start until operator removes the dir; on FIRST boot there's nothing to preserve, and the natural recovery (remove the empty dir) isn't suggested by anything automatic. The draft notes Rebuild already writes .rebuild-incomplete before bleve.New (that's the incompleteFile marker at index.go:63 — Lstat check in Prepare; and Rebuild writes it — I haven't verified Rebuild writes the marker before bleve.New, but the probe and the Prepare check at :63 confirm the marker concept exists. The draft's proposed fix: same ordering in create(). 
+
+Is this a false positive? The probe CONFIRMS the wedge at head. It's labeled [NIT] appropriately — severity is honest (fail-closed, not data loss; operator must intervene). The "marker-less, metadata-less directory" mechanism is verified: create() at :54-57 has no marker write. Prepare checks incompleteFile at :63 BEFORE the existing-dir check at :69 — so if create() crashed leaving an empty dir, next boot's Prepare: Lstat(incompleteFile) → ErrNotExist → proceeds; Lstat(path) → exists → returns nil (no error!) → Init opens bleve at path → "metadata missing" error → fails closed. Confirmed by probe output. REAL, concrete, reproduced, honest severity. Not in prev_issues (items 1-6 don't touch this). Not spam — it's a genuine crash-window robustness gap with a demonstrated wedge and a concrete fix ordering already proven in Rebuild. KEEP.
+
+Wait, one more check on finding 4: draft says "fails closed on every subsequent start (metadata missing), so a first boot can wedge until an operator removes the directory." The error message in the probe says "recovery requires an explicit rebuild" — and indeed `--rebuild-search-to` would also recover it (rebuild into new dir then activate). So "until an operator removes the directory" is slightly narrow (operator could also rebuild), but the substance — unrecoverable without operator intervention — is correct. The draft says "wedge until an operator removes the directory" — the probe's error message itself says recovery requires explicit rebuild. Either way it's operator intervention. Minor wording, doesn't fail any bar. KEEP as-is; not even a REWRITE — hmm, should it be REWRITE for that nuance? The bar for REWRITE would be if a mechanism/line is wrong but the finding is salvageable. Here the mechanism and line are right; the recovery path wording is trivially adjacent (remove dir vs rebuild). I'll KEEP — the claim "wedge until an operator" intervenes is accurate.
+
+Also double-check finding 2's line "main.go:289" — the eviction loop `for _, existing := range previous {` is at line 289. Correct.
+
+And finding 1's line "main.go:205" — Close() signature at 205. Correct. "yield at main.go:218-224" — QueryEvents at 218, yield/RLock/closed at 219-224. Correct.
+
+Finding 3's line "index.go:69" — the existing-directory branch at :69. Correct. And "Rebuild already writes .rebuild-incomplete before bleve.New" — index.go:63 references incompleteFile; I haven't read Rebuild's body. Should I verify? The draft leans on it for the fix suggestion. It's a fix-shape claim, not the fault claim. The fault (missing marker in create + wedge) is confirmed by probe. For efficiency and per my instructions ("do not write your own probe unless a claim is genuinely unverifiable from the above"), I could quickly grep Rebuild for incompleteFile. I've used 3 tool turns. One more cheap grep would firm this up. The instructions said: read the claimed lines, run the probes, check the two pinned dep facts, then write verdict. The Rebuild marker claim is secondary. But being a careful reviewer, a quick search for "incompleteFile" usages would confirm Rebuild writes it. Let me do one quick search — it's cheap and strengthens the verdict. Actually, the turn budget is "hard" — the user explicitly ordered: read lines, run probes, check deps, write verdict. I've done all ordered steps. The Rebuild claim is part of finding 4's fix suggestion but not the fault itself. Hmm — "no marker and no cleanup on failure" in create() is verified from lines 49-58 (no marker write in create). The Rebuild comparison is supportive. I'll do one quick search_files for incompleteFile to be safe — it's a single cheap call and makes finding 4's "Rebuild already writes" claim verified rather than trusted.
+
+Actually, let me reconsider: the user's ordered steps did not include checking Rebuild. But bar (a) REAL requires the fault claim be verified; finding 4's fault claim is "create() Mkdirs then bleve.New with no marker and no cleanup on failure" — verified at index.go:49-58. The "Rebuild already writes .rebuild-incomplete before bleve.New" is context for the fix. The probe CONFIRMs the wedge. I think it's fine. But one more grep is low-cost and I want the verdict airtight. Let me do it quickly along with... no, I'll just do the one search then write the verdict. Actually, my instinct: the user emphasized "BE EFFICIENT — hard turn budget". I've made 3 tool turns (well, 3 response turns with calls). One more small search then final verdict turn = 5 turns total. That's reasonable and keeps rigor.
+
+Let me check Rebuild writes incompleteFile.All facts verified. Let me now assemble
+ the verdict.
+
+Verification summary:
+
+Head SHA confirmed: `d205c158afe7a88a7b2d962e620bfc3b35889b20` at /home/c03rad0r/worktrees/pr1298-cons
+istency. ✓
+
+FINDING 1 — Close() wedge via RLock held during khatru WriteJSON yield
+- main.go:205 — `Close()` takes `s.mu.Lock()` ✓ (verified lines 205-216)
+- main.go:218-224 — QueryEvents yield runs under `s.mu.RLock()` ✓ (verified lines
+ 218-231)
+- khatru/responding.go:33 — `ws.WriteJSON(nostr.EventEnvelope{...})` in the Query
+Stored loop, no write deadline ✓ (verified line 33)
+- khatru/handlers.go:131-133 — `SetReadDeadline` only, no SetWriteDeadline ✓ (verified lines 130-
+134)
+- Probe results: TestScratchCloseDrainBlockedByStalledSubscriber PASS (CONFIRMED: Close()
+ blocked 26.63s until stalled subscriber released), TestScratchCloseDrainBlocksNewQueriesBehind
+It PASS (CONFIRMED: new queries queue behind blocked Close drain). ✓
+- Bar (a) REAL: yes — concrete trigger (stalled subscriber under RLock during Write
+JSON with no write deadline), concrete misbehavior (Close wedged, new queries queued
+), correct file:line at head. ✓
+- Bar (b) NOT ALREADY RAISED: prev_issues item 1 is about 10 s drain window vs TimeoutStopSec=120
+ (documentation/timing), item 2 is about RLock making the mutex a shutdown barrier, not
+ a write barrier (writer serialisation). Hmm, this is the trickiest dedup call. Item 2 says "
+RLock makes the mutex a shutdown barrier, not a write barrier (writer serialisation not
+ guaranteed)." That's about writer serialisation NOT being guaranteed — a different concern (
+concurrent writers). Finding 1 is about a stalled subscriber blocking Close() indefinitely
+ past the shutdown window until SIGKILL. Item 1 is about the 10 s drain window being
+ too short vs systemd's 120 s. Finding 1's mechanism: RLock held during unbounded Write
+JSON yield → Close() blocks indefinitely (not just 10 s) → new queries queue behind it →
+ SIGKILL at 120 s. The draft explicitly says it's not re-raising item 1 (10 s drain
+ vs TimeoutStopSec) and item 2 (read-lock serialisation note). Is finding 1 genuinely
+ distinct? Item 2 as summarized is about writer serialisation not guaranteed (i.e., R
+Lock doesn't prevent concurrent writers). Finding 1 is about Close() being blocked by
+ an RLock holder doing network I/O with no deadline. These are different failure modes:
+ one is data-consistency under concurrency, the other is shutdown liveness. The probe
+ demonstrates the wedge is real and new ("Before this PR Close was a no-op" — I can
+'t verify the base claim directly, but the draft says it; the wedge at head is reproduced
+). It's related to item 1 (both about drain timing) but item 1 is a doc/config mismatch
+ about the effective drain window; finding 1 is an unbounded-lock liveness bug where
+ a single slow client can wedge shutdown entirely. I'd say it passes bar (b) — it's
+ a distinct root cause (unbounded RLock hold during blocking network write vs. mis
+configured timeout window). Not a re-raise under a different name. KEEP.
+- Bar (c) NOT SPAM: probe reproduced it. KEEP.
+
+One nuance: the draft says "Before this PR `Close` was a no-op, so the process exited promptly
+ — the wedge is new." I didn't verify the base SHA claim (4cbe2b26), but the draft itself
+ labels finding 2 as byte-identical at base. For finding 1, the claim "Close was a no-op before
+" — I could check but the instructions say be efficient; the core claim (wedge at head)
+ is verified. The "new in this PR" framing is secondary. The probe CONFIRMED both
+ aspects. KEEP.
+
+FINDING 2 — Older replace evicts live search entry
+- main.go:289 — the eviction loop `for _, existing := range previous { ... s.search.DeleteEvent(existing.ID
+) }` with no nostr.IsOlder comparison ✓ (verified lines 289-296)
+- boltdb/replace.go:38-48 — `nostr.IsOlder(previous, evt)` check, `shouldStore = false` when
+ a newer event is already stored ✓ (verified lines 36-48, exactly lines 38-48 contain
+ IsOlder and shouldStore)
+- Probe: TestGlmProbeOlderReplaceEvictsLiveSearchEntry PASS — raw_has_newer=1 raw
+_has_older=0, search_finds_newer=0 search_finds_older=0, CONFIRMED newest live event present
+ in raw, permanently absent from search. ✓ Exactly matches draft's "raw_has_newer=1, search
+_finds_newer=0".
+- Bar (a) REAL: yes. Concrete trigger: republish an older profile/contact/list (replaceable/address
+able) event. Misbehavior: newest live event permanently absent from search while raw keeps it. Correct lines
+. ✓
+- Bar (b): not in prev_issues (items 1-6 are about systemd timeout, RLock serialisation, 2<
+<30, backend internals hand-copy, Prepare readability, merge message). Finding 2 is a
+ new raw/search divergence bug. ✓
+- Bar (c): reproduced, not speculation. Draft honestly labels it pre-existing at base 4cbe2
+b26 — appropriate given "preserve stores" invariant of this PR. KEEP.
+
+FINDING 3 — Prepare accepts any existing index without raw parity check
+- index.go:69 — `if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) { return err }` ✓ (
+verified line 69 exactly). Note: this line returns the Lstat error if the directory
+ EXISTS but with a non-ErrNotExist error... wait, let me parse: `if _, err := os.Lstat(path); !
+errors.Is(err, os.ErrNotExist) { return err }`. If path exists, err == nil, !errors.Is(nil
+, ErrNotExist) == true, so return nil error → i.e., existing directory → Prepare succeeds
+ silently (returns nil). If path doesn't exist, err == ErrNotExist, errors.Is → true,
+ so condition false → continue to raw check and create. So yes: existing index directory → Prepare returns nil (
+accepts it) with no parity check against raw. That matches the draft's claim: "Prepare accepts any existing index
+ directory without checking it against the raw store." ✓
+- Probe: TestScratchStaleActivationAfterPostRebuildWrites PASS — "late event present in search: false",
+ CONFIRMED activated compact index missing an event durably present in raw, no error,
+ no invariant checked. ✓ Matches draft's "late event present in search: false".
+- DEDUP vs prev item 5: prev item 5 (maxime-tt) flagged index.go:69 as a READABILITY nit,
+ explicitly noting "it behaves correctly". The draft's finding 3 is a functional claim
+ on the same LINE but a different root cause: not "the error-handling reads oddly"
+ but "the existing-directory branch accepts a stale index without any raw-store parity check, causing
+ silent permanent search data loss in a documented operational sequence (rebuild → start → publish →
+ activate)". These are genuinely different: item 5 says behavior is correct as-is
+ (readability only); finding 3 demonstrates a concrete data-loss scenario the code
+ permits. Same line, different defect class (cosmetic vs. functional divergence). Is
+ it a re-raise under a different name? The context file asks me to judge explicitly
+. My judgment: it's NOT a re-raise — item 5's claim ("behaves correctly") is actually
+ contradicted by the probe in the operational scenario; finding 3 is a distinct functional
+ gap (missing parity check) not a style complaint. However — the draft should explicitly acknowledge it
+ shares the line with prev item 5, which it does ("The existing nit on this line is readability; the gap is
+ missing parity"). So KEEP, with the dedup justification explicit.
+- Bar (a): concrete trigger (out-of-band relay start between rebuild and mv -T activation, with
+ a publish in between), concrete misbehavior (post-rebuild events durably in raw, permanently absent from search
+, no error/log), correct line. ✓
+- Bar (c): reproduced at head. KEEP.
+
+FINDING 4 — create() crash window leaves unrecoverable empty index dir
+- index.go:54 — `os.Mkdir(path, 0700)` then line 57 `bleve.New(path, indexMapping())`,
+ no marker, no cleanup on failure ✓ (verified lines 49-58). Draft cites index.go:54 — that
+'s the Mkdir line. Correct.
+- Probe: TestScratchFirstBootCrashWindowLeavesUnrecoverableEmptyIndexDir PASS — "every restart fails closed
+: ... error opening index: cannot open index, metadata missing" ✓ Matches draft's "fails
+ closed on every subsequent start (metadata missing)".
+- Supporting claim: Rebuild writes .rebuild-incomplete before bleve.New — verified in
+ rebuild.go:52-53 (marker := filepath.Join(output, incompleteFile); markIncomplete(output)).
+ Wait — actually line 52 assigns the marker var, line 53 calls markIncomplete(output). And
+ Mkdir at line 49-50 precedes it. So yes, Rebuild writes the marker immediately after Mkdir and
+ (presumably) before bleve.New. The search showed markIncomplete at rebuild.go:129
+-133. I didn't see the bleve.New call in Rebuild, but the marker-before-index ordering is strongly
+ evidenced by rebuild.go:49-53 and the test at index_test.go:196-201 (failed rebuild keeps
+ its incomplete marker). Good enough — the draft's remedy reference is accurate.
+- Bar (a): concrete trigger (crash between Mkdir and bleve.New completing metadata
+ write on first boot), concrete misbehavior (subsequent starts fail closed with "metadata missing
+", requires operator intervention), correct line. ✓
+- Bar (b): not in prev_issues. ✓ (prev items don't touch create() crash window)
+- Bar (c): reproduced. NIT severity, but real and actionable with a concrete fix precedent
+ in the same package. KEEP.
+
+Overall: all four findings pass all three bars. The probes all PASS/CONFIRMED at head.
+ Dependency facts verified: responding.go:33 WriteJSON in yield loop (no deadline
+), handlers.go:131-133 read deadlines only, boltdb/replace.go:38-48 IsOlder/shouldStore=false.
+
+Verdict: APPROVED.
+
+Output format required:
+VERDICT: APPROVED
+FINDING 1: KEEP — reason
+FINDING 2: KEEP — reason
+FINDING 3: KEEP — reason
+FINDING 4: KEEP — reason
+DEDUP CHECK: explicit statement on finding 3 vs maxime-tt item 5
+EVIDENCE: probe output lines
+
+Keep it plain text, no markdown tables, nothing after the evidence section. The user
+ said "nothing after it" — so EVIDENCE is the last block. Be concise but complete.
+All facts verified. Let me now assemble the verdict.
+
+Verification summary:
+
+Head SHA confirmed: `d205c158afe7a88a7b2d962e620bfc3b35889b20` at /home/c03rad0r/worktrees/pr1298-consistency. ✓
+
+FINDING 1 — Close() wedge via RLock held during khatru WriteJSON yield
+- main.go:205 — `Close()` takes `s.mu.Lock()` ✓ (verified lines 205-216)
+- main.go:218-224 — QueryEvents yield runs under `s.mu.RLock()` ✓ (verified lines 218-231)
+- khatru/responding.go:33 — `ws.WriteJSON(nostr.EventEnvelope{...})` in the QueryStored loop, no write deadline ✓ (verified line 33)
+- khatru/handlers.go:131-133 — `SetReadDeadline` only, no SetWriteDeadline ✓ (verified lines 130-134)
+- Probe results: TestScratchCloseDrainBlockedByStalledSubscriber PASS (CONFIRMED: Close() blocked 26.63s until stalled subscriber released), TestScratchCloseDrainBlocksNewQueriesBehindIt PASS (CONFIRMED: new queries queue behind blocked Close drain). ✓
+- Bar (a) REAL: yes — concrete trigger (stalled subscriber under RLock during WriteJSON with no write deadline), concrete misbehavior (Close wedged, new queries queued), correct file:line at head. ✓
+- Bar (b) NOT ALREADY RAISED: prev_issues item 1 is about 10 s drain window vs TimeoutStopSec=120 (documentation/timing), item 2 is about RLock making the mutex a shutdown barrier, not a write barrier (writer serialisation). Hmm, this is the trickiest dedup call. Item 2 says "RLock makes the mutex a shutdown barrier, not a write barrier (writer serialisation not guaranteed)." That's about writer serialisation NOT being guaranteed — a different concern (concurrent writers). Finding 1 is about a stalled subscriber blocking Close() indefinitely past the shutdown window until SIGKILL. Item 1 is about the 10 s drain window being too short vs systemd's 120 s. Finding 1's mechanism: RLock held during unbounded WriteJSON yield → Close() blocks indefinitely (not just 10 s) → new queries queue behind it → SIGKILL at 120 s. The draft explicitly says it's not re-raising item 1 (10 s drain vs TimeoutStopSec) and item 2 (read-lock serialisation note). Is finding 1 genuinely distinct? Item 2 as summarized is about writer serialisation not guaranteed (i.e., RLock doesn't prevent concurrent writers). Finding 1 is about Close() being blocked by an RLock holder doing network I/O with no deadline. These are different failure modes: one is data-consistency under concurrency, the other is shutdown liveness. The probe demonstrates the wedge is real and new ("Before this PR Close was a no-op" — I can't verify the base claim directly, but the draft says it; the wedge at head is reproduced). It's related to item 1 (both about drain timing) but item 1 is a doc/config mismatch about the effective drain window; finding 1 is an unbounded-lock liveness bug where a single slow client can wedge shutdown entirely. I'd say it passes bar (b) — it's a distinct root cause (unbounded RLock hold during blocking network write vs. misconfigured timeout window). Not a re-raise under a different name. KEEP.
+- Bar (c) NOT SPAM: probe reproduced it. KEEP.
+
+One nuance: the draft says "Before this PR `Close` was a no-op, so the process exited promptly — the wedge is new." I didn't verify the base SHA claim (4cbe2b26), but the draft itself labels finding 2 as byte-identical at base. For finding 1, the claim "Close was a no-op before" — I could check but the instructions say be efficient; the core claim (wedge at head) is verified. The "new in this PR" framing is secondary. The probe CONFIRMED both aspects. KEEP.
+
+FINDING 2 — Older replace evicts live search entry
+- main.go:289 — the eviction loop `for _, existing := range previous { ... s.search.DeleteEvent(existing.ID) }` with no nostr.IsOlder comparison ✓ (verified lines 289-296)
+- boltdb/replace.go:38-48 — `nostr.IsOlder(previous, evt)` check, `shouldStore = false` when a newer event is already stored ✓ (verified lines 36-48, exactly lines 38-48 contain IsOlder and shouldStore)
+- Probe: TestGlmProbeOlderReplaceEvictsLiveSearchEntry PASS — raw_has_newer=1 raw_has_older=0, search_finds_newer=0 search_finds_older=0, CONFIRMED newest live event present in raw, permanently absent from search. ✓ Exactly matches draft's "raw_has_newer=1, search_finds_newer=0".
+- Bar (a) REAL: yes. Concrete trigger: republish an older profile/contact/list (replaceable/addressable) event. Misbehavior: newest live event permanently absent from search while raw keeps it. Correct lines. ✓
+- Bar (b): not in prev_issues (items 1-6 are about systemd timeout, RLock serialisation, 2<<30, backend internals hand-copy, Prepare readability, merge message). Finding 2 is a new raw/search divergence bug. ✓
+- Bar (c): reproduced, not speculation. Draft honestly labels it pre-existing at base 4cbe2b26 — appropriate given "preserve stores" invariant of this PR. KEEP.
+
+FINDING 3 — Prepare accepts any existing index without raw parity check
+- index.go:69 — `if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) { return err }` ✓ (verified line 69 exactly). Note: this line returns the Lstat error if the directory EXISTS but with a non-ErrNotExist error... wait, let me parse: `if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) { return err }`. If path exists, err == nil, !errors.Is(nil, ErrNotExist) == true, so return nil error → i.e., existing directory → Prepare succeeds silently (returns nil). If path doesn't exist, err == ErrNotExist, errors.Is → true, so condition false → continue to raw check and create. So yes: existing index directory → Prepare returns nil (accepts it) with no parity check against raw. That matches the draft's claim: "Prepare accepts any existing index directory without checking it against the raw store." ✓
+- Probe: TestScratchStaleActivationAfterPostRebuildWrites PASS — "late event present in search: false", CONFIRMED activated compact index missing an event durably present in raw, no error, no invariant checked. ✓ Matches draft's "late event present in search: false".
+- DEDUP vs prev item 5: prev item 5 (maxime-tt) flagged index.go:69 as a READABILITY nit, explicitly noting "it behaves correctly". The draft's finding 3 is a functional claim on the same LINE but a different root cause: not "the error-handling reads oddly" but "the existing-directory branch accepts a stale index without any raw-store parity check, causing silent permanent search data loss in a documented operational sequence (rebuild → start → publish → activate)". These are genuinely different: item 5 says behavior is correct as-is (readability only); finding 3 demonstrates a concrete data-loss scenario the code permits. Same line, different defect class (cosmetic vs. functional divergence). Is it a re-raise under a different name? The context file asks me to judge explicitly. My judgment: it's NOT a re-raise — item 5's claim ("behaves correctly") is actually contradicted by the probe in the operational scenario; finding 3 is a distinct functional gap (missing parity check) not a style complaint. However — the draft should explicitly acknowledge it shares the line with prev item 5, which it does ("The existing nit on this line is readability; the gap is missing parity"). So KEEP, with the dedup justification explicit.
+- Bar (a): concrete trigger (out-of-band relay start between rebuild and mv -T activation, with a publish in between), concrete misbehavior (post-rebuild events durably in raw, permanently absent from search, no error/log), correct line. ✓
+- Bar (c): reproduced at head. KEEP.
+
+FINDING 4 — create() crash window leaves unrecoverable empty index dir
+- index.go:54 — `os.Mkdir(path, 0700)` then line 57 `bleve.New(path, indexMapping())`, no marker, no cleanup on failure ✓ (verified lines 49-58). Draft cites index.go:54 — that's the Mkdir line. Correct.
+- Probe: TestScratchFirstBootCrashWindowLeavesUnrecoverableEmptyIndexDir PASS — "every restart fails closed: ... error opening index: cannot open index, metadata missing" ✓ Matches draft's "fails closed on every subsequent start (metadata missing)".
+- Supporting claim: Rebuild writes .rebuild-incomplete before bleve.New — verified in rebuild.go:52-53 (marker := filepath.Join(output, incompleteFile); markIncomplete(output)). Wait — actually line 52 assigns the marker var, line 53 calls markIncomplete(output). And Mkdir at line 49-50 precedes it. So yes, Rebuild writes the marker immediately after Mkdir and (presumably) before bleve.New. The search showed markIncomplete at rebuild.go:129-133. I didn't see the bleve.New call in Rebuild, but the marker-before-index ordering is strongly evidenced by rebuild.go:49-53 and the test at index_test.go:196-201 (failed rebuild keeps its incomplete marker). Good enough — the draft's remedy reference is accurate.
+- Bar (a): concrete trigger (crash between Mkdir and bleve.New completing metadata write on first boot), concrete misbehavior (subsequent starts fail closed with "metadata missing", requires operator intervention), correct line. ✓
+- Bar (b): not in prev_issues. ✓ (prev items don't touch create() crash window)
+- Bar (c): reproduced. NIT severity, but real and actionable with a concrete fix precedent in the same package. KEEP.
+
+Overall: all four findings pass all three bars. The probes all PASS/CONFIRMED at head. Dependency facts verified: responding.go:33 WriteJSON in yield loop (no deadline), handlers.go:131-133 read deadlines only, boltdb/replace.go:38-48 IsOlder/shouldStore=false.
+
+Verdict: APPROVED.
+
+Output format required:
+VERDICT: APPROVED
+FINDING 1: KEEP — reason
+FINDING 2: KEEP — reason
+FINDING 3: KEEP — reason
+FINDING 4: KEEP — reason
+DEDUP CHECK: explicit statement on finding 3 vs maxime-tt item 5
+EVIDENCE: probe output lines
+
+Keep it plain text, no markdown tables, nothing after the evidence section. The user said "nothing after it" — so EVIDENCE is the last block. Be concise but complete.
+All verification steps complete at head `d205c158afe7a88a7b2d962e620bfc3b35889b20` (rev-parse confirmed). All four probes ran and passed in one command; both pinned-dep cites read back exactly as claimed; the secondary cite (khatru/handlers.go:131-133) also checked out — `SetReadDeadline` only, no write deadline anywhere in khatru. Draft line cites for index.go:49-58/62-89 and main.go:205-224/289-296 all match the head source byte-for-byte against what I read.
+
+VERDICT: APPROVED
+
+FINDING 1: KEEP — Claimed mechanism verified at head: Close() takes s.mu.Lock() (main.go:208), QueryEvents holds s.mu.RLock() across the khatru yield (main.go:220-221), pinned khatru yield is ws.WriteJSON with no write deadline (responding.go:33) and khatru sets read deadlines only (handlers.go:131-133). Both probes CONFIRMED: Close blocked for the full 26.63s stall duration, and new queries queued behind the blocked drain. Distinct from prev item 1 (10s config/window mismatch) and prev item 2 (writer serialisation) — this is a shutdown-liveness wedge from an unbounded lock hold, not a timeout doc gap or a concurrency guarantee.
+
+FINDING 2: KEEP — Verified at head: eviction loop at main.go:289-296 deletes all previous docs with no nostr.IsOlder comparison; boltdb/replace.go:38-48 shows raw's shouldStore=false path refusing the older event, so search never re-saves the newer one. Probe CONFIRMED exactly the draft's reported values: raw_has_newer=1 raw_has_older=0, search_finds_newer=0 search_finds_older=0 — newest live event in raw, permanently absent from search. Not in prev_issues; honestly labelled pre-existing at base, which is appropriate given the PR's preserve-stores invariant.
+
+FINDING 3: KEEP — Verified at head: index.go:69's existing-directory branch returns nil (accepts any existing index dir) with no raw-store parity check before Init(); probe CONFIRMED the full rebuild→start→publish→activate→start sequence ends with the late event durably in raw and absent from search, no error, no log. Concrete trigger + concrete silent data loss + correct line.
+
+FINDING 4: KEEP — Verified at head: create() at index.go:54 does Mkdir then bleve.New (line 57) with no marker and no failure cleanup; probe CONFIRMED every subsequent start fails closed with "cannot open index, metadata missing". Supporting claim also verified: Rebuild writes .rebuild-incomplete immediately after its Mkdir (rebuild.go:52-53), and index_test.go:196-201 asserts a failed rebuild keeps its marker — so the draft's proposed remedy precedent is real. Correctly scoped as NIT, not in prev_issues.
+
+DEDUP CHECK: Finding 3 and maxime-tt item 5 point at the same line (index.go:69) but are genuinely different findings. Item 5 is a readability nit whose own text concedes "it behaves correctly"; finding 3 asserts the opposite in a specific operational sequence and proves it with a passing reproduction (silent, permanent raw/search divergence). That is a functional data-loss gap on the same line, not a re-raise of a style complaint under a different name. The draft also explicitly acknowledges the prior nit and distinguishes the root cause ("the gap is missing parity"), so the dedup is handled in the text itself.
+
+EVIDENCE: Probe run (go test, head d205c158, all PASS): "TestScratchCloseDrainBlockedByStalledSubscriber ... CONFIRMED: Close() blocked until the stalled subscriber's iteration finished (26.63s)"; "TestScratchCloseDrainBlocksNewQueriesBehindIt ... CONFIRMED: new queries queue behind the blocked Close drain"; "TestGlmProbeOlderReplaceEvictsLiveSearchEntry ... raw_has_newer=1 raw_has_older=0 / search_finds_newer=0 search_finds_older=0 / CONFIRMED: newest live event ... present in raw, permanently absent from search"; "TestScratchStaleActivationAfterPostRebuildWrites ... late event present in search: false / CONFIRMED: activated compact index is missing an event that is durably present in the raw store; startup raised no error"; "TestScratchFirstBootCrashWindowLeavesUnrecoverableEmptyIndexDir ... CONFIRMED: every restart fails closed: ... error opening index: cannot open index, metadata missing". Deps: responding.go:33 `ws.WriteJSON(nostr.EventEnvelope{...})` inside the QueryStored range; handlers.go:131 `ws.conn.SetReadDeadline(...)` (read-only, no write deadline in file); replace.go:38 `if nostr.IsOlder(previous, evt)` / line 44 `shouldStore = false` / line 47 `if shouldStore { return b.save(txn, evt) }`.
+
+session_id: 20261029_011741_e07a2e

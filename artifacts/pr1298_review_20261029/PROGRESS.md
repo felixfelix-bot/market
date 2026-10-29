@@ -38,3 +38,16 @@ tree); this lane's deliverables live at artifacts/pr1298_review_20261029/.
 - M5 Cross-family dispatch to worker-reviewer-glm — see below.
 - M6 Publish — see below.
 - M7 Contribution-PR card — see below.
+- M5 Cross-family gate (GATE 2.5) — DONE. Dispatched to pinned profile
+  `worker-reviewer-glm` (state.db session 20261029_011741_e07a2e, model
+  tier/review-glm @ zai — pin verified against REVIEWER-POOL-RUNBOOK D-115).
+  **VERDICT: APPROVED** — all four findings KEEP (1-4), dedup check on
+  finding 3 vs maxime-tt item 5 explicitly cleared (functional data-loss gap
+  vs readability nit, acknowledged in the draft text). Raw verdict:
+  raw-glm-verdict.txt. First dispatch attempt stalled on context-gathering and
+  was killed at 600 s; re-dispatched with a bounded step list, completed.
+- M6 Publish — DONE. Comment posted:
+  https://github.com/PlebeianApp/market/pull/1298#issuecomment-6484411325
+  (13 lines, 3116 chars, verified by re-read of the posted body). No approval,
+  no merge, no request-changes — comment only (PR already merged).
+- M7 Contribution card — see REPORT.md.
