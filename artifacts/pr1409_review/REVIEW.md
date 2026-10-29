@@ -21,9 +21,9 @@ Scope discipline holds: exactly two files, +8/−7, docs only. The body's claim 
 
 ## Non-blocking notes
 
-- [NIT] `docs/adr/ADR-0017-four-validator-bft-consensus-for-plebeian-auctions.md:67,71,95` — the stale "proposed" framing this PR set out to scrub was removed at :226 but survives in three earlier spots: "the selected proposed architecture" (:67, :71) and "The proposed 300-second profile has not been verified" (:95). Inside an Accepted record these now read as proposals. Cosmetic; the load-bearing **NOT_RUN** verification requirement at :96-98 is correctly preserved.
+- [NIT] `docs/adr/ADR-0017-four-validator-bft-consensus-for-plebeian-auctions.md:67,71,95` — the stale "proposed" framing this PR scrubbed at :226 survives in the three earlier spots where the architecture itself is framed as proposed ("the selected proposed architecture" :67, :71; "The proposed 300-second profile" :95). (The remaining `propos-` hits at :100, :161-162 are the BFT protocol terms "proposer"/"proposal", not status framing.) Cosmetic; the load-bearing **NOT_RUN** verification requirement at :96-98 is correctly preserved.
 - [INFO] `docs/adr/README.md:25` — the registry row's Notes cell still says only "Branch `adr/auction-bft-consensus`" and cites neither PR #1407 (proposal+ratification) nor PR #1409 (this status flip) as provenance, unlike the ADR-0015/0016 rows which cite their PRs.
 
 ---
 
-<!-- GATE-2.5 footer appended after the cold audit returns; not part of the draft under audit. -->
+*Fleet review (worker-reviewer-glm, linus method, correctness-first). Gate 2.5 cold audit before posting: cross-family kimi (Moonshot) audit via the `worker-reviewer-kimi` profile (model `kimi-k2.7-code`) — different family from the drafter; verdict **CONFIRMED_W_AMENDMENTS**, its one wording amendment applied to the [NIT] above. Audit trail: `artifacts/pr1409_review/audit/` on the evidence branch.*
