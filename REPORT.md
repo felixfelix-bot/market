@@ -76,6 +76,14 @@ The loop-closure record is present and correct, so no state-file edit was made.
 
 No source or test files changed, so no behavior tests were run. Documentation checks are recorded in `PROGRESS.md`/the final commit evidence. Pre-existing unrelated modifications to `MANIFEST.md`, `artifacts/pr1306_dedup/*`, `src/lib/auction/reserveGuard.ts`, and `e2e/baseline-results/` were left untouched.
 
-## 7. Remaining steps
+## 7. Verification and completion
 
-None for the PR review itself. The only remaining worker bookkeeping is to validate, commit, and push this no-op documentation milestone without including unrelated worktree changes.
+- `git diff --check`: passed before the documentation commit.
+- Task-scoped `bunx prettier --check REPORT.md PROGRESS.md docs/pr1285-noop/determination.md`: passed.
+- Full `bun run format:check`: failed only on pre-existing `docs/pr1138-review/review-body.md`; it was not modified.
+- Historical snapshots compare byte-for-byte with `HEAD^`'s previous `REPORT.md` and `PROGRESS.md` via `cmp`.
+- Initial no-op milestone: commit `2190d6e5` (`docs(pr1285): record no-op review at already-covered merged head`), pushed to `fork/preflight/pr1138-20261023` and observed on the remote.
+- No source or test files changed, so no behavior tests were run.
+- Pre-existing unrelated modifications to `MANIFEST.md`, `artifacts/pr1306_dedup/*`, `src/lib/auction/reserveGuard.ts`, and `e2e/baseline-results/` were left untouched and uncommitted.
+
+There are no remaining PR-review steps. The stale dispatch is closed by evidence, with zero GitHub PR writes.

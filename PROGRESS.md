@@ -26,4 +26,7 @@ The dispatch is stale. It pins `5ea90a06f94215e7d01c93670fba97018b81d9af`, but f
 - `docs/pr1285-noop/previous-pr1138/REPORT.original.txt`
 - `docs/pr1285-noop/previous-pr1138/PROGRESS.original.txt`
 
+- [x] Initial no-op milestone committed as `2190d6e5` and pushed to `fork/preflight/pr1138-20261023`.
+- [x] Final report records the observed commit/push and documentation-check results.
+
 All other pre-existing worktree changes are out of scope and left untouched.
