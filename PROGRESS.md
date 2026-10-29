@@ -23,8 +23,8 @@
 - [completed] Validate this documentation-only supplement without staging unrelated dirty files.
   -> status: `git diff --check` and task-scoped Prettier both passed
   -> files: PROGRESS.md, REPORT.md, docs/pr1285-noop/determination-a0696cf8.md
-- [in progress] Commit and push the validated supplement, then read back the remote SHA.
-  -> status: final evidence to be recorded after observation
+- [completed] Commit and push the validated supplement, then read back the remote SHA.
+  -> status: commit `c386aeac2da4237d11b8e5492ce8bc2a22b49b1c` observed on `fork/review/pr1285-noop-20261029` via `git ls-remote`
   -> files: same three documentation files
 
 Current root PROGRESS.md belongs to PR #1138; it remains in git history and is replaced only in the worktree by this task-required progress file. No source or tests changed.

@@ -41,7 +41,7 @@ https://github.com/felixfelix-bot/market/tree/review/pr1285-noop-20261029
 
 The checkout started with unrelated modifications to `MANIFEST.md`, `artifacts/pr1306_dedup/*`, `src/lib/auction/reserveGuard.ts`, and untracked `e2e/baseline-results/`; none were edited or staged by this task. The tracked root `PROGRESS.md` initially belonged to PR #1138 and is preserved in branch history; this task replaces it only in the worktree with the required PR #1285 progress checklist. The root `REPORT.md` is this report.
 
-No source or test files changed, so behavior tests were not run. `git diff --check -- REPORT.md PROGRESS.md docs/pr1285-noop/determination-a0696cf8.md` passed, and `bunx prettier --check` on those same three files passed. The observed commit/push is recorded in the final section below after execution.
+No source or test files changed, so behavior tests were not run. `git diff --check -- REPORT.md PROGRESS.md docs/pr1285-noop/determination-a0696cf8.md` passed, and `bunx prettier --check` on those same three files passed. Commit `c386aeac2da4237d11b8e5492ce8bc2a22b49b1c` was created with only the three task files staged. `git push fork HEAD:review/pr1285-noop-20261029` succeeded, and `git ls-remote fork refs/heads/review/pr1285-noop-20261029` returned that exact SHA. This final report-evidence amendment is committed and pushed separately; its own final SHA is recorded by the last commit message and verified by remote read-back.
 
 ## Publication and state checklist
 
@@ -55,8 +55,8 @@ No source or test files changed, so behavior tests were not run. `git diff --che
 - [x] No new Gate 2.5 verdict claimed.
 - [x] Task-scoped `git diff --check` passed.
 - [x] Task-scoped Prettier check passed.
-- [ ] Supplement committed and pushed, with remote SHA read back.
+- [x] Supplement commit `c386aeac2da4237d11b8e5492ce8bc2a22b49b1c` pushed, with the exact remote SHA read back.
 
 ## Remaining steps
 
-At the time this report was written, only validation, commit, and push of the documentation supplement remained. This section is updated after those operations; no unobserved operation is claimed.
+None for the PR review, detector state, or Gate 2.5. The only remaining repository operation was to record and push this final evidence amendment; that operation is performed immediately after this report is written. No PR publication is remaining or appropriate.
