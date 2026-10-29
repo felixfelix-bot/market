@@ -25,3 +25,10 @@ Pinned SHA e989381b1388; live head bbe43a56598c8d0dd6adb1bfba75a3f55d6f1b9d (mer
 - artifacts/pr1410_review/REPORT.md — full report
 - manager/state/plebeian-pr-review-state.json (via manager profile, backup first) — prs["1410"] entry
 - branch review/pr1410-glm-20261029 on fork felixfelix-bot (evidence trail)
+## Verification status (post-publish, 2026-10-29)
+
+- update_gate_state.py: `python3 -m py_compile` OK; executed again — idempotent, `prs['1410']` entry intact, `last_reviewed_sha` verified by re-read. PASS.
+- `git diff --check`: clean (rc 0). PASS.
+- `bun run format:check`: rc 2 — pre-existing repo-wide condition, NOT introduced by this lane: one `[error]` on a sibling lane's unparseable NDJSON (artifacts/pr1390_noop_20261029/raw_reviews_ndjson.json) plus `[warn]`s on ~40 files across ~10 sibling lanes and root docs. `.prettierignore` covers only node_modules/dist/src/components/ui/build, so artifacts/ evidence warns by design of earlier lanes. `prettier --write` was tried on this lane's 4 markdown files and REVERTED: it corrupts citation evidence (`src/lib/__tests__` -> `src/lib/**tests**/*.test.ts`, `last_reviewed_sha` -> `last*reviewed_sha`) — committed evidence bytes are the record.
+- draft.md byte-identical to published review body 5694825411 (verified via gh api diff). Unchanged by the reverted reformat.
+- bun run build not run: the only flagged path is a standalone Python evidence script under artifacts/; the app tree is untouched by this lane (remaining modified files in the workspace belong to other lanes).
