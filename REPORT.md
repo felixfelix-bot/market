@@ -83,6 +83,7 @@ No source or test files changed, so no behavior tests were run. Documentation ch
 - Full `bun run format:check`: failed only on pre-existing `docs/pr1138-review/review-body.md`; it was not modified.
 - Historical snapshots compare byte-for-byte with `HEAD^`'s previous `REPORT.md` and `PROGRESS.md` via `cmp`.
 - Initial no-op milestone: commit `2190d6e5` (`docs(pr1285): record no-op review at already-covered merged head`), pushed to `fork/preflight/pr1138-20261023` and observed on the remote.
+- Final report milestone: commit `4eddb548259cb760b505622da2ae68d0abf647f2`, pushed to the same branch and confirmed by `git ls-remote`. A concurrent PR #1298 worker subsequently added `aa9ea8d5` to this shared local branch; that unrelated commit was left intact, and `4eddb548` remains its ancestor. The remote SHA quoted here is the verified PR #1285 report milestone, not a claim that no later worker pushed.
 - No source or test files changed, so no behavior tests were run.
 - Pre-existing unrelated modifications to `MANIFEST.md`, `artifacts/pr1306_dedup/*`, `src/lib/auction/reserveGuard.ts`, and `e2e/baseline-results/` were left untouched and uncommitted.
 
