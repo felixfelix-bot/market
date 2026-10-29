@@ -1,0 +1,25 @@
+bun test v1.4.2 (744846f84)
+
+src/queries/__tests__/auctionVerdictsRetry.test.ts:
+(pass) publish-path verdict reads — bounded transient retry > budget is a 2500ms window with a 300ms step [0.05ms]
+(pass) publish-path verdict reads — bounded transient retry > re-reads after an empty observation until the verdict appears [25.49ms]
+(pass) publish-path verdict reads — bounded transient retry > returns the last empty observation when the window closes — the caller still fails closed [51.24ms]
+(pass) publish-path verdict reads — bounded transient retry > does not retry an auction that declares no auditors (permanent, not lag) [0.23ms]
+(pass) publish-path verdict reads — bounded transient retry > propagates a non-transient error immediately [220.51ms]
+(pass) publish-path verdict reads — bounded transient retry > retries a transient transport error, then returns the verdict [10.77ms]
+(pass) publish-path verdict reads — bounded transient retry > retries the browser-level TypeError: Failed to fetch [10.52ms]
+(pass) publish-path verdict reads — bounded transient retry > rethrows the transient error once the window closes [54.13ms]
+
+src/queries/__tests__/auctionVerdicts.test.ts:
+(pass) auction verdict queries — trust boundary (review #1235 Should-fix 3) > backwards compatible: no auditors passed means no authors filter [0.43ms]
+(pass) auction verdict queries — trust boundary (review #1235 Should-fix 3) > null limit omits the relay limit for complete win resolution [0.25ms]
+(pass) auction verdict queries — trust boundary (review #1235 Should-fix 3) > sends the configured auditors as the relay authors filter (de-duplicated, sorted) [0.23ms]
+(pass) auction verdict queries — trust boundary (review #1235 Should-fix 3) > fails closed: an empty auditor list authorizes nothing and never queries the relay [7.99ms]
+(pass) auction verdict queries — trust boundary (review #1235 Should-fix 3) > drops unverified events at the parse boundary before they can be rendered [5.54ms]
+(pass) auction verdict queries — trust boundary (review #1235 Should-fix 3) > re-checks authors client-side: a properly-signed verdict from a non-auditor is dropped [8.37ms]
+(pass) auction verdict queries — trust boundary (review #1235 Should-fix 3) > keeps a properly signed, authorized verdict and returns it newest-first [10.90ms]
+
+ 15 pass
+ 0 fail
+ 29 expect() calls
+Ran 15 tests across 2 files. [1.81s]
