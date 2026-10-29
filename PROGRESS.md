@@ -1,33 +1,28 @@
-# PROGRESS.md — PR #1285 no-op review verification
+# PROGRESS — PR #1226 review leg (fleet offload worker)
 
-## Finding
+Task: Review PR #1226 (Franchovy, auction order details settlement status).
+Brief state was STALE — live state re-established below.
 
-The dispatch is stale. It pins `5ea90a06f94215e7d01c93670fba97018b81d9af`, but felixfelix-bot already reviewed that exact SHA in review 5231741100. PR #1285 later merged at `f100daad527cc1ef5d6021de4a3533f87697281e`, and the same lane published retrospective review 5328576103 at that exact merged head. No new review, approval, or contribution PR is owed.
+## Findings so far
 
-## Status
-
-- [x] Re-fetched PR metadata, changed-file list, inline comments, issue comments, and reviews.
-- [x] Verified live state: MERGED into `auctions` at 2026-09-21T21:53:49Z, merge commit `0a48b028ee1c7830813617d2b708094d2de2b010`.
-- [x] Verified review 5231741100 has `commit_id == 5ea90a06...` (the dispatch pin).
-- [x] Verified review 5328576103 has `commit_id == f100daad...` (the merged head).
-- [x] Verified the manager state already records `prs.1285.last_reviewed_sha == f100daad...` and the review URL.
-- [x] Read the durable artifact for the earlier merged-head review, including its completed three-round cross-family audit.
-- [x] Confirmed the merged tree carries the same subscriber blob as the merged head (`2977fa62cea12fb44ec48dd74c8b5c4c0346d58c`).
-- [x] No new findings raised; no GitHub PR writes performed.
-- [x] Gate 2.5 not dispatched: there is no new draft or publication to audit, and no new cross-family verdict is claimed.
-- [x] Full report written to `REPORT.md`; previous PR #1138 reports preserved byte-for-byte as non-Markdown snapshots under `docs/pr1285-noop/previous-pr1138/`.
-- [x] `git diff --check` passes; `bun run format:check` fails only on pre-existing `docs/pr1138-review/review-body.md`; a task-scoped Prettier check passes.
-
-## Files touched
-
-- `REPORT.md`
-- `PROGRESS.md`
-- `docs/pr1285-noop/determination.md`
-- `docs/pr1285-noop/previous-pr1138/REPORT.original.txt`
-- `docs/pr1285-noop/previous-pr1138/PROGRESS.original.txt`
-
-- [x] Initial no-op milestone committed as `2190d6e5` and pushed to `fork/preflight/pr1138-20261023`.
-- [x] Final report milestone `4eddb548259cb760b505622da2ae68d0abf647f2` pushed and confirmed by `git ls-remote`; a concurrent PR #1298 worker's later local commit was left untouched.
-- [x] Final report records the observed commit/push and documentation-check results.
-
-All other pre-existing worktree changes are out of scope and left untouched.
+- [verified] PR #1226 is CLOSED (2026-09-19T20:43:54Z by Franchovy, "Superceded by #1361").
+  Never merged. Not a draft-with-pending-review; review cannot be posted as requested.
+  -> status: DEAD TARGET, no verdict postable
+  -> files: none (gh api reads only)
+- [verified] Successor is PR #1361 `feat(auctions): ... (supersedes #1226)`, OPEN, base
+  `auctions`, head d1a4a647, mergeStateStatus=BLOCKED, reviewDecision=CHANGES_REQUESTED.
+  -> status: REAL review target
+- [verified] Prior felixfelix-bot review 5635730808 (2026-10-24) posted 3 BLOCKs and claimed
+  B1/B3 fixed + B2 still holds at d1a4a647. Head unchanged since -> re-verifying independently.
+- [verified] B1 fixed: settlementDescriptor.ts:613-616 requires latestSettlementValidity==='valid'
+  && classifyPhase==='settled' && hasMatchedClaimOrder.
+- [verified] B2 STILL HOLDS, mechanism confirmed: settlementStatus read straight from the
+  seller-authored kind-1024 (`settlements.reduce` -> `latestSettlement?.status`), no
+  kind-30440 grief quorum anywhere. ADR-0004:298-305 mandates quorum-derived grief.
+- [verified] NEW nuance beyond prior review: `griefed` and `griefed_pending_fallback` ARE in
+  VALIDATOR_CLAIMS (constants.ts:163-164) but neither is in VALIDATOR_CONFIRM_CLAIMS
+  (:177) nor VALIDATOR_CONDEMN_CLAIMS (:180), so the verdict->quorum bridge cannot emit
+  grief at all. Both ends (claim taxonomy + settlement read) are missing.
+- [verified] Prior "grief in kind-1024 status" note is MORE than provenance: `isSettlementStructurallyValid`
+  returns 'valid' for griefed_no_fallback on structural checks alone (settlementDescriptor.ts:186-189),
+  i.e. a seller-authored claim needs no path-release/bid-chain evidence at all.
