@@ -167,6 +167,81 @@ This command uses the TanStack Router CLI (`tsr watch`) to monitor your route fi
 
 Without running this command, changes to route files or creating new routes won't be detected until you manually generate the route tree or restart the server.
 
+## Quality Hooks
+
+A **pre-push** git hook is installed for this repo that runs a local quality gate
+before any push is accepted. Its goal is to keep `master` green by catching
+breakages locally instead of in CI.
+
+### What the hook does
+
+The installed `.git/hooks/pre-push` is a thin wrapper that execs a shared checker
+(`~/scripts/check-quality.sh`) against the repository root. That checker runs
+three gates in order:
+
+1. **Tests (blocking)** — runs the project's test suite. The push is blocked
+   (exit 1) if any test fails.
+2. **Coverage (blocking)** — enforces a minimum coverage percentage read from
+   `.coverage-threshold` in the repo root (currently **90**). The push is blocked
+   if coverage falls below the threshold.
+3. **Doc drift (non-blocking warning)** — if source files are staged but no
+   documentation (`.md`/`.txt`) is included in the same push, a warning is
+   printed. The push still continues.
+
+If all blocking gates pass, the push proceeds normally.
+
+### The `.coverage-threshold` file
+
+`.coverage-threshold` at the repo root contains a single integer (default `90`)
+that sets the coverage floor enforced by Gate 2. Bump it to raise the bar; the
+checker reads it fresh on every push.
+
+### Test layout
+
+The project's test command is **Bun** (`bun test`), not vitest. The hook runs
+`bun test`. The repo organises tests into three layers via `package.json`
+scripts:
+
+- `bun run test:unit` — unit tests (scoped to `contextvm`, `src/queries/__tests__`,
+  `src/lib/__tests__`, excluding `*.integration.test.ts`). This is the fast,
+  network-free suite you should run locally while iterating.
+- `bun run test:integration` — integration tests under `src/lib/__tests__`
+  (`*.integration.test.ts`).
+- `bun run test:e2e` — **Playwright** end-to-end tests, configured at
+  `e2e/playwright.config.ts`. These drive a real browser and are part of the
+  project's coverage story; run them with `bun run test:e2e` (or `:headed` / `:ui`
+  / `:debug` variants). E2E coverage is reported by the CI `e2e.yml` workflow.
+
+### Bypassing the hook
+
+To skip the gate for a single push — e.g. a backup/WIP push or when the gate is
+misbehaving — use:
+
+```bash
+git push --no-verify
+```
+
+Use this sparingly. It exists for convenience, not for shipping known-broken
+code. CI still runs on the remote, so a `--no-verify` push that skips a local
+test failure will still fail in CI.
+
+### Installing / reinstalling / removing
+
+The hook is installed by `~/scripts/install-quality-hooks.sh`. To (re)install or
+repair it:
+
+```bash
+~/scripts/install-quality-hooks.sh /path/to/this/repo
+```
+
+It is idempotent and backs up any pre-existing foreign `pre-push` hook to
+`pre-push.bak-pre-quality` before installing. To remove it and restore the
+backup:
+
+```bash
+~/scripts/install-quality-hooks.sh --uninstall /path/to/this/repo
+```
+
 ## Releasing
 
 Staging deploys automatically after the `E2E Tests` workflow succeeds on `master`.
