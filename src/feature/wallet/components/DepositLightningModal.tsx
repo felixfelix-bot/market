@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useReducer } from 'react'
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { nip60Actions, nip60Store } from '@/lib/stores/nip60'
@@ -12,12 +12,38 @@ interface DepositLightningModalProps {
 	onClose: () => void
 }
 
+/*
+ * Form state for the deposit modal, kept in a pure reducer so its re-open
+ * transitions are unit-testable (src/lib/__tests__/deposit-modal-reopen.test.ts).
+ * Payment state is deliberately NOT here: depositStatus/depositInvoice/
+ * activeDeposit live in the nip60 store and are reset on re-open through
+ * nip60Actions.cancelDeposit().
+ */
+export interface DepositFormState {
+	amount: string
+	copied: boolean
+}
+
+export type DepositFormAction = { type: 'reset' } | { type: 'setAmount'; value: string } | { type: 'setCopied'; value: boolean }
+
+export const initialDepositFormState: DepositFormState = { amount: '', copied: false }
+
+export function depositFormReducer(state: DepositFormState, action: DepositFormAction): DepositFormState {
+	switch (action.type) {
+		case 'reset':
+			return initialDepositFormState
+		case 'setAmount':
+			return { ...state, amount: action.value }
+		case 'setCopied':
+			return { ...state, copied: action.value }
+	}
+}
+
 export function DepositLightningModal({ open, onClose }: DepositLightningModalProps) {
 	const { mints, defaultMint, depositInvoice, depositStatus } = useStore(nip60Store)
-	const [amount, setAmount] = useState('')
 	const [selectedMint, setSelectedMint] = useState<string>('')
 	const [isGenerating, setIsGenerating] = useState(false)
-	const [copied, setCopied] = useState(false)
+	const [form, dispatchForm] = useReducer(depositFormReducer, initialDepositFormState)
 
 	// Sync selectedMint with defaultMint when modal opens or defaultMint changes
 	useEffect(() => {
@@ -26,8 +52,19 @@ export function DepositLightningModal({ open, onClose }: DepositLightningModalPr
 		}
 	}, [open, defaultMint, mints])
 
+	// Reset stale form input and deposit session state each time the modal
+	// opens, so a previously completed deposit doesn't show "done" (or a stale
+	// invoice/amount) on the next open. Deps are [open] only — mint changes
+	// while open must not wipe in-progress form input.
+	useEffect(() => {
+		if (open) {
+			dispatchForm({ type: 'reset' })
+			nip60Actions.cancelDeposit()
+		}
+	}, [open])
+
 	const handleGenerateInvoice = async () => {
-		const amountNum = parseInt(amount, 10)
+		const amountNum = parseInt(form.amount, 10)
 		if (isNaN(amountNum) || amountNum <= 0) {
 			toast.error('Please enter a valid amount')
 			return
@@ -50,9 +87,9 @@ export function DepositLightningModal({ open, onClose }: DepositLightningModalPr
 		if (!depositInvoice) return
 		try {
 			await navigator.clipboard.writeText(depositInvoice)
-			setCopied(true)
+			dispatchForm({ type: 'setCopied', value: true })
 			toast.success('Invoice copied to clipboard')
-			setTimeout(() => setCopied(false), 2000)
+			setTimeout(() => dispatchForm({ type: 'setCopied', value: false }), 2000)
 		} catch {
 			toast.error('Failed to copy invoice')
 		}
@@ -62,8 +99,7 @@ export function DepositLightningModal({ open, onClose }: DepositLightningModalPr
 		if (depositStatus === 'pending') {
 			nip60Actions.cancelDeposit()
 		}
-		setAmount('')
-		setCopied(false)
+		dispatchForm({ type: 'reset' })
 		onClose()
 	}
 
@@ -106,7 +142,7 @@ export function DepositLightningModal({ open, onClose }: DepositLightningModalPr
 									className="flex-1 px-3 py-2 text-sm bg-muted rounded-md font-mono truncate"
 								/>
 								<Button variant="outline" size="icon" onClick={handleCopyInvoice}>
-									{copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+									{form.copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
 								</Button>
 							</div>
 						</div>
@@ -126,8 +162,8 @@ export function DepositLightningModal({ open, onClose }: DepositLightningModalPr
 							<label className="text-sm font-medium">Amount (sats)</label>
 							<input
 								type="number"
-								value={amount}
-								onChange={(e) => setAmount(e.target.value)}
+								value={form.amount}
+								onChange={(e) => dispatchForm({ type: 'setAmount', value: e.target.value })}
 								placeholder="Enter amount in sats"
 								className="w-full px-3 py-2 text-sm border rounded-md bg-background"
 								min="1"
@@ -155,7 +191,7 @@ export function DepositLightningModal({ open, onClose }: DepositLightningModalPr
 							<Button variant="outline" onClick={handleClose}>
 								Cancel
 							</Button>
-							<Button onClick={handleGenerateInvoice} disabled={isGenerating || !amount || !selectedMint}>
+							<Button onClick={handleGenerateInvoice} disabled={isGenerating || !form.amount || !selectedMint}>
 								{isGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
 								Generate Invoice
 							</Button>
