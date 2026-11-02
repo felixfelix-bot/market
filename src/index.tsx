@@ -5,9 +5,10 @@ import NDK from '@nostr-dev-kit/ndk'
 import { bech32 } from '@scure/base'
 import index from './index.html'
 import { fetchAppSettings } from './lib/appSettings'
+import { parseOperatorRelayUrls } from './lib/nostr/operatorRelays'
 import { AppSettingsSchema } from './lib/schemas/app'
 import { resolveCvmServerPubkey } from './lib/cvm-identity'
-import { renderProductPageHtml } from './lib/ogTags'
+import { renderProductPageHtml, resolveServerOrigins, serveProductPageWithOg, type ServerOriginsEnv } from './lib/ogTags'
 import { getProductOgMeta } from './server/ogMeta'
 import { getEventHandler } from './server'
 import { ZapInvoiceError } from './server/ZapPurchaseManager'
@@ -19,6 +20,11 @@ import.meta.hot.accept()
 
 const RELAY_URL = process.env.APP_RELAY_URL
 const NIP46_RELAY_URL = process.env.NIP46_RELAY_URL || 'wss://relay.nsec.app'
+// Additional OPERATOR-controlled relays for authority reads (comma-separated).
+// Empty by default: production runs a single operator relay, so the authority
+// reads (app-settings here, plus the client reads via getOperatorRelayUrls())
+// stay on that one relay until an operator configures another.
+const OPERATOR_RELAYS = parseOperatorRelayUrls(process.env.OPERATOR_RELAYS)
 const APP_PRIVATE_KEY = process.env.APP_PRIVATE_KEY
 
 let appSettings: Awaited<ReturnType<typeof fetchAppSettings>> = null
@@ -136,7 +142,7 @@ async function initializeAppSettings() {
 	try {
 		const privateKeyBytes = new Uint8Array(Buffer.from(APP_PRIVATE_KEY, 'hex'))
 		APP_PUBLIC_KEY = getPublicKey(privateKeyBytes)
-		appSettings = await fetchAppSettings(RELAY_URL as string, APP_PUBLIC_KEY)
+		appSettings = await fetchAppSettings(RELAY_URL as string, APP_PUBLIC_KEY, OPERATOR_RELAYS)
 		if (appSettings) {
 			console.log('App settings loaded successfully')
 		} else {
@@ -241,38 +247,28 @@ console.log(`App port: ${PORT}`)
  * into the initial HTML, so crawlers and link unfurlers see the product's
  * title/description/image without executing JavaScript (issue #459).
  *
- * The shell is obtained by fetching `/` from this same server, which runs it
- * through Bun's HTML import pipeline (asset rewrites, dev scripts) — so the
- * injected page stays byte-identical to the catch-all shell apart from the
- * extra <meta> tags. On any lookup miss (unknown id, relay timeout, NSFW
- * product) the untouched shell is served and the SPA renders as before.
+ * The shell is obtained by fetching `/` from a SERVER-CONTROLLED origin
+ * (`APP_SHELL_ORIGIN` / fixed loopback — never the request Host), which runs
+ * it through Bun's HTML import pipeline (asset rewrites, dev scripts) — so
+ * the injected page stays byte-identical to the catch-all shell apart from
+ * the extra <meta> tags. og:url / og:image use `APP_PUBLIC_ORIGIN`. On any
+ * shell-fetch or lookup failure — unknown id, relay timeout, NSFW product,
+ * rejected lookup, or render error — the untouched module shell is served
+ * with HTTP 200: an SEO-only enrichment failure never reduces product-page
+ * availability.
  */
-async function serveProductPageWithOg(productId: string, requestUrl: string): Promise<Response> {
-	const url = new URL(requestUrl)
-	let baseHtml: string
-	let contentType: string
-
-	try {
-		const baseResponse = await fetch(new URL('/', url))
-		if (!baseResponse.ok) throw new Error(`index shell fetch returned ${baseResponse.status}`)
-		baseHtml = await baseResponse.text()
-		contentType = baseResponse.headers.get('Content-Type') || 'text/html;charset=utf-8'
-	} catch (error) {
-		console.error('og: failed to load index shell:', error)
-		return new Response('Product page unavailable', { status: 503 })
-	}
-
-	const meta = await getProductOgMeta(RELAY_URL, productId)
-	const html = renderProductPageHtml(baseHtml, meta, `${url.origin}/products/${productId}`, url.origin)
-
-	// Body differs per product: only carry over the content type, and force
-	// revalidation so a cached shell from one product is never served for another.
-	return new Response(html, {
-		headers: {
-			'Content-Type': contentType,
-			'Cache-Control': 'no-cache',
-		},
-	})
+async function productPageWithOg(productId: string): Promise<Response> {
+	const { shellOrigin, publicOrigin } = resolveServerOrigins(
+		{ APP_SHELL_ORIGIN: process.env.APP_SHELL_ORIGIN, APP_PUBLIC_ORIGIN: process.env.APP_PUBLIC_ORIGIN } satisfies ServerOriginsEnv,
+		PORT,
+	)
+	return serveProductPageWithOg(productId, {
+		shellOrigin,
+		publicOrigin,
+		relayUrl: RELAY_URL,
+		indexShell: index,
+		getProductOgMeta,
+	}) as Promise<Response>
 }
 
 export const server = serve({
@@ -284,6 +280,9 @@ export const server = serve({
 				// Return cached settings loaded at startup
 				return Response.json({
 					appRelay: RELAY_URL,
+					// Operator-controlled relays for authority reads. Empty until an
+					// operator configures OPERATOR_RELAYS; never third-party relays.
+					operatorRelays: OPERATOR_RELAYS,
 					stage,
 					nip46Relay: NIP46_RELAY_URL,
 					appSettings: appSettings,
@@ -365,7 +364,7 @@ export const server = serve({
 		// Product pages get og: meta tags server-rendered into the initial
 		// HTML (must beat the catch-all so the crawler response carries them).
 		'/products/:productId': {
-			GET: ({ params, url }) => serveProductPageWithOg(params.productId, url),
+			GET: ({ params }) => productPageWithOg(params.productId),
 		},
 		'/*': index,
 	},
