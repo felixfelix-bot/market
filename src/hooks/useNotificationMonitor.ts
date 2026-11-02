@@ -4,6 +4,8 @@ import { authStore } from '@/lib/stores/auth'
 import { ndkActions } from '@/lib/stores/ndk'
 import { notificationActions, notificationStore } from '@/lib/stores/notifications'
 import { ORDER_GENERAL_KIND, ORDER_MESSAGE_TYPE, ORDER_PROCESS_KIND } from '@/lib/schemas/order'
+import { createAuthorRelayReadDeps, readAuthorScopedEvents } from '@/lib/nostr/authorRelayRead'
+import { fetchUserRelayListWithPreferences } from '@/queries/relay-list'
 import type { NDKEvent, NDKFilter, NDKSubscription } from '@nostr-dev-kit/ndk'
 
 /**
@@ -49,6 +51,20 @@ export const useNotificationMonitor = () => {
 		// Initial fetch to calculate current unseen counts
 		const initializeNotifications = async () => {
 			try {
+				// ADR-0002 F3 (proposed: PR #1333): these are reads scoped to the reader — the reader's
+				// own orders, messages and purchase updates — so the relays the
+				// bounded path may consult are the READER's own kind-10002
+				// declarations (an inbox read), never a counterparty's: the `#p`
+				// filters below name no author, so a counterparty's relay set is
+				// not knowable before the read. The pinned read is canonical; the
+				// bounded path (capped, serial, session-bounded) runs only when
+				// the pinned read misses and the single /api/config decision is
+				// ON. Residual gap, recorded in the proposal (PR #1333): a counterparty that
+				// publishes only to its own relays is not reached by this read.
+				const authorRelayDeps = createAuthorRelayReadDeps({ ndk, fetchAuthorRelayList: fetchUserRelayListWithPreferences })
+				const readSelfScopedEvents = (filter: NDKFilter) =>
+					readAuthorScopedEvents(filter, { authorPubkey: user.pubkey, purpose: 'self' }, authorRelayDeps).then((result) => result.events)
+
 				// Fetch recent orders where user is seller (recipient)
 				const orderFilter: NDKFilter = {
 					kinds: [ORDER_PROCESS_KIND],
@@ -56,7 +72,7 @@ export const useNotificationMonitor = () => {
 					limit: 100,
 				}
 
-				const orderEvents = await ndk.fetchEvents(orderFilter)
+				const orderEvents = await readSelfScopedEvents(orderFilter)
 
 				// Filter for order creation events
 				const newOrders = Array.from(orderEvents).filter((event) => {
@@ -71,7 +87,7 @@ export const useNotificationMonitor = () => {
 					limit: 100,
 				}
 
-				const messageEvents = await ndk.fetchEvents(messageFilter)
+				const messageEvents = await readSelfScopedEvents(messageFilter)
 
 				// Group messages by sender and count unseen per conversation
 				const conversationCounts: Record<string, number> = {}
@@ -92,7 +108,7 @@ export const useNotificationMonitor = () => {
 					limit: 100,
 				}
 
-				const purchaseEvents = await ndk.fetchEvents(purchaseFilter)
+				const purchaseEvents = await readSelfScopedEvents(purchaseFilter)
 
 				// Filter for purchase updates (payment requests, status updates, shipping updates)
 				// Exclude order creation events since those are initiated by the buyer
