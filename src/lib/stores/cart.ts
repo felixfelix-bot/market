@@ -560,6 +560,18 @@ export const cartActions = {
 			const shouldAdoptRemote = !localHasItems || !localUpdatedAt || normalizedRemote.updatedAt > localUpdatedAt
 
 			if (shouldAdoptRemote) {
+				const currentLocalItems = Object.keys(cartStore.state.cart.products).length > 0
+				if (currentLocalItems) {
+					cartStore.setState((state) => ({
+						...state,
+						hasRemoteCartHydrated: true,
+						isReconcilingRemoteCart: false,
+						suppressRemotePublish: false,
+						lastRemoteSnapshotUpdatedAt: normalizedRemote.updatedAt,
+					}))
+					return
+				}
+
 				const liveProducts: Record<string, { productRef: string; sellerPubkey: string; productId: string; shippingRefs: string[] }> = {}
 				const liveShipping: Record<string, { shippingRef: string; sellerPubkey: string }> = {}
 
